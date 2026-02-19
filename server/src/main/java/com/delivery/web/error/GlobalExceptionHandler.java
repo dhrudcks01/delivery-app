@@ -8,6 +8,8 @@ import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.driver.exception.DriverApplicationNotFoundException;
 import com.delivery.driver.exception.DriverApplicationStatusConflictException;
+import com.delivery.waste.exception.WasteRequestNotFoundException;
+import com.delivery.waste.exception.WasteStatusTransitionConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -99,6 +101,34 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.CONFLICT.value(),
                 "DRIVER_APPLICATION_STATUS_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(WasteRequestNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleWasteRequestNotFound(
+            WasteRequestNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "WASTE_REQUEST_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(WasteStatusTransitionConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleWasteStatusTransitionConflict(
+            WasteStatusTransitionConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "WASTE_STATUS_TRANSITION_CONFLICT",
                 exception.getMessage(),
                 request.getRequestURI()
         );

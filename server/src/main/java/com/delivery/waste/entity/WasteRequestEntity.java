@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "waste_requests")
@@ -79,6 +80,10 @@ public class WasteRequestEntity {
         this.note = note;
         this.status = status;
         this.currency = currency;
+    }
+
+    public void changeStatus(String nextStatus) {
+        this.status = Objects.requireNonNull(nextStatus);
     }
 
     @PrePersist
