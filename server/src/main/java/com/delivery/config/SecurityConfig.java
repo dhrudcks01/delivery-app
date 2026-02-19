@@ -46,6 +46,8 @@ public class SecurityConfig {
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/auth/register", "/auth/login", "/auth/refresh").permitAll()
+                .requestMatchers("/uploads/files/**").authenticated()
+                .requestMatchers("/uploads").hasAnyRole("DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/sys-admin/**").hasRole("SYS_ADMIN")
                 .requestMatchers("/ops-admin/**").hasAnyRole("OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/driver/**").hasAnyRole("DRIVER", "OPS_ADMIN", "SYS_ADMIN")

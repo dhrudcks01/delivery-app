@@ -8,6 +8,7 @@ import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.driver.exception.DriverApplicationNotFoundException;
 import com.delivery.driver.exception.DriverApplicationStatusConflictException;
+import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
 import com.delivery.waste.exception.WasteStatusTransitionConflictException;
@@ -144,6 +145,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.BAD_REQUEST.value(),
                 "DRIVER_ROLE_REQUIRED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(InvalidUploadFileException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidUploadFile(
+            InvalidUploadFileException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_UPLOAD_FILE",
                 exception.getMessage(),
                 request.getRequestURI()
         );

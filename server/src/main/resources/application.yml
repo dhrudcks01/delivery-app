@@ -29,3 +29,6 @@ app:
       email: ${APP_BOOTSTRAP_SYS_ADMIN_EMAIL:}
       password: ${APP_BOOTSTRAP_SYS_ADMIN_PASSWORD:}
       display-name: ${APP_BOOTSTRAP_SYS_ADMIN_DISPLAY_NAME:시스템 관리자}
+  upload:
+    local-dir: ${APP_UPLOAD_LOCAL_DIR:./uploads}
+    max-size-bytes: ${APP_UPLOAD_MAX_SIZE_BYTES:5242880}
