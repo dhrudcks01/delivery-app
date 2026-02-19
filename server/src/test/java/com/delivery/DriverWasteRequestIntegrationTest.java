@@ -130,13 +130,15 @@ class DriverWasteRequestIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("MEASURED"))
                 .andExpect(jsonPath("$.measuredWeightKg").value(3.75))
-                .andExpect(jsonPath("$.measuredByDriverId").value(driver.getId()));
+                .andExpect(jsonPath("$.measuredByDriverId").value(driver.getId()))
+                .andExpect(jsonPath("$.finalAmount").value(3750));
 
         WasteRequestEntity measured = wasteRequestRepository.findById(request.getId()).orElseThrow();
         assertThat(measured.getStatus()).isEqualTo("MEASURED");
         assertThat(measured.getMeasuredWeightKg()).isEqualByComparingTo("3.750");
         assertThat(measured.getMeasuredByDriver().getId()).isEqualTo(driver.getId());
         assertThat(measured.getMeasuredAt()).isNotNull();
+        assertThat(measured.getFinalAmount()).isEqualTo(3750L);
         assertThat(wastePhotoRepository.countByRequestId(request.getId())).isEqualTo(2);
     }
 

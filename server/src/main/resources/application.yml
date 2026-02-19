@@ -32,3 +32,6 @@ app:
   upload:
     local-dir: ${APP_UPLOAD_LOCAL_DIR:./uploads}
     max-size-bytes: ${APP_UPLOAD_MAX_SIZE_BYTES:5242880}
+  waste:
+    pricing:
+      per-kg-krw: ${APP_WASTE_PRICING_PER_KG_KRW:1000}

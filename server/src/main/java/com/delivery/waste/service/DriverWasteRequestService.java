@@ -27,17 +27,20 @@ public class DriverWasteRequestService {
     private final WasteAssignmentRepository wasteAssignmentRepository;
     private final WastePhotoRepository wastePhotoRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
+    private final WastePricingService wastePricingService;
 
     public DriverWasteRequestService(
             UserRepository userRepository,
             WasteAssignmentRepository wasteAssignmentRepository,
             WastePhotoRepository wastePhotoRepository,
-            WasteStatusTransitionService wasteStatusTransitionService
+            WasteStatusTransitionService wasteStatusTransitionService,
+            WastePricingService wastePricingService
     ) {
         this.userRepository = userRepository;
         this.wasteAssignmentRepository = wasteAssignmentRepository;
         this.wastePhotoRepository = wastePhotoRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
+        this.wastePricingService = wastePricingService;
     }
 
     @Transactional
@@ -65,6 +68,7 @@ public class DriverWasteRequestService {
 
         WasteRequestEntity updated = wasteStatusTransitionService.transition(requestId, MEASURED, email);
         updated.markMeasured(request.measuredWeightKg(), driver, Instant.now());
+        updated.updateFinalAmount(wastePricingService.calculateFinalAmount(request.measuredWeightKg()));
 
         List<WastePhotoEntity> photos = request.photoUrls()
                 .stream()

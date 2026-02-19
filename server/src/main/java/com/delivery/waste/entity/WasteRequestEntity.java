@@ -92,6 +92,10 @@ public class WasteRequestEntity {
         this.measuredAt = Objects.requireNonNull(measuredAt);
     }
 
+    public void updateFinalAmount(Long finalAmount) {
+        this.finalAmount = Objects.requireNonNull(finalAmount);
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
