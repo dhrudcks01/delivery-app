@@ -52,7 +52,7 @@
 
 ---
 
-### [ ] T-0003 로컬 MySQL 개발 가이드 작성 (Docker 없이)
+### [x] T-0003 로컬 MySQL 개발 가이드 작성 (Docker 없이)
 **Goal**
 - Windows/Mac 모두 로컬 MySQL 설치 기반 실행 가능하도록 문서 작성
 
@@ -62,7 +62,7 @@
 
 ---
 
-### [ ] T-0004 Flyway 적용 (초기 마이그레이션)
+### [x] T-0004 Flyway 적용 (초기 마이그레이션)
 **Goal**
 - 빈 DB에서도 서버 기동 시 테이블 자동 생성
 
@@ -72,7 +72,7 @@
 
 ---
 
-### [ ] T-0005 표준 에러 응답 및 예외 처리
+### [x] T-0005 표준 에러 응답 및 예외 처리
 **Goal**
 - Validation/401/403/500 응답 포맷 통일
 
@@ -93,7 +93,7 @@
 
 # EPIC 1) 인증 / 계정 / 권한 (RBAC)
 
-### [ ] T-0101 DB: users / auth_identities / roles / user_roles
+### [x] T-0101 DB: users / auth_identities / roles / user_roles
 **Goal**
 - 멀티 롤 + 멀티 로그인 프로바이더 기반 스키마 구성
 
