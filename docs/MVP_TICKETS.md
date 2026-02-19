@@ -125,7 +125,7 @@
 
 ---
 
-### [ ] T-0301 DB: waste_requests / waste_assignments / waste_status_logs / waste_photos
+### [x] T-0301 DB: waste_requests / waste_assignments / waste_status_logs / waste_photos
 **Goal**
 - “쓰레기 수거” 도메인 중심 테이블 설계
 
