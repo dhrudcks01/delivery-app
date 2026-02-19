@@ -86,6 +86,12 @@ public class WasteRequestEntity {
         this.status = Objects.requireNonNull(nextStatus);
     }
 
+    public void markMeasured(BigDecimal measuredWeightKg, UserEntity driver, Instant measuredAt) {
+        this.measuredWeightKg = Objects.requireNonNull(measuredWeightKg);
+        this.measuredByDriver = Objects.requireNonNull(driver);
+        this.measuredAt = Objects.requireNonNull(measuredAt);
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

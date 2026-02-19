@@ -7,6 +7,7 @@ import com.delivery.auth.repository.UserRepository;
 import com.delivery.waste.entity.WasteAssignmentEntity;
 import com.delivery.waste.entity.WasteRequestEntity;
 import com.delivery.waste.repository.WasteAssignmentRepository;
+import com.delivery.waste.repository.WastePhotoRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,6 +58,9 @@ class DriverWasteRequestIntegrationTest {
 
     @Autowired
     private WasteAssignmentRepository wasteAssignmentRepository;
+
+    @Autowired
+    private WastePhotoRepository wastePhotoRepository;
 
     @BeforeEach
     void setUpRoles() {
@@ -102,6 +110,53 @@ class DriverWasteRequestIntegrationTest {
         mockMvc.perform(get("/driver/waste-requests")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void driverCanMeasureAssignedRequestWithPhotos() throws Exception {
+        UserEntity requester = createUser("driver-measure-requester@example.com", "USER");
+        UserEntity driver = createUser("driver-measure-driver@example.com", "DRIVER");
+        WasteRequestEntity request = createAssignedRequest(requester, driver, "서울시 강동구 3");
+        String driverToken = login(driver.getEmail());
+        String body = objectMapper.writeValueAsString(new MeasurePayload(
+                new BigDecimal("3.750"),
+                List.of("/uploads/files/photo1.jpg", "/uploads/files/photo2.jpg")
+        ));
+
+        mockMvc.perform(post("/driver/waste-requests/{requestId}/measure", request.getId())
+                        .header("Authorization", "Bearer " + driverToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("MEASURED"))
+                .andExpect(jsonPath("$.measuredWeightKg").value(3.75))
+                .andExpect(jsonPath("$.measuredByDriverId").value(driver.getId()));
+
+        WasteRequestEntity measured = wasteRequestRepository.findById(request.getId()).orElseThrow();
+        assertThat(measured.getStatus()).isEqualTo("MEASURED");
+        assertThat(measured.getMeasuredWeightKg()).isEqualByComparingTo("3.750");
+        assertThat(measured.getMeasuredByDriver().getId()).isEqualTo(driver.getId());
+        assertThat(measured.getMeasuredAt()).isNotNull();
+        assertThat(wastePhotoRepository.countByRequestId(request.getId())).isEqualTo(2);
+    }
+
+    @Test
+    void measureReturnsBadRequestWhenPhotoUrlsAreEmpty() throws Exception {
+        UserEntity requester = createUser("driver-measure-empty-photo-requester@example.com", "USER");
+        UserEntity driver = createUser("driver-measure-empty-photo-driver@example.com", "DRIVER");
+        WasteRequestEntity request = createAssignedRequest(requester, driver, "서울시 강동구 4");
+        String driverToken = login(driver.getEmail());
+        String body = objectMapper.writeValueAsString(new MeasurePayload(
+                new BigDecimal("1.500"),
+                List.of()
+        ));
+
+        mockMvc.perform(post("/driver/waste-requests/{requestId}/measure", request.getId())
+                        .header("Authorization", "Bearer " + driverToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     private WasteRequestEntity createAssignedRequest(UserEntity requester, UserEntity driver, String address) {
@@ -155,5 +210,8 @@ class DriverWasteRequestIntegrationTest {
     }
 
     private record LoginPayload(String email, String password) {
+    }
+
+    private record MeasurePayload(BigDecimal measuredWeightKg, List<String> photoUrls) {
     }
 }
