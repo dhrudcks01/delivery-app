@@ -26,4 +26,16 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             nativeQuery = true
     )
     List<String> findRoleCodesByEmail(@Param("email") String email);
+
+    @Query(
+            value = """
+                    SELECT COUNT(*)
+                    FROM user_roles ur
+                    JOIN roles r ON r.id = ur.role_id
+                    WHERE ur.user_id = :userId
+                      AND r.code = :roleCode
+                    """,
+            nativeQuery = true
+    )
+    long countRoleByUserIdAndRoleCode(@Param("userId") Long userId, @Param("roleCode") String roleCode);
 }

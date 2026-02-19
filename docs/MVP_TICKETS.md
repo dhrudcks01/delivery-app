@@ -179,7 +179,7 @@
 
 ---
 
-### [ ] T-0305 OPS_ADMIN: 기사 배정(ASSIGNED 전이)
+### [x] T-0305 OPS_ADMIN: 기사 배정(ASSIGNED 전이)
 **DoD**
 - REQUESTED → ASSIGNED 전이
 - waste_assignments 생성

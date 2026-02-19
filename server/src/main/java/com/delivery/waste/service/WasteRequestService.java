@@ -2,11 +2,16 @@ package com.delivery.waste.service;
 
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.InvalidCredentialsException;
+import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.waste.dto.AssignWasteRequest;
 import com.delivery.waste.dto.CreateWasteRequestRequest;
 import com.delivery.waste.dto.WasteRequestResponse;
+import com.delivery.waste.entity.WasteAssignmentEntity;
 import com.delivery.waste.entity.WasteRequestEntity;
+import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
+import com.delivery.waste.repository.WasteAssignmentRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -21,17 +26,22 @@ public class WasteRequestService {
     private static final String REQUESTED = "REQUESTED";
     private static final String CANCELED = "CANCELED";
     private static final String KRW = "KRW";
+    private static final String ASSIGNED = "ASSIGNED";
+    private static final String DRIVER = "DRIVER";
 
     private final WasteRequestRepository wasteRequestRepository;
+    private final WasteAssignmentRepository wasteAssignmentRepository;
     private final UserRepository userRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
 
     public WasteRequestService(
             WasteRequestRepository wasteRequestRepository,
+            WasteAssignmentRepository wasteAssignmentRepository,
             UserRepository userRepository,
             WasteStatusTransitionService wasteStatusTransitionService
     ) {
         this.wasteRequestRepository = wasteRequestRepository;
+        this.wasteAssignmentRepository = wasteAssignmentRepository;
         this.userRepository = userRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
     }
@@ -89,6 +99,21 @@ public class WasteRequestService {
         WasteRequestEntity request = wasteRequestRepository.findById(requestId)
                 .orElseThrow(WasteRequestNotFoundException::new);
         return toResponse(request);
+    }
+
+    @Transactional
+    public WasteRequestResponse assignForOps(Long requestId, AssignWasteRequest request, String actorEmail) {
+        UserEntity driver = userRepository.findById(request.driverId())
+                .orElseThrow(UserNotFoundException::new);
+        if (userRepository.countRoleByUserIdAndRoleCode(driver.getId(), DRIVER) == 0) {
+            throw new DriverRoleRequiredException();
+        }
+
+        WasteRequestEntity updated = wasteStatusTransitionService.transition(requestId, ASSIGNED, actorEmail);
+        if (!wasteAssignmentRepository.existsByRequestId(updated.getId())) {
+            wasteAssignmentRepository.save(new WasteAssignmentEntity(updated, driver));
+        }
+        return toResponse(updated);
     }
 
     private UserEntity findUserByEmail(String email) {

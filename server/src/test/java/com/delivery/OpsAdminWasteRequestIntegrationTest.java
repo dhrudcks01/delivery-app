@@ -5,6 +5,7 @@ import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.repository.AuthIdentityRepository;
 import com.delivery.auth.repository.UserRepository;
 import com.delivery.waste.entity.WasteRequestEntity;
+import com.delivery.waste.repository.WasteAssignmentRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -49,10 +51,14 @@ class OpsAdminWasteRequestIntegrationTest {
     @Autowired
     private WasteRequestRepository wasteRequestRepository;
 
+    @Autowired
+    private WasteAssignmentRepository wasteAssignmentRepository;
+
     @BeforeEach
     void setUpRoles() {
         upsertRole("USER", "일반 사용자");
         upsertRole("OPS_ADMIN", "운영 관리자");
+        upsertRole("DRIVER", "기사");
     }
 
     @Test
@@ -94,6 +100,42 @@ class OpsAdminWasteRequestIntegrationTest {
         mockMvc.perform(get("/ops-admin/waste-requests")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void opsAdminCanAssignDriverAndTransitionStatusToAssigned() throws Exception {
+        UserEntity requester = createUser("assign-requester@example.com", "USER");
+        UserEntity driver = createUser("assign-driver@example.com", "DRIVER");
+        WasteRequestEntity request = createWasteRequest(requester, "REQUESTED", "서울시 강서구 1");
+        String opsToken = login("assign-ops-admin@example.com", "OPS_ADMIN");
+
+        String body = objectMapper.writeValueAsString(new AssignPayload(driver.getId()));
+        mockMvc.perform(post("/ops-admin/waste-requests/{requestId}/assign", request.getId())
+                        .header("Authorization", "Bearer " + opsToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ASSIGNED"));
+
+        WasteRequestEntity updated = wasteRequestRepository.findById(request.getId()).orElseThrow();
+        assertThat(updated.getStatus()).isEqualTo("ASSIGNED");
+        assertThat(wasteAssignmentRepository.existsByRequestId(request.getId())).isTrue();
+    }
+
+    @Test
+    void assignReturnsBadRequestWhenTargetUserIsNotDriver() throws Exception {
+        UserEntity requester = createUser("assign-invalid-requester@example.com", "USER");
+        UserEntity nonDriver = createUser("assign-non-driver@example.com", "USER");
+        WasteRequestEntity request = createWasteRequest(requester, "REQUESTED", "서울시 영등포구 2");
+        String opsToken = login("assign-invalid-ops-admin@example.com", "OPS_ADMIN");
+
+        String body = objectMapper.writeValueAsString(new AssignPayload(nonDriver.getId()));
+        mockMvc.perform(post("/ops-admin/waste-requests/{requestId}/assign", request.getId())
+                        .header("Authorization", "Bearer " + opsToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DRIVER_ROLE_REQUIRED"));
     }
 
     private UserEntity createUser(String email, String roleCode) {
@@ -146,5 +188,8 @@ class OpsAdminWasteRequestIntegrationTest {
     }
 
     private record LoginPayload(String email, String password) {
+    }
+
+    private record AssignPayload(Long driverId) {
     }
 }
