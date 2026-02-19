@@ -46,6 +46,10 @@ public class SecurityConfig {
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/auth/register", "/auth/login", "/auth/refresh").permitAll()
+                .requestMatchers("/sys-admin/**").hasRole("SYS_ADMIN")
+                .requestMatchers("/ops-admin/**").hasAnyRole("OPS_ADMIN", "SYS_ADMIN")
+                .requestMatchers("/driver/**").hasAnyRole("DRIVER", "OPS_ADMIN", "SYS_ADMIN")
+                .requestMatchers("/user/**").hasAnyRole("USER", "DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/admin/**").hasRole("SYS_ADMIN")
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

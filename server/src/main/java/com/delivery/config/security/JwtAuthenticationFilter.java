@@ -44,11 +44,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if ("access".equals(tokenType)) {
                     String email = claims.getSubject();
                     userRepository.findByEmail(email).ifPresent(user -> {
+                        List<SimpleGrantedAuthority> authorities = userRepository.findRoleCodesByEmail(email)
+                                .stream()
+                                .map(roleCode -> new SimpleGrantedAuthority("ROLE_" + roleCode))
+                                .toList();
                         UsernamePasswordAuthenticationToken authentication =
                                 new UsernamePasswordAuthenticationToken(
                                         email,
                                         null,
-                                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                                        authorities
                                 );
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     });
