@@ -9,6 +9,8 @@ import com.delivery.waste.entity.WasteRequestEntity;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
 import com.delivery.waste.repository.WasteRequestRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -69,6 +71,24 @@ public class WasteRequestService {
     public WasteRequestResponse cancelMyRequest(String email, Long requestId) {
         WasteRequestEntity updated = wasteStatusTransitionService.transitionForOwner(requestId, CANCELED, email);
         return toResponse(updated);
+    }
+
+    @Transactional
+    public Page<WasteRequestResponse> getAllForOps(String status, Pageable pageable) {
+        Page<WasteRequestEntity> page;
+        if (status == null || status.isBlank()) {
+            page = wasteRequestRepository.findAll(pageable);
+        } else {
+            page = wasteRequestRepository.findAllByStatus(status, pageable);
+        }
+        return page.map(this::toResponse);
+    }
+
+    @Transactional
+    public WasteRequestResponse getDetailForOps(Long requestId) {
+        WasteRequestEntity request = wasteRequestRepository.findById(requestId)
+                .orElseThrow(WasteRequestNotFoundException::new);
+        return toResponse(request);
     }
 
     private UserEntity findUserByEmail(String email) {

@@ -172,7 +172,7 @@
 
 ---
 
-### [ ] T-0304 OPS_ADMIN: 전체 요청 목록/필터/상세
+### [x] T-0304 OPS_ADMIN: 전체 요청 목록/필터/상세
 **DoD**
 - 상태별 필터(REQUESTED/ASSIGNED/MEASURED/PAYMENT_FAILED 등)
 - 기본 페이징/정렬

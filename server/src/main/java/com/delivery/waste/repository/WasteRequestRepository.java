@@ -2,6 +2,8 @@ package com.delivery.waste.repository;
 
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.waste.entity.WasteRequestEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,4 +14,6 @@ public interface WasteRequestRepository extends JpaRepository<WasteRequestEntity
     List<WasteRequestEntity> findAllByUserOrderByCreatedAtDesc(UserEntity user);
 
     Optional<WasteRequestEntity> findByIdAndUser(Long id, UserEntity user);
+
+    Page<WasteRequestEntity> findAllByStatus(String status, Pageable pageable);
 }
