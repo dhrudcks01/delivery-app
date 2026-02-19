@@ -112,7 +112,7 @@
 
 ---
 
-### [ ] T-0103 이메일 회원가입 및 로그인 + JWT 발급
+### [x] T-0103 이메일 회원가입 및 로그인 + JWT 발급
 **Endpoints**
 - POST /auth/register
 - POST /auth/login
