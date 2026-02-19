@@ -37,3 +37,8 @@ export type DriverAssignedWasteRequest = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type MeasureAssignedWasteRequestPayload = {
+  measuredWeightKg: number;
+  photoUrls: string[];
+};

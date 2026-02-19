@@ -316,7 +316,7 @@
 
 ## DRIVER
 ### [x] T-0507 DRIVER: 배정 목록/상세
-### [ ] T-0508 DRIVER: 무게 입력 + 사진 업로드 + 측정 완료 처리
+### [x] T-0508 DRIVER: 무게 입력 + 사진 업로드 + 측정 완료 처리
 
 ## OPS_ADMIN / SYS_ADMIN
 ### [ ] T-0509 OPS_ADMIN: 기사 신청 승인/반려
