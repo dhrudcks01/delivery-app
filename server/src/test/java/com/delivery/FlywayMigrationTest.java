@@ -23,10 +23,12 @@ class FlywayMigrationTest {
     @Test
     void flywayAppliesInitialMigrationAndCreatesTable() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM bootstrap_metadata WHERE 1 = 0"))
                 .doesNotThrowAnyException();
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM auth_identities WHERE 1 = 0"))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM driver_applications WHERE 1 = 0"))
                 .doesNotThrowAnyException();
     }
 }

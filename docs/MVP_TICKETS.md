@@ -94,7 +94,7 @@
 
 # EPIC 2) 기사 신청 → 승인 → DRIVER 역할 추가
 
-### [ ] T-0201 DB: driver_applications
+### [x] T-0201 DB: driver_applications
 **Fields**
 - user_id
 - status (PENDING / APPROVED / REJECTED)
