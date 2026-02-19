@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.delivery.auth.exception.DuplicateEmailException;
 import com.delivery.auth.exception.InvalidCredentialsException;
+import com.delivery.auth.exception.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.UNAUTHORIZED.value(),
                 "INVALID_CREDENTIALS",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRefreshToken(
+            InvalidRefreshTokenException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                "INVALID_REFRESH_TOKEN",
                 exception.getMessage(),
                 request.getRequestURI()
         );

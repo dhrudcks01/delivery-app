@@ -5,6 +5,7 @@ import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.repository.AuthIdentityRepository;
 import com.delivery.auth.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -100,6 +101,72 @@ class AuthIntegrationTest {
     }
 
     @Test
+    void refreshReturnsNewTokensWhenRefreshTokenIsValid() throws Exception {
+        String email = "refresh-user@example.com";
+        String password = "password123";
+        UserEntity saved = userRepository.save(new UserEntity(
+                email,
+                passwordEncoder.encode(password),
+                "리프레시유저",
+                "ACTIVE"
+        ));
+        authIdentityRepository.save(new AuthIdentityEntity(saved, "LOCAL", email));
+
+        String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, password));
+        String loginResponse = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode loginJson = objectMapper.readTree(loginResponse);
+        String refreshToken = loginJson.get("refreshToken").asText();
+
+        String refreshBody = objectMapper.writeValueAsString(new RefreshPayload(refreshToken));
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(refreshBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+    }
+
+    @Test
+    void refreshReturnsUnauthorizedWhenTokenTypeIsNotRefresh() throws Exception {
+        String email = "refresh-invalid-user@example.com";
+        String password = "password123";
+        UserEntity saved = userRepository.save(new UserEntity(
+                email,
+                passwordEncoder.encode(password),
+                "리프레시실패유저",
+                "ACTIVE"
+        ));
+        authIdentityRepository.save(new AuthIdentityEntity(saved, "LOCAL", email));
+
+        String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, password));
+        String loginResponse = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode loginJson = objectMapper.readTree(loginResponse);
+        String accessToken = loginJson.get("accessToken").asText();
+
+        String refreshBody = objectMapper.writeValueAsString(new RefreshPayload(accessToken));
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(refreshBody))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
     void registerReturnsConflictWhenEmailAlreadyExists() throws Exception {
         String email = "duplicate@example.com";
         userRepository.save(new UserEntity(
@@ -121,5 +188,8 @@ class AuthIntegrationTest {
     }
 
     private record LoginPayload(String email, String password) {
+    }
+
+    private record RefreshPayload(String refreshToken) {
     }
 }

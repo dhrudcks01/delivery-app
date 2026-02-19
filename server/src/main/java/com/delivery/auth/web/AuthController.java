@@ -2,6 +2,7 @@ package com.delivery.auth.web;
 
 import com.delivery.auth.dto.AuthTokenResponse;
 import com.delivery.auth.dto.LoginRequest;
+import com.delivery.auth.dto.RefreshTokenRequest;
 import com.delivery.auth.dto.RegisterRequest;
 import com.delivery.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -30,5 +31,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
     }
 }
