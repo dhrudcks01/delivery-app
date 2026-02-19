@@ -14,6 +14,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "driver_applications")
@@ -53,6 +54,12 @@ public class DriverApplicationEntity {
         this.user = user;
         this.status = status;
         this.payload = payload;
+    }
+
+    public void markProcessed(String status, UserEntity processedBy, Instant processedAt) {
+        this.status = status;
+        this.processedBy = Objects.requireNonNull(processedBy);
+        this.processedAt = Objects.requireNonNull(processedAt);
     }
 
     @PrePersist

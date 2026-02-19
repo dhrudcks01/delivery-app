@@ -7,6 +7,7 @@ import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.driver.exception.DriverApplicationNotFoundException;
+import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -88,6 +89,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(DriverApplicationStatusConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleDriverApplicationStatusConflict(
+            DriverApplicationStatusConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "DRIVER_APPLICATION_STATUS_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
