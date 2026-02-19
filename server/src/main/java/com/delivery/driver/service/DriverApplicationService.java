@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,19 +25,23 @@ public class DriverApplicationService {
     private static final String PENDING = "PENDING";
     private static final String APPROVED = "APPROVED";
     private static final String REJECTED = "REJECTED";
+    private static final String DRIVER = "DRIVER";
 
     private final UserRepository userRepository;
     private final DriverApplicationRepository driverApplicationRepository;
     private final ObjectMapper objectMapper;
+    private final JdbcTemplate jdbcTemplate;
 
     public DriverApplicationService(
             UserRepository userRepository,
             DriverApplicationRepository driverApplicationRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            JdbcTemplate jdbcTemplate
     ) {
         this.userRepository = userRepository;
         this.driverApplicationRepository = driverApplicationRepository;
         this.objectMapper = objectMapper;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional
@@ -93,7 +98,49 @@ public class DriverApplicationService {
         }
 
         entity.markProcessed(nextStatus, actor, Instant.now());
+        if (APPROVED.equals(nextStatus)) {
+            grantDriverRole(entity.getUser().getId());
+        }
         return toResponse(entity);
+    }
+
+    private void grantDriverRole(Long userId) {
+        Long driverRoleId = ensureDriverRole();
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_roles WHERE user_id = ? AND role_id = ?",
+                Integer.class,
+                userId,
+                driverRoleId
+        );
+        if (count == null || count == 0) {
+            jdbcTemplate.update(
+                    "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
+                    userId,
+                    driverRoleId
+            );
+        }
+    }
+
+    private Long ensureDriverRole() {
+        Long roleId = jdbcTemplate.query(
+                "SELECT id FROM roles WHERE code = ?",
+                ps -> ps.setString(1, DRIVER),
+                rs -> rs.next() ? rs.getLong("id") : null
+        );
+        if (roleId != null) {
+            return roleId;
+        }
+
+        jdbcTemplate.update(
+                "INSERT INTO roles (code, description) VALUES (?, ?)",
+                DRIVER,
+                "기사"
+        );
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM roles WHERE code = ?",
+                Long.class,
+                DRIVER
+        );
     }
 
     private DriverApplicationResponse toResponse(DriverApplicationEntity entity) {

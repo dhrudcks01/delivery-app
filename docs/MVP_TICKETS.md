@@ -106,7 +106,7 @@
 
 ### [x] T-0202 USER: 기사 신청 생성 / 조회 API
 ### [x] T-0203 OPS_ADMIN: 기사 신청 승인 / 반려 API
-### [ ] T-0204 승인 시 DRIVER 역할 추가 + 감사 로그
+### [x] T-0204 승인 시 DRIVER 역할 추가 + 감사 로그
 ### [x] T-0205 SYS_ADMIN: OPS_ADMIN 권한 부여 / 회수
 
 ---

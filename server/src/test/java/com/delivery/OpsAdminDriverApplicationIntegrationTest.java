@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +48,7 @@ class OpsAdminDriverApplicationIntegrationTest {
     void setUpRoles() {
         upsertRole("USER", "일반 사용자");
         upsertRole("OPS_ADMIN", "운영 관리자");
+        upsertRole("DRIVER", "기사");
     }
 
     @Test
@@ -61,6 +63,10 @@ class OpsAdminDriverApplicationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.processedBy").isNumber())
                 .andExpect(jsonPath("$.processedAt").isNotEmpty());
+
+        mockMvc.perform(get("/driver/secure")
+                        .header("Authorization", "Bearer " + userAccessToken))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -75,6 +81,10 @@ class OpsAdminDriverApplicationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("REJECTED"))
                 .andExpect(jsonPath("$.processedBy").isNumber())
                 .andExpect(jsonPath("$.processedAt").isNotEmpty());
+
+        mockMvc.perform(get("/driver/secure")
+                        .header("Authorization", "Bearer " + userAccessToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test
