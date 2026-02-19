@@ -2,6 +2,7 @@ package com.delivery.auth.service;
 
 import com.delivery.auth.dto.AuthTokenResponse;
 import com.delivery.auth.dto.LoginRequest;
+import com.delivery.auth.dto.MeResponse;
 import com.delivery.auth.dto.RegisterRequest;
 import com.delivery.auth.dto.RefreshTokenRequest;
 import com.delivery.auth.entity.AuthIdentityEntity;
@@ -17,6 +18,8 @@ import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class AuthService {
@@ -87,6 +90,19 @@ public class AuthService {
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         return issueTokens(user);
+    }
+
+    @Transactional
+    public MeResponse getMe(String email) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+        List<String> roles = userRepository.findRoleCodesByEmail(email);
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                roles
+        );
     }
 
     private AuthTokenResponse issueTokens(UserEntity user) {

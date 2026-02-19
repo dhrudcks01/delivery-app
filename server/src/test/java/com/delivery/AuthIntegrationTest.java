@@ -6,6 +6,7 @@ import com.delivery.auth.repository.AuthIdentityRepository;
 import com.delivery.auth.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,6 +41,9 @@ class AuthIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void registerStoresHashedPasswordAndReturnsTokens() throws Exception {
@@ -164,6 +169,54 @@ class AuthIntegrationTest {
                         .content(refreshBody))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    void meReturnsProfileWithRolesWhenAuthenticated() throws Exception {
+        String email = "me-user@example.com";
+        String password = "password123";
+        UserEntity saved = userRepository.save(new UserEntity(
+                email,
+                passwordEncoder.encode(password),
+                "내정보유저",
+                "ACTIVE"
+        ));
+        authIdentityRepository.save(new AuthIdentityEntity(saved, "LOCAL", email));
+
+        jdbcTemplate.update("INSERT INTO roles (code, description) VALUES (?, ?)", "USER", "일반 사용자");
+        jdbcTemplate.update("INSERT INTO roles (code, description) VALUES (?, ?)", "DRIVER", "기사");
+        jdbcTemplate.update(
+                """
+                INSERT INTO user_roles (user_id, role_id)
+                SELECT ?, id FROM roles WHERE code IN (?, ?)
+                """,
+                saved.getId(), "USER", "DRIVER"
+        );
+
+        String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, password));
+        String loginResponse = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String accessToken = objectMapper.readTree(loginResponse).get("accessToken").asText();
+
+        mockMvc.perform(get("/me")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.displayName").value("내정보유저"))
+                .andExpect(jsonPath("$.roles[0]").value("DRIVER"))
+                .andExpect(jsonPath("$.roles[1]").value("USER"));
+    }
+
+    @Test
+    void meReturnsUnauthorizedWithoutToken() throws Exception {
+        mockMvc.perform(get("/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
