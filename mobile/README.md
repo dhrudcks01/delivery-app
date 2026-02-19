@@ -2,7 +2,7 @@
 
 Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 
-## T-0501 ~ T-0504 구현 범위
+## T-0501 ~ T-0504, T-0507 구현 범위
 
 - Expo TypeScript 앱 기본 스캐폴딩
 - React Navigation 기반 네비게이션
@@ -16,6 +16,9 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
   - 목록 조회
   - 상세 조회
   - 취소(REQUESTED 상태)
+- DRIVER 배정 요청 기능
+  - 목록 조회
+  - 상세 조회
 
 ## 환경 변수
 
@@ -43,4 +46,4 @@ npm run typecheck
 ## 참고
 
 - Docker 없이 로컬 개발 가능
-- 실제 DRIVER/OPS_ADMIN/SYS_ADMIN 업무 기능은 후속 티켓에서 구현
+- 실제 DRIVER 측정 완료, OPS_ADMIN/SYS_ADMIN 업무 기능은 후속 티켓에서 구현

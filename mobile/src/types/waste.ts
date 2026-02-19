@@ -26,3 +26,14 @@ export type ApiErrorResponse = {
   message: string;
   path: string;
 };
+
+export type DriverAssignedWasteRequest = {
+  requestId: number;
+  status: string;
+  address: string;
+  contactPhone: string;
+  note: string | null;
+  assignedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
