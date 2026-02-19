@@ -1,4 +1,4 @@
-# MVP 티켓 백로그
+# MVP 티켓 백로그 (쓰레기 수거 서비스)
 
 ## 사용 규칙 (중요)
 - Codex는 작업마다 "티켓 1개"만 수행한다.
@@ -18,130 +18,70 @@
 
 ---
 
+# 서비스 MVP 핵심 흐름 (요약)
+1) USER: 쓰레기 수거 신청 생성(주소/연락처/요청사항)
+2) OPS_ADMIN: 기사 배정(ASSIGNED)
+3) DRIVER: 현장 무게 입력 + 사진 업로드(MEASURED)
+4) 서버: 요금 계산(무게 기반) → 저장된 카드로 자동 결제 시도
+5) 결제 성공: PAID → COMPLETED
+6) 결제 실패: PAYMENT_FAILED(운영자 확인/재시도/결제수단 재등록)
+
+---
+
 # EPIC 0) 프로젝트/개발환경
 
-### [ ] T-0001 레포 구조 및 README 작성
+### [x] T-0001 레포 구조 및 README 작성
+
+### [x] T-0002 서버(Spring Boot) 스캐폴딩 생성
 **Goal**
-- `mobile/`, `server/`, `docs/` 기본 구조 생성
-- 루트 README 작성
+- Spring Boot 3 + Java + Gradle 프로젝트 생성
 
 **DoD**
-- 각 폴더가 독립 실행 가능
-- README에 실행 방법 명시
+- `/health` 200 응답
 
 ---
 
-### [~] T-0002 서버(Spring Boot) 스캐폴딩 생성
-**Goal**
-- Spring Boot 3 + Java 17 + Gradle 프로젝트 생성
+### [~] T-0003 DB 연결 가이드 문서 (로컬/원격, Docker 없이)
+**배경**
+- 공개 레포이므로 시크릿/비밀번호 하드코딩 금지
 
-**Include**
-- Web
-- Validation
-- Security
-- OAuth2 Client
-- JPA
-- Flyway
-- MySQL Driver
-- Lombok
-- (선택) OpenAPI
+**Goal**
+- Windows/Mac에서 Docker 없이 로컬 또는 원격(MySQL) 연결 가능하도록 문서화
+- 환경변수(DB_URL/DB_USERNAME/DB_PASSWORD) 방식만 사용
 
 **DoD**
-- `./gradlew bootRun` 실행 시 서버 정상 기동
-- `/health` 엔드포인트 200 응답
-
----
-
-### [x] T-0003 로컬 MySQL 개발 가이드 작성 (Docker 없이)
-**Goal**
-- Windows/Mac 모두 로컬 MySQL 설치 기반 실행 가능하도록 문서 작성
-
-**DoD**
-- `docs/dev/mysql-local.md` 작성
-- 설치 방법 / DB 생성 / 접속 검증 절차 포함
+- `docs/dev/mysql-connection.md` 작성
+- `.env` 사용 방법(예시 값은 placeholder) + `.gitignore` 확인
+- 기존 `docs/dev/mysql-local.md`가 있다면, 내용 정리/통합(선택)
 
 ---
 
 ### [x] T-0004 Flyway 적용 (초기 마이그레이션)
-**Goal**
-- 빈 DB에서도 서버 기동 시 테이블 자동 생성
-
-**DoD**
-- Flyway 정상 적용
-- 실패 시 에러 원인 명확
-
----
 
 ### [x] T-0005 표준 에러 응답 및 예외 처리
-**Goal**
-- Validation/401/403/500 응답 포맷 통일
-
-**DoD**
-- 공통 에러 DTO 작성
-- 글로벌 예외 핸들러 적용
-
----
 
 ### [x] T-0006 OpenAPI(Swagger) 노출
-**Goal**
-- API 문서 확인 가능
-
-**DoD**
-- 로컬에서 Swagger UI 접속 가능
 
 ---
 
 # EPIC 1) 인증 / 계정 / 권한 (RBAC)
 
 ### [x] T-0101 DB: users / auth_identities / roles / user_roles
+
+### [ ] T-0102 SYS_ADMIN 초기 계정 생성(부트스트랩)
 **Goal**
-- 멀티 롤 + 멀티 로그인 프로바이더 기반 스키마 구성
+- 로컬에서 SYS_ADMIN 계정으로 로그인 가능
 
 **DoD**
-- Flyway 적용
-- UNIQUE(provider, provider_user_id) 제약 설정
-
----
-
-### [ ] T-0102 SYS_ADMIN 초기 계정 생성
-**Goal**
-- 초기 운영을 위한 SYS_ADMIN 계정 생성
-
-**DoD**
-- 로컬에서 SYS_ADMIN 로그인 가능
+- 운영환경/공개레포 고려: 초기 비밀번호/시크릿은 환경변수 또는 로컬 전용 설정에서만
+- 문서로 생성/접속 방법 안내
 
 ---
 
 ### [x] T-0103 이메일 회원가입 및 로그인 + JWT 발급
-**Endpoints**
-- POST /auth/register
-- POST /auth/login
-
-**DoD**
-- 비밀번호 해시 저장
-- access / refresh 토큰 발급
-
----
 
 ### [ ] T-0104 Refresh 토큰 재발급
-**Endpoint**
-- POST /auth/refresh
-
-**DoD**
-- 만료 시 재발급
-- 위조 또는 불일치 시 401 처리
-
----
-
 ### [ ] T-0105 /me (roles 포함)
-**Endpoint**
-- GET /me
-
-**DoD**
-- roles 배열 포함 응답
-
----
-
 ### [ ] T-0106 RBAC 서버 강제 적용
 **Goal**
 - USER / DRIVER / OPS_ADMIN / SYS_ADMIN 권한 분리
@@ -152,226 +92,256 @@
 
 ---
 
-### [ ] T-0107 소셜 로그인 공통 구조 (Strategy 패턴)
-**Goal**
-- KAKAO / GOOGLE / APPLE 확장 가능 구조 설계
-
-**DoD**
-- provider별 구현체 추가 가능
-
----
-
-### [ ] T-0108 카카오 로그인 (서버)
-**DoD**
-- 카카오 로그인으로 가입/로그인
-- JWT 발급
-
----
-
-### [ ] T-0109 구글 로그인 (서버)
-**DoD**
-- 구글 로그인으로 가입/로그인
-- JWT 발급
-
----
-
-### [ ] T-0110 애플 로그인 (서버)
-**DoD**
-- 애플 로그인으로 가입/로그인
-- JWT 발급
-
----
-
-### [ ] T-0111 계정 삭제 API
-**Goal**
-- 스토어 정책 대응
-
-**DoD**
-- 개인정보 삭제 또는 비활성화 처리
-
----
-
-# EPIC 2) 기사 신청 → 승인 → 역할 추가
+# EPIC 2) 기사 신청 → 승인 → DRIVER 역할 추가
 
 ### [ ] T-0201 DB: driver_applications
 **Fields**
 - user_id
 - status (PENDING / APPROVED / REJECTED)
-- payload
-- processedBy
-- processedAt
-
-**DoD**
-- 테이블 + 엔티티 + 리포지토리 구현
+- payload(JSON)
+- processed_by
+- processed_at
 
 ---
 
-### [ ] T-0202 USER: 기사 신청 생성 / 조회
-**DoD**
-- 본인 신청 생성 가능
-- 본인 신청 조회 가능
-
----
-
-### [ ] T-0203 OPS_ADMIN: 기사 신청 승인 / 반려
-**DoD**
-- 승인/반려 처리
-- 처리자 및 처리 시각 기록
-
----
-
-### [ ] T-0204 승인 시 DRIVER 역할 추가
-**DoD**
-- 승인 시 user_roles에 DRIVER 추가
-- 기존 USER 유지
-
----
-
+### [ ] T-0202 USER: 기사 신청 생성 / 조회 API
+### [ ] T-0203 OPS_ADMIN: 기사 신청 승인 / 반려 API
+### [ ] T-0204 승인 시 DRIVER 역할 추가 + 감사 로그
 ### [ ] T-0205 SYS_ADMIN: OPS_ADMIN 권한 부여 / 회수
-**DoD**
-- SYS_ADMIN만 수행 가능
 
 ---
 
-# EPIC 3) 수거 신청 / 배정 / 처리
+# EPIC 3) 쓰레기 수거 요청 / 배정 / 측정
 
-### [ ] T-0301 DB: pickup_requests / assignments / pickup_status_logs
-**DoD**
-- 상태 / 배정 / 이력 분리 저장
-
----
-
-### [ ] T-0302 상태 전이 규칙 서버 강제
-**DoD**
-- 불가 전이 거절 (400 또는 409)
-- 전이 시 로그 기록
-
----
-
-### [ ] T-0303 USER: 수거 신청 생성
-**DoD**
-- 생성 시 REQUESTED 상태
-- 입력 Validation 포함
+## 상태 정의 (MVP)
+- REQUESTED: 사용자 신청 완료
+- ASSIGNED: 기사 배정 완료
+- MEASURED: 기사 무게 입력 + 사진 업로드 완료
+- PAYMENT_PENDING: 결제 시도 중
+- PAID: 결제 성공
+- COMPLETED: 최종 완료
+- PAYMENT_FAILED: 결제 실패(운영자 조치 필요)
+- CANCELED: 수거 전 취소(정책: REQUESTED에서만 허용)
 
 ---
 
-### [ ] T-0304 USER: 내 수거 목록 / 상세
+### [ ] T-0301 DB: waste_requests / waste_assignments / waste_status_logs / waste_photos
+**Goal**
+- “쓰레기 수거” 도메인 중심 테이블 설계
+
+**필수 항목(예시)**
+- waste_requests:
+  - id, user_id
+  - address, contact_phone, note
+  - status
+  - measured_weight_kg (nullable)
+  - measured_at (nullable)
+  - measured_by_driver_id (nullable)
+  - final_amount (nullable)
+  - currency(KRW)
+  - created_at, updated_at
+- waste_assignments:
+  - request_id, driver_id, assigned_at
+- waste_status_logs:
+  - request_id, from_status, to_status, actor_user_id, created_at
+- waste_photos:
+  - request_id, url, type(OPTIONAL: TRASH/ SCALE), created_at
+
 **DoD**
-- 본인만 조회 가능
-- 기본 페이징 / 정렬
+- Flyway 마이그레이션 + JPA 엔티티/리포지토리
 
 ---
 
-### [ ] T-0305 USER: 결제 전 취소
+### [ ] T-0302 상태 전이 규칙 서버 강제 + 감사로그
 **DoD**
-- REQUESTED / PAYMENT_PENDING 상태에서만 가능
+- 불가 전이 거절(400 또는 409)
+- 전이 시 waste_status_logs 기록(누가/언제/무엇)
 
 ---
 
-### [ ] T-0306 OPS_ADMIN: 전체 수거 목록 조회
+### [ ] T-0303 USER: 쓰레기 수거 신청 생성/내 목록/상세/취소
+**Endpoints(예시)**
+- POST /waste-requests
+- GET /waste-requests (본인)
+- GET /waste-requests/{id} (본인)
+- POST /waste-requests/{id}/cancel
+
 **DoD**
-- 상태별 필터 가능
+- 생성: REQUESTED
+- 취소: REQUESTED에서만 가능 → CANCELED
 
 ---
 
-### [ ] T-0307 OPS_ADMIN: 기사 배정
+### [ ] T-0304 OPS_ADMIN: 전체 요청 목록/필터/상세
 **DoD**
-- 정책 상태에서만 ASSIGNED 전이
-- driverId 연결
+- 상태별 필터(REQUESTED/ASSIGNED/MEASURED/PAYMENT_FAILED 등)
+- 기본 페이징/정렬
 
 ---
 
-### [ ] T-0308 DRIVER: 내 배정 목록 조회
+### [ ] T-0305 OPS_ADMIN: 기사 배정(ASSIGNED 전이)
 **DoD**
-- 본인 배정만 조회
+- REQUESTED → ASSIGNED 전이
+- waste_assignments 생성
 
 ---
 
-### [ ] T-0309 DRIVER: 수거 완료 처리
+### [ ] T-0306 DRIVER: 내 배정 목록/상세
 **DoD**
-- ASSIGNED → PICKED_UP 전이 가능
+- 본인 배정만 조회 가능
 
 ---
 
-### [ ] T-0310 OPS_ADMIN: 최종 완료 처리
+### [ ] T-0307 사진 업로드 API(최소) + 사진 저장
+**Goal**
+- DRIVER가 업로드한 사진을 URL로 저장
+
 **DoD**
-- PICKED_UP → COMPLETED 전이 가능
+- POST /uploads (multipart) → URL 반환
+- 이미지 확장자/용량 제한
+- 개발용: 로컬 저장 OK (운영은 S3 후순위)
+- 업로드된 URL을 waste_photos에 저장 가능
 
 ---
 
-# EPIC 4) 결제 (Toss Payments)
+### [ ] T-0308 DRIVER: 무게 입력 + 사진 업로드 완료 처리(MEASURED 전이)
+**Goal**
+- 기사님이 현장에서 무게 입력 + 사진 업로드 후 “측정 완료”
 
-### [ ] T-0401 DB: payments (orderId UNIQUE)
+**요구**
+- measured_weight_kg 입력(소수 가능)
+- 사진 1장 이상 필수
+
 **DoD**
-- orderId 멱등성 보장
+- ASSIGNED → MEASURED 전이
+- measured_* 필드 저장 + waste_photos 저장
 
 ---
 
-### [ ] T-0402 결제 주문 생성 API
-**Endpoint**
-- POST /payments/toss/create
+### [ ] T-0309 요금 계산 서비스(무게 기반)
+**Goal**
+- 무게(kg) × 단가(원/kg) = 금액
 
 **DoD**
-- orderId 생성
-- PAYMENT_PENDING 전이
-- checkoutUrl 반환
+- MVP 단가 정책:
+  - 기본 상수(예: 1000원/kg) 또는 설정값(ENV/DB) 중 택1
+- final_amount 계산 및 저장
+- 계산 로직 단위테스트 1개 이상
 
 ---
 
-### [ ] T-0403 결제 페이지 최소 구현 (web-pay)
-**DoD**
-- orderId / amount 기반 결제 시작 가능
+# EPIC 4) 결제: 저장카드 등록 + 수거 후 자동 결제 (Toss 기반)
+
+> 주의: 공개 레포에 결제 키/시크릿/카드정보 저장 금지.
+> 모든 키는 환경변수로만 관리.
+
+### [ ] T-0401 DB: payment_methods (사용자 저장 결제수단)
+**Goal**
+- USER당 결제수단 1개 이상 저장
+
+**필드(예시)**
+- user_id
+- provider(TOSS)
+- customer_key (우리 시스템에서 유저 식별용 키)
+- billing_key_or_token (저장결제 식별자)
+- status(ACTIVE/INACTIVE)
+- created_at, updated_at
 
 ---
 
-### [ ] T-0404 successUrl 처리 (서버 승인 Confirm)
+### [ ] T-0402 DB: payments (요청별 결제 기록, 멱등)
+**Goal**
+- waste_request_id 기준 중복 결제 방지(멱등)
+
 **DoD**
-- amount 위변조 검증
-- 승인 성공 시 payment=PAID
-- pickup=PAID 전이
+- request_id UNIQUE(또는 provider_order_id UNIQUE)
+- status(SUCCEEDED/FAILED/PENDING)
+- amount, provider refs 저장
 
 ---
 
-### [ ] T-0405 failUrl 처리
+### [ ] T-0403 카드 등록 시작/완료(콜백) 플로우(최소)
+**Goal**
+- 사용자가 “결제 카드 등록”을 1회 수행하면 payment_methods에 저장
+
 **DoD**
-- payment=FAILED 처리
+- 서버:
+  - 카드 등록 시작 endpoint → 등록용 페이지 URL 반환
+  - successUrl 콜백 endpoint → payment_methods 저장
+  - failUrl endpoint
+- 보안:
+  - customer_key 생성 규칙 문서화
+  - 로그에 키/토큰 노출 금지
 
 ---
 
-### [ ] T-0406 웹훅 엔드포인트 + 멱등 처리
+### [ ] T-0404 MEASURED 이후 자동 결제 실행(서버)
+**Goal**
+- DRIVER가 측정(MEASURED) 완료하면 서버가 자동 결제 시도
+
 **DoD**
-- 중복 이벤트 안전 처리
+- 흐름:
+  - MEASURED 완료 → 요금계산(T-0309) → 결제수단 확인
+  - 결제 시도 → 성공: PAID → COMPLETED
+  - 실패: PAYMENT_FAILED
+- 멱등:
+  - 같은 요청에 대해 중복 결제 시도 방지
 
 ---
 
-### [ ] T-0407 로컬 웹훅 테스트 문서 (ngrok)
+### [ ] T-0405 결제 실패 대응(최소)
+**Goal**
+- 결제 실패 시 사용자/운영자가 대응 가능
+
 **DoD**
-- `docs/dev/toss-webhook-local.md` 작성
+- USER:
+  - 결제수단 상태 조회
+  - 결제수단 재등록 가능
+- OPS_ADMIN:
+  - PAYMENT_FAILED 목록 조회
+  - 결제 재시도 endpoint(최소)
 
 ---
 
-# EPIC 5) 모바일 (Expo)
+# EPIC 5) 모바일(Expo) - 단일 앱 역할별 UI
 
 ### [ ] T-0501 Expo TS 앱 생성 + 네비게이션 구성
 ### [ ] T-0502 API 클라이언트 + 토큰 저장 + 자동 refresh
-### [ ] T-0503 이메일 로그인 UI
-### [ ] T-0504 카카오 로그인
-### [ ] T-0505 구글 로그인
-### [ ] T-0506 애플 로그인 (iOS)
-### [ ] T-0507 역할 기반 라우팅
-### [ ] T-0508 USER 수거 신청 화면
-### [ ] T-0509 USER 결제 WebView 연결
-### [ ] T-0510 DRIVER 배정 화면
-### [ ] T-0511 OPS_ADMIN 승인 화면
-### [ ] T-0512 OPS_ADMIN 배정 화면
-### [ ] T-0513 SYS_ADMIN 권한 관리 화면
-### [ ] T-0514 설정 (로그아웃 / 계정삭제)
+### [ ] T-0503 이메일 로그인 UI + /me 기반 역할 분기
+
+## USER
+### [ ] T-0504 USER: 수거 신청(생성/목록/상세/취소)
+### [ ] T-0505 USER: 결제수단 등록(등록 페이지 WebView 오픈)
+### [ ] T-0506 USER: 결제수단 상태/재등록 + 결제 실패 안내
+
+## DRIVER
+### [ ] T-0507 DRIVER: 배정 목록/상세
+### [ ] T-0508 DRIVER: 무게 입력 + 사진 업로드 + 측정 완료 처리
+
+## OPS_ADMIN / SYS_ADMIN
+### [ ] T-0509 OPS_ADMIN: 기사 신청 승인/반려
+### [ ] T-0510 OPS_ADMIN: 요청 목록/배정/결제 실패 처리
+### [ ] T-0511 SYS_ADMIN: OPS_ADMIN 권한 부여/회수(최소)
 
 ---
 
-# EPIC 6) 테스트 및 문서
+# EPIC 6) 테스트 및 문서(최소)
 
 ### [ ] T-0601 Auth + RBAC 통합 테스트
-### [ ] T-0602 상태 전이 테스트
-### [ ] T-0603 토스 승인 Mock 테스트
-### [ ] T-0604 운영 문서 작성
+### [ ] T-0602 상태 전이 테스트(REQUESTED→ASSIGNED→MEASURED→PAID/FAILED)
+### [ ] T-0603 요금 계산 단위 테스트
+### [ ] T-0604 자동 결제 멱등성 테스트(요청별 1회 결제)
+### [ ] T-0605 운영 문서 작성(원격/로컬 DB, 업로드, 결제 실패 대응)
+
+---
+
+# EPIC 7) (추후) 쿠폰/할인 기능 (MVP 이후)
+
+> 이 섹션은 "예정"이며, MVP에서는 구현하지 않는다.
+
+### [ ] T-0701 DB: coupons / user_coupons / coupon_redemptions
+### [ ] T-0702 USER: 쿠폰 코드 등록 API
+### [ ] T-0703 결제 금액 계산에 쿠폰 할인 반영
+### [ ] T-0704 OPS_ADMIN: 쿠폰 생성/비활성화/발급 관리
+
+---
