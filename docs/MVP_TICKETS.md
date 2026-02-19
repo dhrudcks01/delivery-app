@@ -82,7 +82,7 @@
 
 ---
 
-### [ ] T-0006 OpenAPI(Swagger) 노출
+### [x] T-0006 OpenAPI(Swagger) 노출
 **Goal**
 - API 문서 확인 가능
 
