@@ -159,7 +159,7 @@
 
 ---
 
-### [ ] T-0303 USER: 쓰레기 수거 신청 생성/내 목록/상세/취소
+### [x] T-0303 USER: 쓰레기 수거 신청 생성/내 목록/상세/취소
 **Endpoints(예시)**
 - POST /waste-requests
 - GET /waste-requests (본인)

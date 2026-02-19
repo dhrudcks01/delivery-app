@@ -47,7 +47,19 @@ public class WasteStatusTransitionService {
                 .orElseThrow(WasteRequestNotFoundException::new);
         UserEntity actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(InvalidCredentialsException::new);
+        return transitionInternal(request, toStatus, actor);
+    }
 
+    @Transactional
+    public WasteRequestEntity transitionForOwner(Long requestId, String toStatus, String actorEmail) {
+        UserEntity actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(InvalidCredentialsException::new);
+        WasteRequestEntity request = wasteRequestRepository.findByIdAndUser(requestId, actor)
+                .orElseThrow(WasteRequestNotFoundException::new);
+        return transitionInternal(request, toStatus, actor);
+    }
+
+    private WasteRequestEntity transitionInternal(WasteRequestEntity request, String toStatus, UserEntity actor) {
         String fromStatus = request.getStatus();
         validateTransition(fromStatus, toStatus);
 
