@@ -1,22 +1,36 @@
 # mobile
 
-Mobile application for the Delivery MVP.
+Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 
-## Tech stack
+## T-0501 구현 범위
 
-- Expo (React Native)
-- TypeScript
-- Role-based screens and auth flows planned (USER, DRIVER, OPS_ADMIN, SYS_ADMIN)
-- No local Docker requirement for app development
+- Expo TypeScript 앱 기본 스캐폴딩 생성
+- React Navigation 기반 네비게이션 구성
+  - Root Stack: `Login` -> `MainTabs`
+  - Bottom Tabs: `USER`, `DRIVER`, `OPS_ADMIN`, `SYS_ADMIN`
+- 역할별 홈 화면 placeholder 추가
 
-## Local setup
+## 로컬 실행
 
-1. Install Node.js (LTS) and Expo tooling (`npm install -g expo-cli` if preferred).
-2. Install dependencies for the mobile project.
-3. Configure API endpoint settings in an environment file for the target backend.
+1. `mobile` 디렉터리로 이동
+2. 의존성 설치
+3. Expo 개발 서버 실행
 
-## Development commands
+```bash
+cd mobile
+npm install
+npm run start
+```
 
-- Start Metro/dev client as generated per ticket implementation (`npx expo start` when initialized).
-- Mobile functionality will be added in subsequent tickets.
+플랫폼 실행 예시:
 
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+## 참고
+
+- Docker 없이 로컬 개발 가능
+- 실제 인증/토큰/API 연동은 후속 티켓(T-0502, T-0503)에서 구현
