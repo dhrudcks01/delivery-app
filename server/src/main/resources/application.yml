@@ -1,6 +1,8 @@
 spring:
   application:
     name: delivery-server
+  profiles:
+    active: local
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/delivery?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:delivery}
