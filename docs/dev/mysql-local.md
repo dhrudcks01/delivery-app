@@ -1,55 +1,46 @@
-# 로컬 MySQL 개발 가이드 (Docker 없이)
+# 로컬/외부 MySQL 개발 가이드 (Docker 없이)
 
-이 문서는 **Windows / macOS** 환경에서 Docker 없이 MySQL을 설치하고, 백엔드 로컬 개발에 필요한 기본 DB를 준비하는 절차를 안내합니다.
+이 문서는 Windows/macOS 환경에서 Docker 없이 MySQL을 사용해 개발하는 방법을 안내합니다.
+개발 환경에서는 다음 두 가지 방식 중 하나를 선택할 수 있습니다.
 
-## 1. 사전 조건
+- 방식 A: 내 PC에 MySQL을 설치해서 로컬 DB 사용
+- 방식 B: 외부(원격) 개발 DB에 접속해서 사용
 
-- MySQL 8.x
+핵심 원칙: 로컬 개발에 Docker는 필수가 아닙니다.
+
+## 1. 공통 사전 조건
+
+- MySQL 8.x 호환 DB
 - 터미널(Windows: PowerShell, macOS: Terminal)
 - 프로젝트 루트: `server/` (Spring Boot 3 + Flyway)
 
-## 2. 설치
+## 2. 방식 A - 로컬 MySQL 설치
 
-## 2.1 Windows
+### 2.1 Windows
 
-1. MySQL Installer를 사용해 `MySQL Server 8.x`를 설치합니다.
-2. 설치 중 root 비밀번호를 설정합니다.
-3. 기본 포트는 `3306`을 사용합니다.
-4. 설치 완료 후 서비스 실행 상태를 확인합니다.
-
-PowerShell 확인:
+1. MySQL Installer로 `MySQL Server 8.x` 설치
+2. 설치 중 root 비밀번호 설정
+3. 기본 포트 `3306` 확인
+4. 서비스 실행 확인
 
 ```powershell
 Get-Service -Name *mysql*
 ```
 
-## 2.2 macOS
-
-Homebrew 기준:
+### 2.2 macOS (Homebrew)
 
 ```bash
 brew update
 brew install mysql
 brew services start mysql
-```
-
-동작 확인:
-
-```bash
 brew services list | grep mysql
 ```
 
-## 3. DB/계정 생성
-
-아래 예시는 로컬 개발용 계정을 분리해 사용하는 방법입니다.
-
-MySQL 접속:
+### 2.3 로컬 DB/계정 생성 예시
 
 ```bash
 mysql -u root -p
 ```
-
-SQL 실행:
 
 ```sql
 CREATE DATABASE delivery_dev
@@ -61,38 +52,37 @@ GRANT ALL PRIVILEGES ON delivery_dev.* TO 'delivery'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-주의:
-- 운영 환경과 동일한 비밀번호를 로컬에서 재사용하지 않습니다.
-- 비밀번호/시크릿은 코드에 하드코딩하지 않습니다.
-
-## 4. 접속 검증
-
-터미널에서 직접 검증:
+접속 검증:
 
 ```bash
 mysql -u delivery -p -D delivery_dev -e "SELECT 1;"
 ```
 
-정상이라면 `1` 값이 반환됩니다.
+## 3. 방식 B - 외부(원격) 개발 DB 사용
 
-## 5. Spring Boot 연결 예시
+팀에서 공용 개발 DB를 사용한다면 아래 정보로 접속합니다.
 
-`server/src/main/resources/application-local.yml` 예시:
+- 호스트: 예) `dev-db.example.com`
+- 포트: 예) `3306`
+- DB명: 예) `delivery_dev`
+- 계정/비밀번호: 팀에서 발급
+- 네트워크 접근 제어: IP 허용 목록(allowlist) 필요 여부 확인
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/delivery_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-    username: delivery
-    password: delivery1234!
-  jpa:
-    hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
+직접 접속 검증:
+
+```bash
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USERNAME> -p -D <DB_NAME> -e "SELECT 1;"
 ```
 
-환경변수 기반으로 분리하려면:
+주의:
+
+- 운영 DB 접속 정보와 개발 DB 접속 정보를 분리합니다.
+- 개발에서는 운영 DB를 직접 사용하지 않습니다.
+- 원격 DB 사용 시 TLS/보안 옵션은 인프라 정책을 따릅니다.
+
+## 4. Spring Boot 설정 예시
+
+`server/src/main/resources/application-local.yml`에는 값을 하드코딩하지 않고 환경변수를 우선 사용합니다.
 
 ```yaml
 spring:
@@ -100,34 +90,53 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/delivery_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
     username: ${DB_USERNAME:delivery}
     password: ${DB_PASSWORD:delivery1234!}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
 ```
 
-## 6. 로컬 실행 점검
+외부 DB를 사용할 때는 실행 전에 환경변수를 설정합니다.
 
-`server/`에서 실행:
+Windows PowerShell:
+
+```powershell
+$env:DB_URL="jdbc:mysql://dev-db.example.com:3306/delivery_dev?useSSL=true&serverTimezone=Asia/Seoul"
+$env:DB_USERNAME="delivery_dev_user"
+$env:DB_PASSWORD="(발급받은 비밀번호)"
+```
+
+macOS/Linux:
 
 ```bash
+export DB_URL="jdbc:mysql://dev-db.example.com:3306/delivery_dev?useSSL=true&serverTimezone=Asia/Seoul"
+export DB_USERNAME="delivery_dev_user"
+export DB_PASSWORD="(발급받은 비밀번호)"
+```
+
+## 5. 실행 및 검증
+
+```bash
+cd server
 ./gradlew bootRun
-```
-
-추가 검증:
-
-```bash
 ./gradlew test
 ```
+
+## 6. 보안 체크리스트 (공개 레포지토리)
+
+- DB 비밀번호, API 키, 토큰은 코드/문서에 실제값으로 커밋하지 않습니다.
+- `.env`, `application-*.local.yml`, 키 파일(`*.pem`, `*.key`, `*.p12`)은 Git 제외 대상이어야 합니다.
+- 민감정보는 로컬 환경변수 또는 별도 비공개 시크릿 저장소로 관리합니다.
 
 ## 7. 트러블슈팅
 
 - `Access denied for user`
-  - 사용자/비밀번호 재확인
-  - `GRANT` 대상 DB와 계정(host 포함) 확인
+  - 계정/비밀번호 확인
+  - 권한(`GRANT`)과 접속 host 조건 확인
 - `Communications link failure`
-  - MySQL 서비스 실행 여부 확인
-  - 포트 `3306` 충돌 여부 확인
+  - DB 서버 실행 여부 확인
+  - 호스트/포트/IP 허용 목록 확인
 - Flyway 마이그레이션 실패
   - DB 권한과 `spring.datasource.*` 설정 확인
-  - 이미 생성된 스키마/테이블과 충돌 여부 확인
-
----
-
-이 프로젝트의 로컬 개발은 **Docker가 필수가 아닙니다.**
+  - 기존 스키마와 충돌 여부 확인
