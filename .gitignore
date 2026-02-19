@@ -1,0 +1,36 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.secrets
+
+# Spring local config (keep examples only)
+server/src/main/resources/application-local.yml
+server/src/main/resources/application-*.local.yml
+!server/src/main/resources/application-*.example.yml
+
+# Keys / certificates
+*.pem
+*.key
+*.p12
+*.jks
+
+# Logs
+*.log
+
+# Node / mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-shared/
+
+# Gradle build outputs
+server/.gradle/
+server/build/
