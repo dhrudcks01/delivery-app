@@ -68,7 +68,7 @@
 
 ### [x] T-0101 DB: users / auth_identities / roles / user_roles
 
-### [ ] T-0102 SYS_ADMIN 초기 계정 생성(부트스트랩)
+### [x] T-0102 SYS_ADMIN 초기 계정 생성(부트스트랩)
 **Goal**
 - 로컬에서 SYS_ADMIN 계정으로 로그인 가능
 
@@ -80,9 +80,9 @@
 
 ### [x] T-0103 이메일 회원가입 및 로그인 + JWT 발급
 
-### [ ] T-0104 Refresh 토큰 재발급
-### [ ] T-0105 /me (roles 포함)
-### [ ] T-0106 RBAC 서버 강제 적용
+### [x] T-0104 Refresh 토큰 재발급
+### [x] T-0105 /me (roles 포함)
+### [x] T-0106 RBAC 서버 강제 적용
 **Goal**
 - USER / DRIVER / OPS_ADMIN / SYS_ADMIN 권한 분리
 
@@ -107,7 +107,7 @@
 ### [ ] T-0202 USER: 기사 신청 생성 / 조회 API
 ### [ ] T-0203 OPS_ADMIN: 기사 신청 승인 / 반려 API
 ### [ ] T-0204 승인 시 DRIVER 역할 추가 + 감사 로그
-### [ ] T-0205 SYS_ADMIN: OPS_ADMIN 권한 부여 / 회수
+### [x] T-0205 SYS_ADMIN: OPS_ADMIN 권한 부여 / 회수
 
 ---
 
