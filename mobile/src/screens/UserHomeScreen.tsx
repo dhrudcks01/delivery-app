@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { PaymentMethodStatusResponse } from '../types/payment';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
+import { ui } from '../theme/ui';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -486,68 +487,68 @@ export function UserHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.screen,
     gap: 12,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   meta: {
     fontSize: 13,
-    color: '#334155',
+    color: ui.colors.text,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
+    borderColor: ui.colors.cardBorder,
+    borderRadius: ui.radius.card,
     padding: 14,
     gap: 8,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   helpText: {
     fontSize: 13,
-    color: '#475569',
+    color: ui.colors.text,
   },
   successText: {
-    color: '#15803d',
+    color: ui.colors.success,
     fontSize: 13,
   },
   label: {
     fontSize: 13,
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     marginTop: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
+    borderColor: '#c2d7d2',
+    borderRadius: ui.radius.control,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
   },
   error: {
-    color: '#dc2626',
+    color: ui.colors.error,
     fontSize: 13,
   },
   button: {
-    backgroundColor: '#0f172a',
-    borderRadius: 10,
+    backgroundColor: ui.colors.primary,
+    borderRadius: ui.radius.control,
     paddingVertical: 11,
     alignItems: 'center',
   },
   buttonMuted: {
-    backgroundColor: '#64748b',
+    backgroundColor: ui.colors.textMuted,
   },
   buttonDisabled: {
     opacity: 0.65,
@@ -563,44 +564,44 @@ const styles = StyleSheet.create({
   },
   ghostButton: {
     borderWidth: 1,
-    borderColor: '#94a3b8',
+    borderColor: '#9fc2b9',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   ghostButtonText: {
-    color: '#334155',
+    color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
   },
   listItem: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: ui.colors.cardBorder,
     borderRadius: 10,
     padding: 10,
     gap: 2,
   },
   listItemActive: {
-    borderColor: '#0f172a',
-    backgroundColor: '#f8fafc',
+    borderColor: ui.colors.primary,
+    backgroundColor: '#eef8f6',
   },
   listTitle: {
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     fontWeight: '700',
   },
   listSub: {
-    color: '#475569',
+    color: ui.colors.text,
     fontSize: 12,
   },
   detailTitle: {
-    color: '#334155',
+    color: ui.colors.text,
     fontSize: 13,
   },
   detailBox: {
     gap: 4,
   },
   detailText: {
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     fontSize: 13,
   },
   paymentMethodList: {
@@ -608,7 +609,7 @@ const styles = StyleSheet.create({
   },
   paymentMethodItem: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: ui.colors.cardBorder,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -617,7 +618,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   paymentMethodTitle: {
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     fontWeight: '700',
   },
   paymentMethodStatus: {
@@ -625,29 +626,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   paymentMethodStatusActive: {
-    color: '#15803d',
+    color: ui.colors.success,
   },
   paymentMethodStatusInactive: {
-    color: '#64748b',
+    color: ui.colors.textMuted,
   },
   failedPaymentNotice: {
     marginTop: 8,
     marginBottom: 8,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#f59e0b',
+    borderColor: ui.colors.warningBorder,
     borderRadius: 10,
-    backgroundColor: '#fffbeb',
+    backgroundColor: ui.colors.warningBg,
     gap: 8,
   },
   failedPaymentTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#92400e',
+    color: ui.colors.warningText,
   },
   failedPaymentText: {
     fontSize: 12,
-    color: '#92400e',
+    color: ui.colors.warningText,
     lineHeight: 18,
   },
   logoutButton: {
@@ -659,7 +660,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: ui.colors.cardBorder,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -667,17 +668,17 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   modalCloseButton: {
     borderWidth: 1,
-    borderColor: '#94a3b8',
+    borderColor: '#9fc2b9',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   modalCloseText: {
-    color: '#334155',
+    color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
   },

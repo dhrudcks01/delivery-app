@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { grantOpsAdminRole, revokeOpsAdminRole } from '../api/sysAdminRoleApi';
 import { useAuth } from '../auth/AuthContext';
+import { ui } from '../theme/ui';
 import { ApiErrorResponse } from '../types/waste';
 
 function toErrorMessage(error: unknown): string {
@@ -118,54 +119,54 @@ export function SysAdminHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.screen,
     padding: 16,
     gap: 12,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   description: {
     marginTop: 8,
     fontSize: 14,
-    color: '#475569',
+    color: ui.colors.text,
   },
   meta: {
     fontSize: 13,
-    color: '#334155',
+    color: ui.colors.text,
   },
   card: {
     marginTop: 8,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: ui.colors.card,
+    borderRadius: ui.radius.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: ui.colors.cardBorder,
     padding: 14,
     gap: 10,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
+    borderColor: '#c2d7d2',
+    borderRadius: ui.radius.control,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     backgroundColor: '#ffffff',
   },
   success: {
     fontSize: 13,
-    color: '#15803d',
+    color: ui.colors.success,
   },
   error: {
     fontSize: 13,
-    color: '#dc2626',
+    color: ui.colors.error,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -174,8 +175,8 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 11,
-    borderRadius: 10,
-    backgroundColor: '#0f172a',
+    borderRadius: ui.radius.control,
+    backgroundColor: ui.colors.primary,
     alignItems: 'center',
   },
   revokeButton: {

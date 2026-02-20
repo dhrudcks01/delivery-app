@@ -13,6 +13,7 @@ import {
   retryFailedPaymentForOps,
 } from '../api/opsAdminWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
 import { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
@@ -377,45 +378,45 @@ export function OpsAdminHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.screen,
     gap: 12,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   meta: {
     fontSize: 13,
-    color: '#334155',
+    color: ui.colors.text,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
+    borderColor: ui.colors.cardBorder,
+    borderRadius: ui.radius.card,
     padding: 14,
     gap: 8,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
+    borderColor: '#c2d7d2',
+    borderRadius: ui.radius.control,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    color: '#0f172a',
+    color: ui.colors.textStrong,
   },
   success: {
-    color: '#15803d',
+    color: ui.colors.success,
     fontSize: 13,
   },
   error: {
-    color: '#dc2626',
+    color: ui.colors.error,
     fontSize: 13,
   },
   rowBetween: {
@@ -429,20 +430,20 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    backgroundColor: '#0f172a',
-    borderRadius: 10,
+    backgroundColor: ui.colors.primary,
+    borderRadius: ui.radius.control,
     paddingVertical: 11,
     alignItems: 'center',
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#0f172a',
-    borderRadius: 10,
+    borderColor: ui.colors.primary,
+    borderRadius: ui.radius.control,
     paddingVertical: 10,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#0f172a',
+    color: ui.colors.primary,
     fontWeight: '700',
   },
   rejectButton: {
@@ -457,40 +458,40 @@ const styles = StyleSheet.create({
   },
   ghostButton: {
     borderWidth: 1,
-    borderColor: '#94a3b8',
+    borderColor: '#9fc2b9',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   ghostButtonText: {
-    color: '#334155',
+    color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
   },
   listItem: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: ui.colors.cardBorder,
     borderRadius: 10,
     padding: 10,
     gap: 4,
   },
   listItemActive: {
-    borderColor: '#0f172a',
-    backgroundColor: '#f8fafc',
+    borderColor: ui.colors.primary,
+    backgroundColor: '#eef8f6',
   },
   listTitle: {
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     fontWeight: '700',
   },
   listSub: {
-    color: '#475569',
+    color: ui.colors.text,
     fontSize: 12,
   },
   resultBox: {
     gap: 4,
   },
   detailText: {
-    color: '#0f172a',
+    color: ui.colors.textStrong,
     fontSize: 13,
   },
   logoutButton: {
