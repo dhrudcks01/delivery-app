@@ -17,3 +17,8 @@ app:
     secret: test-jwt-secret-key-for-integration-tests-123456
     access-token-expiration-seconds: 3600
     refresh-token-expiration-seconds: 1209600
+  payment:
+    registration:
+      billing-auth-base-url: https://api.tosspayments.com/v1/billing/authorizations/issue
+      success-url: http://localhost:8080/user/payment-methods/registration/success
+      fail-url: http://localhost:8080/user/payment-methods/registration/fail

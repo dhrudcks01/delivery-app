@@ -35,3 +35,8 @@ app:
   waste:
     pricing:
       per-kg-krw: ${APP_WASTE_PRICING_PER_KG_KRW:1000}
+  payment:
+    registration:
+      billing-auth-base-url: ${APP_PAYMENT_REGISTRATION_BILLING_AUTH_BASE_URL:https://api.tosspayments.com/v1/billing/authorizations/issue}
+      success-url: ${APP_PAYMENT_REGISTRATION_SUCCESS_URL:http://localhost:8080/user/payment-methods/registration/success}
+      fail-url: ${APP_PAYMENT_REGISTRATION_FAIL_URL:http://localhost:8080/user/payment-methods/registration/fail}

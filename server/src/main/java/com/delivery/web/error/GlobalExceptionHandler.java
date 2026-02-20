@@ -8,6 +8,7 @@ import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.driver.exception.DriverApplicationNotFoundException;
 import com.delivery.driver.exception.DriverApplicationStatusConflictException;
+import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
@@ -159,6 +160,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.BAD_REQUEST.value(),
                 "INVALID_UPLOAD_FILE",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(InvalidPaymentMethodRegistrationException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidPaymentMethodRegistration(
+            InvalidPaymentMethodRegistrationException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_PAYMENT_METHOD_REGISTRATION",
                 exception.getMessage(),
                 request.getRequestURI()
         );
