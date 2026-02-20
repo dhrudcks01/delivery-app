@@ -1,0 +1,35 @@
+import { WasteRequest } from './waste';
+
+export type PageResponse<T> = {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  numberOfElements: number;
+};
+
+export type FailedPayment = {
+  paymentId: number;
+  wasteRequestId: number;
+  userId: number;
+  amount: number;
+  currency: string;
+  failureCode: string | null;
+  failureMessage: string | null;
+  updatedAt: string;
+};
+
+export type OpsWasteListFilter = {
+  status?: string;
+  page?: number;
+  size?: number;
+};
+
+export type AssignWasteRequestPayload = {
+  driverId: number;
+};
+
+export type OpsWasteRequest = WasteRequest;

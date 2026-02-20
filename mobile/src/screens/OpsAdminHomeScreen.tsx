@@ -1,12 +1,20 @@
 import { AxiosError } from 'axios';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveDriverApplication,
   rejectDriverApplication,
 } from '../api/opsAdminDriverApplicationApi';
+import {
+  assignWasteRequestForOps,
+  getFailedPaymentsForOps,
+  getOpsWasteRequestDetail,
+  getOpsWasteRequests,
+  retryFailedPaymentForOps,
+} from '../api/opsAdminWasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { DriverApplication } from '../types/driverApplication';
+import { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 function toErrorMessage(error: unknown): string {
@@ -30,9 +38,29 @@ export function OpsAdminHomeScreen() {
   const [applicationIdInput, setApplicationIdInput] = useState('');
   const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
   const [isSubmittingReject, setIsSubmittingReject] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [resultMessage, setResultMessage] = useState<string | null>(null);
-  const [latestResult, setLatestResult] = useState<DriverApplication | null>(null);
+  const [applicationActionError, setApplicationActionError] = useState<string | null>(null);
+  const [applicationResultMessage, setApplicationResultMessage] = useState<string | null>(null);
+  const [latestApplicationResult, setLatestApplicationResult] = useState<DriverApplication | null>(null);
+
+  const [wasteStatusFilter, setWasteStatusFilter] = useState('');
+  const [isLoadingWasteList, setIsLoadingWasteList] = useState(false);
+  const [wasteListError, setWasteListError] = useState<string | null>(null);
+  const [opsWasteRequests, setOpsWasteRequests] = useState<OpsWasteRequest[]>([]);
+  const [selectedWasteRequestId, setSelectedWasteRequestId] = useState<number | null>(null);
+  const [selectedWasteRequest, setSelectedWasteRequest] = useState<OpsWasteRequest | null>(null);
+  const [isLoadingWasteDetail, setIsLoadingWasteDetail] = useState(false);
+  const [wasteDetailError, setWasteDetailError] = useState<string | null>(null);
+
+  const [driverIdInput, setDriverIdInput] = useState('');
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [assignMessage, setAssignMessage] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  const [isLoadingFailedPayments, setIsLoadingFailedPayments] = useState(false);
+  const [failedPaymentError, setFailedPaymentError] = useState<string | null>(null);
+  const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
+  const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
+  const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
 
   const parsedApplicationId = useMemo(() => {
     const parsed = Number(applicationIdInput.trim());
@@ -42,112 +70,300 @@ export function OpsAdminHomeScreen() {
     return parsed;
   }, [applicationIdInput]);
 
-  const validateInput = (): number | null => {
-    if (!parsedApplicationId) {
-      setActionError('승인/반려할 신청 ID를 숫자로 입력해 주세요.');
+  const parsedDriverId = useMemo(() => {
+    const parsed = Number(driverIdInput.trim());
+    if (!Number.isInteger(parsed) || parsed <= 0) {
       return null;
     }
-    return parsedApplicationId;
+    return parsed;
+  }, [driverIdInput]);
+
+  const loadWasteRequests = async () => {
+    setIsLoadingWasteList(true);
+    setWasteListError(null);
+
+    try {
+      const response = await getOpsWasteRequests({
+        status: wasteStatusFilter.trim() || undefined,
+        page: 0,
+        size: 20,
+      });
+      setOpsWasteRequests(response.content);
+    } catch (error) {
+      setWasteListError(toErrorMessage(error));
+    } finally {
+      setIsLoadingWasteList(false);
+    }
   };
 
-  const handleApprove = async () => {
-    const applicationId = validateInput();
-    if (!applicationId) {
+  const loadWasteRequestDetail = async (requestId: number) => {
+    setIsLoadingWasteDetail(true);
+    setWasteDetailError(null);
+    setSelectedWasteRequestId(requestId);
+
+    try {
+      const response = await getOpsWasteRequestDetail(requestId);
+      setSelectedWasteRequest(response);
+    } catch (error) {
+      setWasteDetailError(toErrorMessage(error));
+      setSelectedWasteRequest(null);
+    } finally {
+      setIsLoadingWasteDetail(false);
+    }
+  };
+
+  const loadFailedPayments = async () => {
+    setIsLoadingFailedPayments(true);
+    setFailedPaymentError(null);
+
+    try {
+      const response = await getFailedPaymentsForOps(0, 20);
+      setFailedPayments(response.content);
+    } catch (error) {
+      setFailedPaymentError(toErrorMessage(error));
+    } finally {
+      setIsLoadingFailedPayments(false);
+    }
+  };
+
+  const handleApproveApplication = async () => {
+    if (!parsedApplicationId) {
+      setApplicationActionError('승인할 기사 신청 ID를 숫자로 입력해 주세요.');
       return;
     }
 
     setIsSubmittingApprove(true);
-    setActionError(null);
-    setResultMessage(null);
+    setApplicationActionError(null);
+    setApplicationResultMessage(null);
 
     try {
-      const response = await approveDriverApplication(applicationId);
-      setLatestResult(response);
-      setResultMessage(`신청 #${response.id} 승인 완료`);
+      const response = await approveDriverApplication(parsedApplicationId);
+      setLatestApplicationResult(response);
+      setApplicationResultMessage(`신청 #${response.id} 승인 완료`);
     } catch (error) {
-      setActionError(toErrorMessage(error));
+      setApplicationActionError(toErrorMessage(error));
     } finally {
       setIsSubmittingApprove(false);
     }
   };
 
-  const handleReject = async () => {
-    const applicationId = validateInput();
-    if (!applicationId) {
+  const handleRejectApplication = async () => {
+    if (!parsedApplicationId) {
+      setApplicationActionError('반려할 기사 신청 ID를 숫자로 입력해 주세요.');
       return;
     }
 
     setIsSubmittingReject(true);
-    setActionError(null);
-    setResultMessage(null);
+    setApplicationActionError(null);
+    setApplicationResultMessage(null);
 
     try {
-      const response = await rejectDriverApplication(applicationId);
-      setLatestResult(response);
-      setResultMessage(`신청 #${response.id} 반려 완료`);
+      const response = await rejectDriverApplication(parsedApplicationId);
+      setLatestApplicationResult(response);
+      setApplicationResultMessage(`신청 #${response.id} 반려 완료`);
     } catch (error) {
-      setActionError(toErrorMessage(error));
+      setApplicationActionError(toErrorMessage(error));
     } finally {
       setIsSubmittingReject(false);
     }
   };
 
+  const handleAssignWasteRequest = async () => {
+    if (!selectedWasteRequestId) {
+      setAssignError('배정할 요청을 목록에서 선택해 주세요.');
+      return;
+    }
+    if (!parsedDriverId) {
+      setAssignError('배정할 기사 사용자 ID를 숫자로 입력해 주세요.');
+      return;
+    }
+
+    setIsAssigning(true);
+    setAssignError(null);
+    setAssignMessage(null);
+
+    try {
+      const response = await assignWasteRequestForOps(selectedWasteRequestId, { driverId: parsedDriverId });
+      setSelectedWasteRequest(response);
+      setAssignMessage(`요청 #${response.id} 기사 배정 완료`);
+      await loadWasteRequests();
+    } catch (error) {
+      setAssignError(toErrorMessage(error));
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleRetryFailedPayment = async (wasteRequestId: number) => {
+    setIsRetryingPayment(wasteRequestId);
+    setFailedPaymentError(null);
+    setRetryResultMessage(null);
+
+    try {
+      const response = await retryFailedPaymentForOps(wasteRequestId);
+      setRetryResultMessage(`요청 #${response.id} 결제 재시도 완료 (${response.status})`);
+      await loadFailedPayments();
+      await loadWasteRequests();
+      if (selectedWasteRequestId === wasteRequestId) {
+        await loadWasteRequestDetail(wasteRequestId);
+      }
+    } catch (error) {
+      setFailedPaymentError(toErrorMessage(error));
+    } finally {
+      setIsRetryingPayment(null);
+    }
+  };
+
+  useEffect(() => {
+    void loadWasteRequests();
+    void loadFailedPayments();
+  }, []);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>OPS_ADMIN 기사 신청 처리</Text>
+      <Text style={styles.title}>OPS_ADMIN 운영 관리</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>신청 승인/반려</Text>
-        <Text style={styles.description}>
-          현재 서버 API는 신청 ID 단건 승인/반려를 제공합니다. 기사 신청 ID를 입력한 뒤 처리해 주세요.
-        </Text>
-
-        <Text style={styles.label}>기사 신청 ID</Text>
+        <Text style={styles.cardTitle}>기사 신청 승인/반려</Text>
         <TextInput
           style={styles.input}
           value={applicationIdInput}
           onChangeText={setApplicationIdInput}
-          placeholder="예: 12"
+          placeholder="기사 신청 ID"
           keyboardType="numeric"
           placeholderTextColor="#94a3b8"
         />
-
-        {resultMessage && <Text style={styles.success}>{resultMessage}</Text>}
-        {actionError && <Text style={styles.error}>{actionError}</Text>}
-
+        {applicationResultMessage && <Text style={styles.success}>{applicationResultMessage}</Text>}
+        {applicationActionError && <Text style={styles.error}>{applicationActionError}</Text>}
         <View style={styles.buttonRow}>
           <Pressable
             style={[styles.button, isSubmittingApprove && styles.buttonDisabled]}
-            onPress={handleApprove}
+            onPress={handleApproveApplication}
             disabled={isSubmittingApprove || isSubmittingReject}
           >
             <Text style={styles.buttonText}>{isSubmittingApprove ? '승인 중..' : '승인'}</Text>
           </Pressable>
-
           <Pressable
             style={[styles.button, styles.rejectButton, isSubmittingReject && styles.buttonDisabled]}
-            onPress={handleReject}
+            onPress={handleRejectApplication}
             disabled={isSubmittingApprove || isSubmittingReject}
           >
             <Text style={styles.buttonText}>{isSubmittingReject ? '반려 중..' : '반려'}</Text>
           </Pressable>
         </View>
+        {latestApplicationResult && (
+          <View style={styles.resultBox}>
+            <Text style={styles.detailText}>최근 처리 신청 ID: {latestApplicationResult.id}</Text>
+            <Text style={styles.detailText}>상태: {latestApplicationResult.status}</Text>
+            <Text style={styles.detailText}>처리시각: {formatDate(latestApplicationResult.processedAt)}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>최근 처리 결과</Text>
-        {!latestResult && <Text style={styles.meta}>아직 처리된 결과가 없습니다.</Text>}
-        {latestResult && (
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardTitle}>수거 요청 목록</Text>
+          <Pressable style={styles.ghostButton} onPress={loadWasteRequests}>
+            <Text style={styles.ghostButtonText}>새로고침</Text>
+          </Pressable>
+        </View>
+        <TextInput
+          style={styles.input}
+          value={wasteStatusFilter}
+          onChangeText={setWasteStatusFilter}
+          placeholder="상태 필터 (예: REQUESTED, PAYMENT_FAILED)"
+          placeholderTextColor="#94a3b8"
+        />
+        <Pressable style={styles.secondaryButton} onPress={loadWasteRequests}>
+          <Text style={styles.secondaryButtonText}>필터 적용</Text>
+        </Pressable>
+        {isLoadingWasteList && <Text style={styles.meta}>요청 목록 로딩 중..</Text>}
+        {wasteListError && <Text style={styles.error}>{wasteListError}</Text>}
+        {opsWasteRequests.map((item) => (
+          <Pressable
+            key={item.id}
+            style={[styles.listItem, selectedWasteRequestId === item.id && styles.listItemActive]}
+            onPress={() => void loadWasteRequestDetail(item.id)}
+          >
+            <Text style={styles.listTitle}>
+              #{item.id} {item.status}
+            </Text>
+            <Text style={styles.listSub}>{item.address}</Text>
+            <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
+          </Pressable>
+        ))}
+        {!isLoadingWasteList && opsWasteRequests.length === 0 && (
+          <Text style={styles.meta}>조회된 요청이 없습니다.</Text>
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>요청 상세/기사 배정</Text>
+        {isLoadingWasteDetail && <Text style={styles.meta}>요청 상세 로딩 중..</Text>}
+        {wasteDetailError && <Text style={styles.error}>{wasteDetailError}</Text>}
+        {!selectedWasteRequest && !isLoadingWasteDetail && (
+          <Text style={styles.meta}>목록에서 요청을 선택해 주세요.</Text>
+        )}
+        {selectedWasteRequest && (
           <View style={styles.resultBox}>
-            <Text style={styles.detailText}>신청 ID: {latestResult.id}</Text>
-            <Text style={styles.detailText}>신청자 ID: {latestResult.userId}</Text>
-            <Text style={styles.detailText}>상태: {latestResult.status}</Text>
-            <Text style={styles.detailText}>처리자 ID: {latestResult.processedBy ?? '-'}</Text>
-            <Text style={styles.detailText}>처리시각: {formatDate(latestResult.processedAt)}</Text>
-            <Text style={styles.detailText}>신청시각: {formatDate(latestResult.createdAt)}</Text>
+            <Text style={styles.detailText}>요청 ID: {selectedWasteRequest.id}</Text>
+            <Text style={styles.detailText}>상태: {selectedWasteRequest.status}</Text>
+            <Text style={styles.detailText}>주소: {selectedWasteRequest.address}</Text>
+            <Text style={styles.detailText}>연락처: {selectedWasteRequest.contactPhone}</Text>
+            <Text style={styles.detailText}>최종금액: {selectedWasteRequest.finalAmount ?? '-'}</Text>
+            <TextInput
+              style={styles.input}
+              value={driverIdInput}
+              onChangeText={setDriverIdInput}
+              placeholder="배정할 기사 사용자 ID"
+              keyboardType="numeric"
+              placeholderTextColor="#94a3b8"
+            />
+            {assignMessage && <Text style={styles.success}>{assignMessage}</Text>}
+            {assignError && <Text style={styles.error}>{assignError}</Text>}
+            <Pressable
+              style={[styles.button, isAssigning && styles.buttonDisabled]}
+              onPress={handleAssignWasteRequest}
+              disabled={isAssigning}
+            >
+              <Text style={styles.buttonText}>{isAssigning ? '배정 중..' : '기사 배정'}</Text>
+            </Pressable>
           </View>
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardTitle}>결제 실패 처리</Text>
+          <Pressable style={styles.ghostButton} onPress={loadFailedPayments}>
+            <Text style={styles.ghostButtonText}>실패 목록 새로고침</Text>
+          </Pressable>
+        </View>
+        {retryResultMessage && <Text style={styles.success}>{retryResultMessage}</Text>}
+        {failedPaymentError && <Text style={styles.error}>{failedPaymentError}</Text>}
+        {isLoadingFailedPayments && <Text style={styles.meta}>실패 결제 목록 로딩 중..</Text>}
+        {failedPayments.map((item) => (
+          <View key={item.paymentId} style={styles.listItem}>
+            <Text style={styles.listTitle}>결제 #{item.paymentId}</Text>
+            <Text style={styles.listSub}>요청 ID: {item.wasteRequestId}</Text>
+            <Text style={styles.listSub}>실패코드: {item.failureCode ?? '-'}</Text>
+            <Text style={styles.listSub}>실패사유: {item.failureMessage ?? '-'}</Text>
+            <Text style={styles.listSub}>갱신시각: {formatDate(item.updatedAt)}</Text>
+            <Pressable
+              style={[styles.button, isRetryingPayment === item.wasteRequestId && styles.buttonDisabled]}
+              onPress={() => void handleRetryFailedPayment(item.wasteRequestId)}
+              disabled={isRetryingPayment !== null}
+            >
+              <Text style={styles.buttonText}>
+                {isRetryingPayment === item.wasteRequestId ? '재시도 중..' : '결제 재시도'}
+              </Text>
+            </Pressable>
+          </View>
+        ))}
+        {!isLoadingFailedPayments && failedPayments.length === 0 && (
+          <Text style={styles.meta}>결제 실패 건이 없습니다.</Text>
         )}
       </View>
 
@@ -186,16 +402,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0f172a',
   },
-  description: {
-    color: '#475569',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  label: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#0f172a',
-  },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',
@@ -212,6 +418,11 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 13,
   },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   buttonRow: {
     flexDirection: 'row',
     gap: 8,
@@ -223,6 +434,17 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
   },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#0f172a',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: '#0f172a',
+    fontWeight: '700',
+  },
   rejectButton: {
     backgroundColor: '#7f1d1d',
   },
@@ -232,6 +454,37 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  ghostButton: {
+    borderWidth: 1,
+    borderColor: '#94a3b8',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  ghostButtonText: {
+    color: '#334155',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listItem: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  listItemActive: {
+    borderColor: '#0f172a',
+    backgroundColor: '#f8fafc',
+  },
+  listTitle: {
+    color: '#0f172a',
+    fontWeight: '700',
+  },
+  listSub: {
+    color: '#475569',
+    fontSize: 12,
   },
   resultBox: {
     gap: 4,
