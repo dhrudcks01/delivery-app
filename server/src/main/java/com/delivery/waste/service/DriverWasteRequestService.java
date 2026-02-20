@@ -3,6 +3,7 @@ package com.delivery.waste.service;
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.payment.service.PaymentAutomationService;
 import com.delivery.waste.dto.DriverAssignedWasteRequestResponse;
 import com.delivery.waste.dto.MeasureWasteRequest;
 import com.delivery.waste.dto.WasteRequestResponse;
@@ -28,19 +29,22 @@ public class DriverWasteRequestService {
     private final WastePhotoRepository wastePhotoRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
     private final WastePricingService wastePricingService;
+    private final PaymentAutomationService paymentAutomationService;
 
     public DriverWasteRequestService(
             UserRepository userRepository,
             WasteAssignmentRepository wasteAssignmentRepository,
             WastePhotoRepository wastePhotoRepository,
             WasteStatusTransitionService wasteStatusTransitionService,
-            WastePricingService wastePricingService
+            WastePricingService wastePricingService,
+            PaymentAutomationService paymentAutomationService
     ) {
         this.userRepository = userRepository;
         this.wasteAssignmentRepository = wasteAssignmentRepository;
         this.wastePhotoRepository = wastePhotoRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
         this.wastePricingService = wastePricingService;
+        this.paymentAutomationService = paymentAutomationService;
     }
 
     @Transactional
@@ -75,6 +79,7 @@ public class DriverWasteRequestService {
                 .map(url -> new WastePhotoEntity(updated, url, null))
                 .toList();
         wastePhotoRepository.saveAll(photos);
+        paymentAutomationService.attemptAutoPaymentAfterMeasured(updated, email);
 
         return toWasteRequestResponse(updated);
     }

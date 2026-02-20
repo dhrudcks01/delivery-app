@@ -64,16 +64,16 @@ class DriverWasteRequestIntegrationTest {
 
     @BeforeEach
     void setUpRoles() {
-        upsertRole("USER", "일반 사용자");
-        upsertRole("DRIVER", "기사");
-        upsertRole("OPS_ADMIN", "운영 관리자");
+        upsertRole("USER", "General User");
+        upsertRole("DRIVER", "Driver");
+        upsertRole("OPS_ADMIN", "Ops Admin");
     }
 
     @Test
     void driverCanGetOwnAssignedListAndDetail() throws Exception {
         UserEntity requester = createUser("driver-waste-requester@example.com", "USER");
         UserEntity driver = createUser("driver-waste-driver@example.com", "DRIVER");
-        WasteRequestEntity request = createAssignedRequest(requester, driver, "서울시 마포구 1");
+        WasteRequestEntity request = createAssignedRequest(requester, driver, "Seoul Mapo 1");
         String driverToken = login("driver-waste-driver@example.com");
 
         mockMvc.perform(get("/driver/waste-requests")
@@ -86,7 +86,7 @@ class DriverWasteRequestIntegrationTest {
                         .header("Authorization", "Bearer " + driverToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.requestId").value(request.getId()))
-                .andExpect(jsonPath("$.address").value("서울시 마포구 1"));
+                .andExpect(jsonPath("$.address").value("Seoul Mapo 1"));
     }
 
     @Test
@@ -94,7 +94,7 @@ class DriverWasteRequestIntegrationTest {
         UserEntity requester = createUser("driver-waste-other-requester@example.com", "USER");
         UserEntity driverA = createUser("driver-waste-driver-a@example.com", "DRIVER");
         UserEntity driverB = createUser("driver-waste-driver-b@example.com", "DRIVER");
-        WasteRequestEntity request = createAssignedRequest(requester, driverA, "서울시 종로구 2");
+        WasteRequestEntity request = createAssignedRequest(requester, driverA, "Seoul Jongro 2");
         String driverBToken = login("driver-waste-driver-b@example.com");
 
         mockMvc.perform(get("/driver/waste-requests/{requestId}", request.getId())
@@ -113,10 +113,11 @@ class DriverWasteRequestIntegrationTest {
     }
 
     @Test
-    void driverCanMeasureAssignedRequestWithPhotos() throws Exception {
+    void driverMeasureTriggersAutoPaymentAndCompletesOnSuccess() throws Exception {
         UserEntity requester = createUser("driver-measure-requester@example.com", "USER");
         UserEntity driver = createUser("driver-measure-driver@example.com", "DRIVER");
-        WasteRequestEntity request = createAssignedRequest(requester, driver, "서울시 강동구 3");
+        createActivePaymentMethod(requester);
+        WasteRequestEntity request = createAssignedRequest(requester, driver, "Seoul Gangdong 3");
         String driverToken = login(driver.getEmail());
         String body = objectMapper.writeValueAsString(new MeasurePayload(
                 new BigDecimal("3.750"),
@@ -128,25 +129,65 @@ class DriverWasteRequestIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("MEASURED"))
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.measuredWeightKg").value(3.75))
                 .andExpect(jsonPath("$.measuredByDriverId").value(driver.getId()))
                 .andExpect(jsonPath("$.finalAmount").value(3750));
 
         WasteRequestEntity measured = wasteRequestRepository.findById(request.getId()).orElseThrow();
-        assertThat(measured.getStatus()).isEqualTo("MEASURED");
+        assertThat(measured.getStatus()).isEqualTo("COMPLETED");
         assertThat(measured.getMeasuredWeightKg()).isEqualByComparingTo("3.750");
         assertThat(measured.getMeasuredByDriver().getId()).isEqualTo(driver.getId());
         assertThat(measured.getMeasuredAt()).isNotNull();
         assertThat(measured.getFinalAmount()).isEqualTo(3750L);
         assertThat(wastePhotoRepository.countByRequestId(request.getId())).isEqualTo(2);
+
+        String paymentStatus = jdbcTemplate.queryForObject(
+                "SELECT status FROM payments WHERE waste_request_id = ?",
+                String.class,
+                request.getId()
+        );
+        assertThat(paymentStatus).isEqualTo("SUCCEEDED");
+        Long paymentCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payments WHERE waste_request_id = ?",
+                Long.class,
+                request.getId()
+        );
+        assertThat(paymentCount).isEqualTo(1L);
+    }
+
+    @Test
+    void driverMeasureMovesToPaymentFailedWhenNoActivePaymentMethod() throws Exception {
+        UserEntity requester = createUser("driver-measure-no-payment-requester@example.com", "USER");
+        UserEntity driver = createUser("driver-measure-no-payment-driver@example.com", "DRIVER");
+        WasteRequestEntity request = createAssignedRequest(requester, driver, "Seoul Gangdong 4");
+        String driverToken = login(driver.getEmail());
+        String body = objectMapper.writeValueAsString(new MeasurePayload(
+                new BigDecimal("2.000"),
+                List.of("/uploads/files/photo-a.jpg")
+        ));
+
+        mockMvc.perform(post("/driver/waste-requests/{requestId}/measure", request.getId())
+                        .header("Authorization", "Bearer " + driverToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAYMENT_FAILED"))
+                .andExpect(jsonPath("$.finalAmount").value(2000));
+
+        String paymentStatus = jdbcTemplate.queryForObject(
+                "SELECT status FROM payments WHERE waste_request_id = ?",
+                String.class,
+                request.getId()
+        );
+        assertThat(paymentStatus).isEqualTo("FAILED");
     }
 
     @Test
     void measureReturnsBadRequestWhenPhotoUrlsAreEmpty() throws Exception {
         UserEntity requester = createUser("driver-measure-empty-photo-requester@example.com", "USER");
         UserEntity driver = createUser("driver-measure-empty-photo-driver@example.com", "DRIVER");
-        WasteRequestEntity request = createAssignedRequest(requester, driver, "서울시 강동구 4");
+        WasteRequestEntity request = createAssignedRequest(requester, driver, "Seoul Gangdong 5");
         String driverToken = login(driver.getEmail());
         String body = objectMapper.writeValueAsString(new MeasurePayload(
                 new BigDecimal("1.500"),
@@ -180,7 +221,7 @@ class DriverWasteRequestIntegrationTest {
         UserEntity user = userRepository.save(new UserEntity(
                 email,
                 passwordEncoder.encode("password123"),
-                "배정조회테스터",
+                "Driver Waste Test",
                 "ACTIVE"
         ));
         authIdentityRepository.save(new AuthIdentityEntity(user, "LOCAL", email));
@@ -209,6 +250,18 @@ class DriverWasteRequestIntegrationTest {
 
     private void upsertRole(String code, String description) {
         jdbcTemplate.update("MERGE INTO roles (code, description) KEY(code) VALUES (?, ?)", code, description);
+    }
+
+    private void createActivePaymentMethod(UserEntity user) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO payment_methods (user_id, provider, customer_key, billing_key_or_token, status)
+                VALUES (?, 'TOSS', ?, ?, 'ACTIVE')
+                """,
+                user.getId(),
+                "delivery_user_" + user.getId() + "_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "test-billing-token"
+        );
     }
 
     private record LoginPayload(String email, String password) {

@@ -10,5 +10,7 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
 
     Optional<PaymentEntity> findByWasteRequest(WasteRequestEntity wasteRequest);
 
+    Optional<PaymentEntity> findByWasteRequestId(Long wasteRequestId);
+
     Optional<PaymentEntity> findByProviderOrderId(String providerOrderId);
 }
