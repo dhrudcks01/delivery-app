@@ -9,3 +9,16 @@ export type PaymentMethodRegistrationSuccessResponse = {
   status: string;
   createdAt: string;
 };
+
+export type PaymentMethodStatusItem = {
+  id: number;
+  provider: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PaymentMethodStatusResponse = {
+  canReregister: boolean;
+  paymentMethods: PaymentMethodStatusItem[];
+};

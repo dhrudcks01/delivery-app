@@ -13,6 +13,7 @@ import {
 import { WebView } from 'react-native-webview';
 import {
   completePaymentMethodRegistration,
+  getMyPaymentMethodStatus,
   startPaymentMethodRegistration,
 } from '../api/paymentApi';
 import {
@@ -22,6 +23,7 @@ import {
   getMyWasteRequests,
 } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { PaymentMethodStatusResponse } from '../types/payment';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
 
 function toErrorMessage(error: unknown): string {
@@ -66,21 +68,27 @@ export function UserHomeScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isPreparingRegistration, setIsPreparingRegistration] = useState(false);
   const [isRegisteringPaymentMethod, setIsRegisteringPaymentMethod] = useState(false);
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [paymentRegistrationError, setPaymentRegistrationError] = useState<string | null>(null);
   const [paymentRegistrationResult, setPaymentRegistrationResult] = useState<string | null>(null);
+  const [paymentMethodStatusError, setPaymentMethodStatusError] = useState<string | null>(null);
 
   const [requests, setRequests] = useState<WasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<WasteRequest | null>(null);
   const [registrationUrl, setRegistrationUrl] = useState<string | null>(null);
   const [isRegistrationModalVisible, setIsRegistrationModalVisible] = useState(false);
+  const [paymentMethodStatus, setPaymentMethodStatus] = useState<PaymentMethodStatusResponse | null>(null);
 
   const selectedStatus = selectedRequest?.status;
   const canCancelSelected = selectedStatus === 'REQUESTED';
+  const isSelectedPaymentFailed = selectedStatus === 'PAYMENT_FAILED';
+  const activePaymentMethodCount =
+    paymentMethodStatus?.paymentMethods.filter((item) => item.status === 'ACTIVE').length ?? 0;
 
   const selectedTitle = useMemo(() => {
     if (!selectedRequest) {
@@ -104,6 +112,20 @@ export function UserHomeScreen() {
       setListError(toErrorMessage(error));
     } finally {
       setIsLoadingList(false);
+    }
+  };
+
+  const refreshPaymentMethods = async () => {
+    setIsLoadingPaymentMethods(true);
+    setPaymentMethodStatusError(null);
+
+    try {
+      const data = await getMyPaymentMethodStatus();
+      setPaymentMethodStatus(data);
+    } catch (error) {
+      setPaymentMethodStatusError(toErrorMessage(error));
+    } finally {
+      setIsLoadingPaymentMethods(false);
     }
   };
 
@@ -212,6 +234,7 @@ export function UserHomeScreen() {
     try {
       await completePaymentMethodRegistration(customerKey, authKey);
       setPaymentRegistrationResult('결제수단 등록이 완료되었습니다.');
+      await refreshPaymentMethods();
     } catch (error) {
       setPaymentRegistrationError(toErrorMessage(error));
     } finally {
@@ -244,6 +267,7 @@ export function UserHomeScreen() {
 
   useEffect(() => {
     void refreshRequests();
+    void refreshPaymentMethods();
   }, []);
 
   return (
@@ -254,8 +278,42 @@ export function UserHomeScreen() {
         <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>결제수단 등록</Text>
-          <Text style={styles.helpText}>웹뷰에서 카드 등록 페이지를 열어 결제수단을 등록합니다.</Text>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitle}>결제수단 상태</Text>
+            <Pressable style={styles.ghostButton} onPress={refreshPaymentMethods}>
+              <Text style={styles.ghostButtonText}>상태 새로고침</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.helpText}>
+            활성 결제수단: {activePaymentMethodCount}개
+            {paymentMethodStatus?.canReregister ? ' (재등록 가능)' : ''}
+          </Text>
+
+          {isLoadingPaymentMethods && <Text style={styles.meta}>결제수단 상태를 불러오는 중..</Text>}
+          {paymentMethodStatusError && <Text style={styles.error}>{paymentMethodStatusError}</Text>}
+
+          {paymentMethodStatus?.paymentMethods.length ? (
+            <View style={styles.paymentMethodList}>
+              {paymentMethodStatus.paymentMethods.map((method) => (
+                <View key={method.id} style={styles.paymentMethodItem}>
+                  <Text style={styles.paymentMethodTitle}>
+                    #{method.id} {method.provider}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.paymentMethodStatus,
+                      method.status === 'ACTIVE' ? styles.paymentMethodStatusActive : styles.paymentMethodStatusInactive,
+                    ]}
+                  >
+                    {method.status}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            !isLoadingPaymentMethods && <Text style={styles.meta}>등록된 결제수단이 없습니다.</Text>
+          )}
+
           {paymentRegistrationResult && <Text style={styles.successText}>{paymentRegistrationResult}</Text>}
           {paymentRegistrationError && <Text style={styles.error}>{paymentRegistrationError}</Text>}
           <Pressable
@@ -264,7 +322,11 @@ export function UserHomeScreen() {
             disabled={isPreparingRegistration}
           >
             <Text style={styles.buttonText}>
-              {isPreparingRegistration ? '등록 페이지 준비 중..' : '결제수단 등록하기'}
+              {isPreparingRegistration
+                ? '등록 페이지 준비 중..'
+                : activePaymentMethodCount > 0
+                  ? '결제수단 재등록하기'
+                  : '결제수단 등록하기'}
             </Text>
           </Pressable>
         </View>
@@ -351,6 +413,22 @@ export function UserHomeScreen() {
               <Text style={styles.detailText}>최종금액: {selectedRequest.finalAmount ?? '-'}</Text>
               <Text style={styles.detailText}>생성일: {formatDate(selectedRequest.createdAt)}</Text>
               <Text style={styles.detailText}>수정일: {formatDate(selectedRequest.updatedAt)}</Text>
+
+              {isSelectedPaymentFailed && (
+                <View style={styles.failedPaymentNotice}>
+                  <Text style={styles.failedPaymentTitle}>결제 실패 안내</Text>
+                  <Text style={styles.failedPaymentText}>
+                    결제수단을 재등록한 뒤 운영자 재시도를 기다려 주세요. 상태가 갱신되지 않으면 고객센터로 문의해 주세요.
+                  </Text>
+                  <Pressable
+                    style={[styles.button, isPreparingRegistration && styles.buttonDisabled]}
+                    onPress={handleStartPaymentMethodRegistration}
+                    disabled={isPreparingRegistration}
+                  >
+                    <Text style={styles.buttonText}>결제수단 재등록 바로가기</Text>
+                  </Pressable>
+                </View>
+              )}
 
               <Pressable
                 style={[
@@ -524,6 +602,53 @@ const styles = StyleSheet.create({
   detailText: {
     color: '#0f172a',
     fontSize: 13,
+  },
+  paymentMethodList: {
+    gap: 6,
+  },
+  paymentMethodItem: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  paymentMethodTitle: {
+    color: '#0f172a',
+    fontWeight: '700',
+  },
+  paymentMethodStatus: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  paymentMethodStatusActive: {
+    color: '#15803d',
+  },
+  paymentMethodStatusInactive: {
+    color: '#64748b',
+  },
+  failedPaymentNotice: {
+    marginTop: 8,
+    marginBottom: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    borderRadius: 10,
+    backgroundColor: '#fffbeb',
+    gap: 8,
+  },
+  failedPaymentTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  failedPaymentText: {
+    fontSize: 12,
+    color: '#92400e',
+    lineHeight: 18,
   },
   logoutButton: {
     marginBottom: 20,

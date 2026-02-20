@@ -2,6 +2,7 @@ import { httpClient } from './httpClient';
 import {
   PaymentMethodRegistrationStartResponse,
   PaymentMethodRegistrationSuccessResponse,
+  PaymentMethodStatusResponse,
 } from '../types/payment';
 
 export async function startPaymentMethodRegistration(): Promise<PaymentMethodRegistrationStartResponse> {
@@ -21,5 +22,10 @@ export async function completePaymentMethodRegistration(
       params: { customerKey, authKey },
     },
   );
+  return response.data;
+}
+
+export async function getMyPaymentMethodStatus(): Promise<PaymentMethodStatusResponse> {
+  const response = await httpClient.get<PaymentMethodStatusResponse>('/user/payment-methods');
   return response.data;
 }
