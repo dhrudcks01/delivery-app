@@ -179,6 +179,39 @@
 ### [x] T-0204 승인 시 DRIVER 역할 추가 + 감사 로그
 ### [x] T-0205 SYS_ADMIN: OPS_ADMIN 권한 부여 / 회수
 
+### [ ] T-0206 OPS_ADMIN 기사신청 승인 UX 개선(신청 목록 기반)
+**Goal**
+- 관리자가 신청 ID를 수동 입력하지 않고, 대기 신청 목록에서 선택해 승인/반려할 수 있게 한다.
+
+**DoD**
+- 서버: 기사 신청 목록 조회 API에 상태/정렬/페이징 기준 명확화
+- 승인/반려 처리 응답에 처리자/처리시각 포함
+- ID 직접입력 없이도 승인 가능한 UI 연동을 고려한 응답 구조 정리
+
+---
+
+### [ ] T-0207 OPS_ADMIN 권한 신청/승인 플로우(OPS_ADMIN_REQUEST)
+**Goal**
+- 사용자(또는 DRIVER)가 OPS_ADMIN 권한을 신청하고 SYS_ADMIN이 승인/반려하는 절차를 추가한다.
+
+**DoD**
+- DB: ops_admin_applications(신청자/상태/처리자/처리시각/사유) 테이블 추가
+- USER/DRIVER: OPS_ADMIN 권한 신청 API 제공
+- SYS_ADMIN: OPS_ADMIN 권한 신청 목록/승인/반려 API 제공
+- 승인 시 user_roles에 OPS_ADMIN 추가, 감사로그 기록
+
+---
+
+### [ ] T-0208 SYS_ADMIN 권한 신청/승인 플로우(SYS_ADMIN_REQUEST)
+**Goal**
+- SYS_ADMIN 권한도 직접 ID 부여가 아닌 신청 기반 승인 절차로 관리한다.
+
+**DoD**
+- DB: sys_admin_applications(신청자/상태/처리자/처리시각/사유) 테이블 추가
+- OPS_ADMIN(또는 정책상 허용된 역할): SYS_ADMIN 권한 신청 API 제공
+- SYS_ADMIN: 신청 목록/승인/반려 API 제공(자기승인 방지 규칙 포함)
+- 승인 시 user_roles에 SYS_ADMIN 추가, 처리 이력 감사로그 기록
+
 ---
 
 # EPIC 3) 쓰레기 수거 요청 / 배정 / 측정
@@ -473,6 +506,30 @@
 - 서버 주소검색 endpoint(T-0112)와 연동
 - 선택한 주소를 신청 폼에 반영(주소 상세 입력칸 분리 포함)
 - 검색 로딩/빈 결과/오류 상태 UX 제공
+
+---
+
+### [ ] T-0519 OPS_ADMIN 기사신청 승인 화면 개편(목록 선택형)
+**Goal**
+- 관리자가 기사 신청을 ID 수동 입력 없이 신청 카드/목록에서 선택해 승인/반려하도록 UI를 개선한다.
+
+**DoD**
+- OPS_ADMIN 화면에 PENDING 기사신청 목록 표시
+- 신청 상세 정보 확인 후 승인/반려 액션 제공
+- 처리 완료 항목은 목록에서 즉시 상태 갱신
+- 기존 수동 ID 입력 UI 제거 또는 후순위 숨김
+
+---
+
+### [ ] T-0520 권한 신청 화면(OPS_ADMIN/SYS_ADMIN) 및 승인 화면
+**Goal**
+- 권한 부여 기능을 신청 기반으로 바꾸고, 모바일에서 신청/승인 화면을 제공한다.
+
+**DoD**
+- USER/DRIVER: OPS_ADMIN 권한 신청 화면 제공
+- 정책 허용 역할: SYS_ADMIN 권한 신청 화면 제공
+- SYS_ADMIN: OPS_ADMIN/SYS_ADMIN 신청 목록, 승인/반려 UI 제공
+- 상태값(PENDING/APPROVED/REJECTED) 및 처리 이력 표시
 
 
 ---
