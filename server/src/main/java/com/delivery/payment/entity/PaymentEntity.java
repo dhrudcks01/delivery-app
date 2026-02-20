@@ -96,6 +96,14 @@ public class PaymentEntity {
         this.failureMessage = failureMessage;
     }
 
+    public void markPendingForRetry(PaymentMethodEntity paymentMethod) {
+        this.paymentMethod = paymentMethod;
+        this.status = "PENDING";
+        this.providerPaymentKey = null;
+        this.failureCode = null;
+        this.failureMessage = null;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

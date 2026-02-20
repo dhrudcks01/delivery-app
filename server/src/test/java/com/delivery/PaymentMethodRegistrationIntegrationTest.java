@@ -49,23 +49,13 @@ class PaymentMethodRegistrationIntegrationTest {
 
     @BeforeEach
     void setUpRoles() {
-        upsertRole("USER", "일반 사용자");
+        upsertRole("USER", "General User");
     }
 
     @Test
-    void userCanStartAndCompletePaymentMethodRegistration() throws Exception {
+    void userCanRegisterAndQueryPaymentMethodStatus() throws Exception {
         TestUser user = createUserWithUserRole();
-
-        String startResponse = mockMvc.perform(post("/user/payment-methods/registration/start")
-                        .header("Authorization", "Bearer " + user.accessToken()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerKey").value(org.hamcrest.Matchers.startsWith("delivery_user_" + user.id() + "_")))
-                .andExpect(jsonPath("$.registrationUrl").value(org.hamcrest.Matchers.containsString("customerKey=")))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        String customerKey = objectMapper.readTree(startResponse).get("customerKey").asText();
+        String customerKey = startRegistration(user.accessToken(), user.id());
 
         mockMvc.perform(get("/user/payment-methods/registration/success")
                         .header("Authorization", "Bearer " + user.accessToken())
@@ -74,6 +64,13 @@ class PaymentMethodRegistrationIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.provider").value("TOSS"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        mockMvc.perform(get("/user/payment-methods")
+                        .header("Authorization", "Bearer " + user.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canReregister").value(true))
+                .andExpect(jsonPath("$.paymentMethods.length()").value(1))
+                .andExpect(jsonPath("$.paymentMethods[0].status").value("ACTIVE"));
 
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM payment_methods WHERE user_id = ?",
@@ -84,17 +81,37 @@ class PaymentMethodRegistrationIntegrationTest {
     }
 
     @Test
+    void reRegisterDeactivatesPreviousActiveMethod() throws Exception {
+        TestUser user = createUserWithUserRole();
+
+        String firstCustomerKey = startRegistration(user.accessToken(), user.id());
+        mockMvc.perform(get("/user/payment-methods/registration/success")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .param("customerKey", firstCustomerKey)
+                        .param("authKey", "billing-auth-key-1"))
+                .andExpect(status().isCreated());
+
+        String secondCustomerKey = startRegistration(user.accessToken(), user.id());
+        mockMvc.perform(get("/user/payment-methods/registration/success")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .param("customerKey", secondCustomerKey)
+                        .param("authKey", "billing-auth-key-2"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        mockMvc.perform(get("/user/payment-methods")
+                        .header("Authorization", "Bearer " + user.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentMethods.length()").value(2))
+                .andExpect(jsonPath("$.paymentMethods[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.paymentMethods[1].status").value("INACTIVE"));
+    }
+
+    @Test
     void successCallbackRejectsOtherUsersCustomerKey() throws Exception {
         TestUser userA = createUserWithUserRole();
         TestUser userB = createUserWithUserRole();
-
-        String startResponse = mockMvc.perform(post("/user/payment-methods/registration/start")
-                        .header("Authorization", "Bearer " + userB.accessToken()))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        String customerKeyOfUserB = objectMapper.readTree(startResponse).get("customerKey").asText();
+        String customerKeyOfUserB = startRegistration(userB.accessToken(), userB.id());
 
         mockMvc.perform(get("/user/payment-methods/registration/success")
                         .header("Authorization", "Bearer " + userA.accessToken())
@@ -104,6 +121,18 @@ class PaymentMethodRegistrationIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_PAYMENT_METHOD_REGISTRATION"));
     }
 
+    private String startRegistration(String accessToken, Long userId) throws Exception {
+        String startResponse = mockMvc.perform(post("/user/payment-methods/registration/start")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerKey").value(org.hamcrest.Matchers.startsWith("delivery_user_" + userId + "_")))
+                .andExpect(jsonPath("$.registrationUrl").value(org.hamcrest.Matchers.containsString("customerKey=")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(startResponse).get("customerKey").asText();
+    }
+
     private TestUser createUserWithUserRole() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
         String email = "payment-user-" + unique + "@example.com";
@@ -111,7 +140,7 @@ class PaymentMethodRegistrationIntegrationTest {
         UserEntity user = userRepository.save(new UserEntity(
                 email,
                 passwordEncoder.encode(password),
-                "결제 테스트 사용자",
+                "Payment Test User",
                 "ACTIVE"
         ));
         authIdentityRepository.save(new AuthIdentityEntity(user, "LOCAL", email));

@@ -28,15 +28,18 @@ public class PaymentMethodRegistrationService {
 
     private final UserRepository userRepository;
     private final PaymentMethodRepository paymentMethodRepository;
+    private final PaymentFailureHandlingService paymentFailureHandlingService;
     private final PaymentRegistrationProperties paymentRegistrationProperties;
 
     public PaymentMethodRegistrationService(
             UserRepository userRepository,
             PaymentMethodRepository paymentMethodRepository,
+            PaymentFailureHandlingService paymentFailureHandlingService,
             PaymentRegistrationProperties paymentRegistrationProperties
     ) {
         this.userRepository = userRepository;
         this.paymentMethodRepository = paymentMethodRepository;
+        this.paymentFailureHandlingService = paymentFailureHandlingService;
         this.paymentRegistrationProperties = paymentRegistrationProperties;
     }
 
@@ -66,6 +69,7 @@ public class PaymentMethodRegistrationService {
 
         UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
         validateCustomerKeyOwnership(customerKey, user.getId());
+        paymentFailureHandlingService.deactivateActiveMethods(user);
 
         PaymentMethodEntity saved = paymentMethodRepository.save(new PaymentMethodEntity(
                 user,

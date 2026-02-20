@@ -9,6 +9,8 @@ import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.driver.exception.DriverApplicationNotFoundException;
 import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
+import com.delivery.payment.exception.PaymentNotFoundException;
+import com.delivery.payment.exception.PaymentRetryConflictException;
 import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
@@ -178,6 +180,34 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(PaymentNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handlePaymentNotFound(
+            PaymentNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "PAYMENT_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(PaymentRetryConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handlePaymentRetryConflict(
+            PaymentRetryConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "PAYMENT_RETRY_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
