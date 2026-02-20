@@ -249,7 +249,7 @@
 
 ---
 
-### [ ] T-0402 DB: payments (요청별 결제 기록, 멱등)
+### [x] T-0402 DB: payments (요청별 결제 기록, 멱등)
 **Goal**
 - waste_request_id 기준 중복 결제 방지(멱등)
 
