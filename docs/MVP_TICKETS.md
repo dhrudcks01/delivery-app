@@ -321,7 +321,7 @@
 ## OPS_ADMIN / SYS_ADMIN
 ### [x] T-0509 OPS_ADMIN: 기사 신청 승인/반려
 ### [x] T-0510 OPS_ADMIN: 요청 목록/배정/결제 실패 처리
-### [ ] T-0511 SYS_ADMIN: OPS_ADMIN 권한 부여/회수(최소)
+### [x] T-0511 SYS_ADMIN: OPS_ADMIN 권한 부여/회수(최소)
 
 ---
 
