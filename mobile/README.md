@@ -2,7 +2,7 @@
 
 Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 
-## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 ~ T-0517 구현 범위
+## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 ~ T-0518 구현 범위
 
 - Expo TypeScript 앱 기본 스캐폴딩
 - React Navigation 기반 네비게이션
@@ -19,6 +19,7 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
   - 목록 조회
   - 상세 조회
   - 취소(REQUESTED 상태)
+  - 도로명 주소 검색 연동(`/addresses/road-search`) 및 상세주소 분리 입력
 - DRIVER 배정 요청 기능
   - 목록 조회
   - 상세 조회

@@ -16,6 +16,7 @@ import {
   getMyPaymentMethodStatus,
   startPaymentMethodRegistration,
 } from '../api/paymentApi';
+import { searchRoadAddresses } from '../api/addressApi';
 import {
   cancelMyWasteRequest,
   createWasteRequest,
@@ -23,6 +24,7 @@ import {
   getMyWasteRequests,
 } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { AddressItem } from '../types/address';
 import { PaymentMethodStatusResponse } from '../types/payment';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
 import { ui } from '../theme/ui';
@@ -60,6 +62,8 @@ export function UserHomeScreen() {
   const { me, signOut } = useAuth();
 
   const [address, setAddress] = useState('');
+  const [addressDetail, setAddressDetail] = useState('');
+  const [addressQuery, setAddressQuery] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [note, setNote] = useState('');
 
@@ -70,6 +74,7 @@ export function UserHomeScreen() {
   const [isPreparingRegistration, setIsPreparingRegistration] = useState(false);
   const [isRegisteringPaymentMethod, setIsRegisteringPaymentMethod] = useState(false);
   const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -77,6 +82,7 @@ export function UserHomeScreen() {
   const [paymentRegistrationError, setPaymentRegistrationError] = useState<string | null>(null);
   const [paymentRegistrationResult, setPaymentRegistrationResult] = useState<string | null>(null);
   const [paymentMethodStatusError, setPaymentMethodStatusError] = useState<string | null>(null);
+  const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
 
   const [requests, setRequests] = useState<WasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
@@ -84,6 +90,7 @@ export function UserHomeScreen() {
   const [registrationUrl, setRegistrationUrl] = useState<string | null>(null);
   const [isRegistrationModalVisible, setIsRegistrationModalVisible] = useState(false);
   const [paymentMethodStatus, setPaymentMethodStatus] = useState<PaymentMethodStatusResponse | null>(null);
+  const [addressSearchResults, setAddressSearchResults] = useState<AddressItem[]>([]);
 
   const selectedStatus = selectedRequest?.status;
   const canCancelSelected = selectedStatus === 'REQUESTED';
@@ -147,8 +154,12 @@ export function UserHomeScreen() {
   };
 
   const handleCreate = async () => {
-    if (!address.trim() || !contactPhone.trim()) {
-      setSubmitError('주소와 연락처를 입력해 주세요.');
+    const trimmedAddress = address.trim();
+    const trimmedAddressDetail = addressDetail.trim();
+    const fullAddress = trimmedAddressDetail ? `${trimmedAddress} ${trimmedAddressDetail}` : trimmedAddress;
+
+    if (!trimmedAddress || !contactPhone.trim()) {
+      setSubmitError('주소(검색 후 선택)와 연락처를 입력해 주세요.');
       return;
     }
 
@@ -157,12 +168,16 @@ export function UserHomeScreen() {
 
     try {
       const created = await createWasteRequest({
-        address: address.trim(),
+        address: fullAddress,
         contactPhone: contactPhone.trim(),
         note: note.trim() ? note.trim() : undefined,
       });
 
       setAddress('');
+      setAddressDetail('');
+      setAddressQuery('');
+      setAddressSearchResults([]);
+      setAddressSearchError(null);
       setContactPhone('');
       setNote('');
 
@@ -173,6 +188,36 @@ export function UserHomeScreen() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAddressSearch = async () => {
+    const query = addressQuery.trim();
+    if (!query) {
+      setAddressSearchError('검색어를 입력해 주세요.');
+      setAddressSearchResults([]);
+      return;
+    }
+
+    setIsSearchingAddress(true);
+    setAddressSearchError(null);
+
+    try {
+      const response = await searchRoadAddresses(query, 7);
+      setAddressSearchResults(response.results);
+      if (response.results.length === 0) {
+        setAddressSearchError('검색 결과가 없습니다.');
+      }
+    } catch (error) {
+      setAddressSearchResults([]);
+      setAddressSearchError(toErrorMessage(error));
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  const handleSelectAddress = (item: AddressItem) => {
+    setAddress(item.roadAddress);
+    setAddressSearchError(null);
   };
 
   const handleCancel = async () => {
@@ -334,12 +379,63 @@ export function UserHomeScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>요청 생성</Text>
-          <Text style={styles.label}>주소</Text>
+
+          <Text style={styles.label}>주소 검색</Text>
+          <View style={styles.rowGap8}>
+            <TextInput
+              style={[styles.input, styles.flexInput]}
+              value={addressQuery}
+              onChangeText={setAddressQuery}
+              placeholder="도로명 주소 검색어 입력"
+              placeholderTextColor="#94a3b8"
+            />
+            <Pressable
+              style={[styles.ghostButton, styles.searchButton, isSearchingAddress && styles.buttonDisabled]}
+              onPress={handleAddressSearch}
+              disabled={isSearchingAddress}
+            >
+              <Text style={styles.ghostButtonText}>{isSearchingAddress ? '검색 중..' : '주소 검색'}</Text>
+            </Pressable>
+          </View>
+
+          {isSearchingAddress && <Text style={styles.meta}>주소를 검색하는 중..</Text>}
+          {addressSearchError && <Text style={styles.error}>{addressSearchError}</Text>}
+          {addressSearchResults.length > 0 && (
+            <View style={styles.addressResultList}>
+              {addressSearchResults.map((item) => {
+                const key = `${item.roadAddress}-${item.zipCode}`;
+                const isSelected = item.roadAddress === address;
+                return (
+                  <Pressable
+                    key={key}
+                    style={[styles.addressResultItem, isSelected && styles.addressResultItemSelected]}
+                    onPress={() => handleSelectAddress(item)}
+                  >
+                    <Text style={styles.addressRoad}>{item.roadAddress}</Text>
+                    <Text style={styles.addressMeta}>
+                      [{item.zipCode}] 지번: {item.jibunAddress || '-'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          <Text style={styles.label}>선택 주소</Text>
           <TextInput
             style={styles.input}
             value={address}
-            onChangeText={setAddress}
-            placeholder="수거 주소"
+            editable={false}
+            placeholder="주소 검색 후 선택해 주세요"
+            placeholderTextColor="#94a3b8"
+          />
+
+          <Text style={styles.label}>상세 주소</Text>
+          <TextInput
+            style={styles.input}
+            value={addressDetail}
+            onChangeText={setAddressDetail}
+            placeholder="동/호수 등 상세 주소"
             placeholderTextColor="#94a3b8"
           />
 
@@ -562,6 +658,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  rowGap8: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  flexInput: {
+    flex: 1,
+  },
   ghostButton: {
     borderWidth: 1,
     borderColor: '#9fc2b9',
@@ -569,10 +673,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
+  searchButton: {
+    minWidth: 78,
+    alignItems: 'center',
+  },
   ghostButtonText: {
     color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
+  },
+  addressResultList: {
+    gap: 6,
+  },
+  addressResultItem: {
+    borderWidth: 1,
+    borderColor: ui.colors.cardBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 3,
+  },
+  addressResultItemSelected: {
+    borderColor: ui.colors.primary,
+    backgroundColor: '#eef8f6',
+  },
+  addressRoad: {
+    color: ui.colors.textStrong,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  addressMeta: {
+    color: ui.colors.text,
+    fontSize: 12,
   },
   listItem: {
     borderWidth: 1,
