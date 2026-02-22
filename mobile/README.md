@@ -2,7 +2,7 @@
 
 Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 
-## T-0501 ~ T-0504, T-0507 ~ T-0508 구현 범위
+## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 구현 범위
 
 - Expo TypeScript 앱 기본 스캐폴딩
 - React Navigation 기반 네비게이션
@@ -10,7 +10,10 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 - 토큰 저장소(AsyncStorage)
 - 401 응답 시 `/auth/refresh` 자동 재발급 인터셉터
 - 이메일 로그인 UI
-- `/me` 기반 역할 분기 탭 노출(USER/DRIVER/OPS_ADMIN/SYS_ADMIN)
+- `/me` 기반 역할 분기
+  - 단일 권한 계정: 해당 홈 화면으로 즉시 진입 (하단 탭 미노출)
+  - 멀티 권한 계정: 역할 선택 허브에서 화면 전환
+  - DRIVER 권한 포함 계정: DRIVER 배정 화면 진입 동선 제공
 - USER 수거 신청 기능
   - 생성
   - 목록 조회
