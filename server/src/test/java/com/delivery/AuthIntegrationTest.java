@@ -88,6 +88,28 @@ class AuthIntegrationTest {
     }
 
     @Test
+    void loginAllowsNonEmailIdentifierString() throws Exception {
+        String identifier = "local-user-001";
+        String password = "password123";
+
+        UserEntity saved = userRepository.save(new UserEntity(
+                identifier,
+                passwordEncoder.encode(password),
+                "문자열식별자유저",
+                "ACTIVE"
+        ));
+        authIdentityRepository.save(new AuthIdentityEntity(saved, "LOCAL", identifier));
+
+        String body = objectMapper.writeValueAsString(new LoginPayload(identifier, password));
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+    }
+
+    @Test
     void loginReturnsUnauthorizedWhenCredentialsAreInvalid() throws Exception {
         String email = "invalid-login@example.com";
         userRepository.save(new UserEntity(
