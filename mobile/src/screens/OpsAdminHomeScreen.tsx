@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveDriverApplication,
+  getDriverApplicationsForOps,
   rejectDriverApplication,
 } from '../api/opsAdminDriverApplicationApi';
 import {
@@ -36,11 +37,15 @@ function formatDate(dateTime: string | null): string {
 export function OpsAdminHomeScreen() {
   const { me, signOut } = useAuth();
 
-  const [applicationIdInput, setApplicationIdInput] = useState('');
+  const [isLoadingApplications, setIsLoadingApplications] = useState(false);
   const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
   const [isSubmittingReject, setIsSubmittingReject] = useState(false);
+  const [applicationListError, setApplicationListError] = useState<string | null>(null);
   const [applicationActionError, setApplicationActionError] = useState<string | null>(null);
   const [applicationResultMessage, setApplicationResultMessage] = useState<string | null>(null);
+  const [applications, setApplications] = useState<DriverApplication[]>([]);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<number | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<DriverApplication | null>(null);
   const [latestApplicationResult, setLatestApplicationResult] = useState<DriverApplication | null>(null);
 
   const [wasteStatusFilter, setWasteStatusFilter] = useState('');
@@ -62,14 +67,6 @@ export function OpsAdminHomeScreen() {
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
   const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
   const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
-
-  const parsedApplicationId = useMemo(() => {
-    const parsed = Number(applicationIdInput.trim());
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      return null;
-    }
-    return parsed;
-  }, [applicationIdInput]);
 
   const parsedDriverId = useMemo(() => {
     const parsed = Number(driverIdInput.trim());
@@ -127,9 +124,38 @@ export function OpsAdminHomeScreen() {
     }
   };
 
+  const loadPendingApplications = async () => {
+    setIsLoadingApplications(true);
+    setApplicationListError(null);
+
+    try {
+      const response = await getDriverApplicationsForOps({
+        status: 'PENDING',
+        page: 0,
+        size: 20,
+        sort: 'createdAt,desc',
+      });
+      setApplications(response.content);
+      setSelectedApplicationId((currentId) => {
+        if (currentId === null) {
+          return response.content[0]?.id ?? null;
+        }
+        return response.content.some((item) => item.id === currentId)
+          ? currentId
+          : (response.content[0]?.id ?? null);
+      });
+    } catch (error) {
+      setApplicationListError(toErrorMessage(error));
+      setApplications([]);
+      setSelectedApplicationId(null);
+    } finally {
+      setIsLoadingApplications(false);
+    }
+  };
+
   const handleApproveApplication = async () => {
-    if (!parsedApplicationId) {
-      setApplicationActionError('승인할 기사 신청 ID를 숫자로 입력해 주세요.');
+    if (!selectedApplicationId) {
+      setApplicationActionError('승인할 신청을 목록에서 선택해 주세요.');
       return;
     }
 
@@ -138,9 +164,10 @@ export function OpsAdminHomeScreen() {
     setApplicationResultMessage(null);
 
     try {
-      const response = await approveDriverApplication(parsedApplicationId);
+      const response = await approveDriverApplication(selectedApplicationId);
       setLatestApplicationResult(response);
-      setApplicationResultMessage(`신청 #${response.id} 승인 완료`);
+      setApplicationResultMessage(`신청 #${response.id} 승인 완료 (${response.userEmail})`);
+      await loadPendingApplications();
     } catch (error) {
       setApplicationActionError(toErrorMessage(error));
     } finally {
@@ -149,8 +176,8 @@ export function OpsAdminHomeScreen() {
   };
 
   const handleRejectApplication = async () => {
-    if (!parsedApplicationId) {
-      setApplicationActionError('반려할 기사 신청 ID를 숫자로 입력해 주세요.');
+    if (!selectedApplicationId) {
+      setApplicationActionError('반려할 신청을 목록에서 선택해 주세요.');
       return;
     }
 
@@ -159,9 +186,10 @@ export function OpsAdminHomeScreen() {
     setApplicationResultMessage(null);
 
     try {
-      const response = await rejectDriverApplication(parsedApplicationId);
+      const response = await rejectDriverApplication(selectedApplicationId);
       setLatestApplicationResult(response);
-      setApplicationResultMessage(`신청 #${response.id} 반려 완료`);
+      setApplicationResultMessage(`신청 #${response.id} 반려 완료 (${response.userEmail})`);
+      await loadPendingApplications();
     } catch (error) {
       setApplicationActionError(toErrorMessage(error));
     } finally {
@@ -216,9 +244,19 @@ export function OpsAdminHomeScreen() {
   };
 
   useEffect(() => {
+    void loadPendingApplications();
     void loadWasteRequests();
     void loadFailedPayments();
   }, []);
+
+  useEffect(() => {
+    if (!selectedApplicationId) {
+      setSelectedApplication(null);
+      return;
+    }
+    const found = applications.find((item) => item.id === selectedApplicationId) ?? null;
+    setSelectedApplication(found);
+  }, [applications, selectedApplicationId]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -227,29 +265,60 @@ export function OpsAdminHomeScreen() {
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>기사 신청 승인/반려</Text>
-        <TextInput
-          style={styles.input}
-          value={applicationIdInput}
-          onChangeText={setApplicationIdInput}
-          placeholder="기사 신청 ID"
-          keyboardType="numeric"
-          placeholderTextColor="#94a3b8"
-        />
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardTitle}>기사 신청 승인/반려</Text>
+          <Pressable style={styles.ghostButton} onPress={loadPendingApplications}>
+            <Text style={styles.ghostButtonText}>대기 목록 새로고침</Text>
+          </Pressable>
+        </View>
+        {isLoadingApplications && <Text style={styles.meta}>기사 신청 목록 로딩 중..</Text>}
+        {applicationListError && <Text style={styles.error}>{applicationListError}</Text>}
+        {applications.map((item) => (
+          <Pressable
+            key={item.id}
+            style={[styles.listItem, selectedApplicationId === item.id && styles.listItemActive]}
+            onPress={() => {
+              setSelectedApplicationId(item.id);
+              setApplicationActionError(null);
+              setApplicationResultMessage(null);
+            }}
+          >
+            <Text style={styles.listTitle}>신청 #{item.id}</Text>
+            <Text style={styles.listSub}>신청자: {item.userDisplayName} ({item.userEmail})</Text>
+            <Text style={styles.listSub}>신청시각: {formatDate(item.createdAt)}</Text>
+          </Pressable>
+        ))}
+        {!isLoadingApplications && applications.length === 0 && (
+          <Text style={styles.meta}>현재 대기(PENDING) 기사 신청이 없습니다.</Text>
+        )}
+
+        {selectedApplication && (
+          <View style={styles.resultBox}>
+            <Text style={styles.detailText}>선택 신청 ID: {selectedApplication.id}</Text>
+            <Text style={styles.detailText}>상태: {selectedApplication.status}</Text>
+            <Text style={styles.detailText}>
+              신청자: {selectedApplication.userDisplayName} ({selectedApplication.userEmail})
+            </Text>
+            <Text style={styles.detailText}>신청시각: {formatDate(selectedApplication.createdAt)}</Text>
+            <Text style={styles.detailText}>
+              신청내용: {selectedApplication.payload ? JSON.stringify(selectedApplication.payload) : '-'}
+            </Text>
+          </View>
+        )}
         {applicationResultMessage && <Text style={styles.success}>{applicationResultMessage}</Text>}
         {applicationActionError && <Text style={styles.error}>{applicationActionError}</Text>}
         <View style={styles.buttonRow}>
           <Pressable
             style={[styles.button, isSubmittingApprove && styles.buttonDisabled]}
             onPress={handleApproveApplication}
-            disabled={isSubmittingApprove || isSubmittingReject}
+            disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
           >
             <Text style={styles.buttonText}>{isSubmittingApprove ? '승인 중..' : '승인'}</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.rejectButton, isSubmittingReject && styles.buttonDisabled]}
             onPress={handleRejectApplication}
-            disabled={isSubmittingApprove || isSubmittingReject}
+            disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
           >
             <Text style={styles.buttonText}>{isSubmittingReject ? '반려 중..' : '반려'}</Text>
           </Pressable>
@@ -258,6 +327,7 @@ export function OpsAdminHomeScreen() {
           <View style={styles.resultBox}>
             <Text style={styles.detailText}>최근 처리 신청 ID: {latestApplicationResult.id}</Text>
             <Text style={styles.detailText}>상태: {latestApplicationResult.status}</Text>
+            <Text style={styles.detailText}>신청자: {latestApplicationResult.userEmail}</Text>
             <Text style={styles.detailText}>처리시각: {formatDate(latestApplicationResult.processedAt)}</Text>
           </View>
         )}
