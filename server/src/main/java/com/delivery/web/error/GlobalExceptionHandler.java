@@ -6,6 +6,8 @@ import com.delivery.auth.exception.DuplicateEmailException;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.UserNotFoundException;
+import com.delivery.address.exception.AddressSearchTimeoutException;
+import com.delivery.address.exception.AddressSearchUnavailableException;
 import com.delivery.driver.exception.DriverApplicationNotFoundException;
 import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
@@ -180,6 +182,34 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(AddressSearchTimeoutException.class)
+    public ResponseEntity<ApiErrorResponse> handleAddressSearchTimeout(
+            AddressSearchTimeoutException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.GATEWAY_TIMEOUT.value(),
+                "ADDRESS_SEARCH_TIMEOUT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
+    }
+
+    @ExceptionHandler(AddressSearchUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleAddressSearchUnavailable(
+            AddressSearchUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_GATEWAY.value(),
+                "ADDRESS_SEARCH_UNAVAILABLE",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(response);
     }
 
     @ExceptionHandler(PaymentNotFoundException.class)

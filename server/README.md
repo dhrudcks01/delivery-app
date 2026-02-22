@@ -23,6 +23,12 @@ Spring Boot backend skeleton for the Delivery MVP.
 - `APP_BOOTSTRAP_SYS_ADMIN_EMAIL` (example: `admin@example.com`)
 - `APP_BOOTSTRAP_SYS_ADMIN_PASSWORD` (example: `change-me-now`)
 - `APP_BOOTSTRAP_SYS_ADMIN_DISPLAY_NAME` (optional, default: `시스템 관리자`)
+- `APP_ADDRESS_SEARCH_BASE_URL` (도로명 주소 검색 외부 API URL)
+- `APP_ADDRESS_SEARCH_API_KEY` (도로명 주소 검색 API 키)
+- `APP_ADDRESS_SEARCH_CONNECT_TIMEOUT_MILLIS` (기본: `2000`)
+- `APP_ADDRESS_SEARCH_READ_TIMEOUT_MILLIS` (기본: `3000`)
+- `APP_ADDRESS_SEARCH_DEFAULT_LIMIT` (기본: `10`)
+- `APP_ADDRESS_SEARCH_MAX_LIMIT` (기본: `30`)
 
 If these values are not provided, Spring uses local defaults above.
 
@@ -37,6 +43,15 @@ the server creates an initial `SYS_ADMIN` account at startup (idempotent).
 4. Verify role with `GET /me` and confirm `roles` includes `SYS_ADMIN`.
 
 The bootstrap password is never hardcoded in source code. Manage it only via environment variables.
+
+### Address search API (T-0112)
+
+- Endpoint: `GET /addresses/road-search?query={검색어}&limit={개수}`
+- 인증: JWT 필요
+- 응답: 검색어, 적용 limit, 주소 목록
+- 외부 API 타임아웃/장애 시 표준 에러 응답
+  - `ADDRESS_SEARCH_TIMEOUT` (504)
+  - `ADDRESS_SEARCH_UNAVAILABLE` (502)
 
 ## Run & verify
 
