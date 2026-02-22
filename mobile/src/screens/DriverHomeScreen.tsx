@@ -12,6 +12,8 @@ import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
 
+type DriverFilter = 'ALL' | 'ACTION_REQUIRED' | 'DONE';
+
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
     const apiError = error.response?.data as ApiErrorResponse | undefined;
@@ -43,6 +45,7 @@ export function DriverHomeScreen() {
   const [assignedRequests, setAssignedRequests] = useState<DriverAssignedWasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<DriverAssignedWasteRequest | null>(null);
+  const [driverFilter, setDriverFilter] = useState<DriverFilter>('ACTION_REQUIRED');
 
   const [measuredWeightKgText, setMeasuredWeightKgText] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
@@ -55,6 +58,15 @@ export function DriverHomeScreen() {
   }, [selectedRequest]);
 
   const canMeasureSelected = selectedRequest?.status === 'ASSIGNED';
+  const filteredRequests = useMemo(() => {
+    if (driverFilter === 'ALL') {
+      return assignedRequests;
+    }
+    if (driverFilter === 'ACTION_REQUIRED') {
+      return assignedRequests.filter((request) => request.status === 'ASSIGNED');
+    }
+    return assignedRequests.filter((request) => request.status !== 'ASSIGNED');
+  }, [assignedRequests, driverFilter]);
 
   const resetMeasureForm = () => {
     setMeasuredWeightKgText('');
@@ -179,42 +191,72 @@ export function DriverHomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>DRIVER 배정 요청</Text>
+      <Text style={styles.title}>DRIVER 전용 배정건</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>내 배정 목록</Text>
+          <Text style={styles.cardTitle}>1단계. 배정 목록</Text>
           <Pressable style={styles.ghostButton} onPress={refreshAssignedRequests}>
             <Text style={styles.ghostButtonText}>새로고침</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.meta}>상태 필터</Text>
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[styles.filterChip, driverFilter === 'ACTION_REQUIRED' && styles.filterChipActive]}
+            onPress={() => setDriverFilter('ACTION_REQUIRED')}
+          >
+            <Text style={[styles.filterChipText, driverFilter === 'ACTION_REQUIRED' && styles.filterChipTextActive]}>
+              처리 필요
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.filterChip, driverFilter === 'DONE' && styles.filterChipActive]}
+            onPress={() => setDriverFilter('DONE')}
+          >
+            <Text style={[styles.filterChipText, driverFilter === 'DONE' && styles.filterChipTextActive]}>
+              처리 완료
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.filterChip, driverFilter === 'ALL' && styles.filterChipActive]}
+            onPress={() => setDriverFilter('ALL')}
+          >
+            <Text style={[styles.filterChipText, driverFilter === 'ALL' && styles.filterChipTextActive]}>
+              전체
+            </Text>
           </Pressable>
         </View>
 
         {isLoadingList && <Text style={styles.meta}>목록을 불러오는 중...</Text>}
         {listError && <Text style={styles.error}>{listError}</Text>}
 
-        {assignedRequests.map((item) => (
+        {filteredRequests.map((item) => (
           <Pressable
             key={item.requestId}
             style={[styles.listItem, selectedRequestId === item.requestId && styles.listItemActive]}
             onPress={() => loadAssignedRequestDetail(item.requestId)}
           >
-            <Text style={styles.listTitle}>
-              #{item.requestId} {item.status}
-            </Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.listTitle}>
+                #{item.requestId} {item.status}
+              </Text>
+              {item.status === 'ASSIGNED' && <Text style={styles.priorityBadge}>우선 처리</Text>}
+            </View>
             <Text style={styles.listSub}>{item.address}</Text>
             <Text style={styles.listSub}>배정일: {formatDate(item.assignedAt)}</Text>
           </Pressable>
         ))}
 
-        {!isLoadingList && assignedRequests.length === 0 && (
-          <Text style={styles.meta}>배정된 요청이 없습니다.</Text>
+        {!isLoadingList && filteredRequests.length === 0 && (
+          <Text style={styles.meta}>선택한 필터에 해당하는 배정 요청이 없습니다.</Text>
         )}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>배정 상세</Text>
+        <Text style={styles.cardTitle}>2단계. 배정 상세 확인</Text>
         <Text style={styles.detailTitle}>{selectedTitle}</Text>
 
         {isLoadingDetail && <Text style={styles.meta}>상세를 불러오는 중...</Text>}
@@ -234,7 +276,7 @@ export function DriverHomeScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>측정 완료 처리</Text>
+        <Text style={styles.cardTitle}>3단계. 측정 완료 처리</Text>
         {!canMeasureSelected && (
           <Text style={styles.meta}>ASSIGNED 상태 요청을 선택해야 측정 완료할 수 있습니다.</Text>
         )}
@@ -329,6 +371,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: '#c2d7d2',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#ffffff',
+  },
+  filterChipActive: {
+    borderColor: ui.colors.primary,
+    backgroundColor: '#eef8f6',
+  },
+  filterChipText: {
+    color: ui.colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: ui.colors.primary,
+  },
   ghostButton: {
     borderWidth: 1,
     borderColor: '#9fc2b9',
@@ -359,6 +425,15 @@ const styles = StyleSheet.create({
   listSub: {
     color: ui.colors.text,
     fontSize: 12,
+  },
+  priorityBadge: {
+    color: '#b91c1c',
+    fontSize: 11,
+    fontWeight: '700',
+    backgroundColor: '#fee2e2',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   detailTitle: {
     color: ui.colors.text,

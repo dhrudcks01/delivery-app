@@ -2,7 +2,7 @@
 
 Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 
-## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 구현 범위
+## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 ~ T-0517 구현 범위
 
 - Expo TypeScript 앱 기본 스캐폴딩
 - React Navigation 기반 네비게이션
@@ -26,6 +26,10 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
   - 무게 입력
   - 사진 선택/업로드(`/uploads`)
   - 측정 완료 처리(`/driver/waste-requests/{id}/measure`)
+- DRIVER 전용 배정건 화면 강화
+  - 목록/상세/측정 완료 액션 흐름 정리
+  - 상태 필터(처리 필요/처리 완료/전체) 제공
+  - ASSIGNED 건 우선 처리 배지 표시
 
 ## 환경 변수
 
