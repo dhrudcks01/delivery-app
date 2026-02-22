@@ -129,7 +129,18 @@ class AuthIntegrationTest {
     }
 
     @Test
-    void loginReturnsUnauthorizedWhenCredentialsAreInvalid() throws Exception {
+    void loginReturnsUnauthorizedWhenIdentifierDoesNotExist() throws Exception {
+        String body = objectMapper.writeValueAsString(new LoginPayload("not-found-id", "password123"));
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("LOGIN_IDENTIFIER_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("존재하지 않는 아이디입니다."));
+    }
+
+    @Test
+    void loginReturnsUnauthorizedWhenPasswordDoesNotMatch() throws Exception {
         String email = "invalid-login@example.com";
         userRepository.save(new UserEntity(
                 email,
@@ -143,7 +154,8 @@ class AuthIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.code").value("LOGIN_PASSWORD_MISMATCH"))
+                .andExpect(jsonPath("$.message").value("비밀번호가 올바르지 않습니다."));
     }
 
     @Test

@@ -5,6 +5,8 @@ import java.util.List;
 import com.delivery.auth.exception.DuplicateEmailException;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
+import com.delivery.auth.exception.LoginIdentifierNotFoundException;
+import com.delivery.auth.exception.LoginPasswordMismatchException;
 import com.delivery.auth.exception.OpsAdminApplicationConflictException;
 import com.delivery.auth.exception.OpsAdminApplicationNotAllowedException;
 import com.delivery.auth.exception.OpsAdminApplicationNotFoundException;
@@ -75,6 +77,34 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.UNAUTHORIZED.value(),
                 "INVALID_REFRESH_TOKEN",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(LoginIdentifierNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleLoginIdentifierNotFound(
+            LoginIdentifierNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                "LOGIN_IDENTIFIER_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(LoginPasswordMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleLoginPasswordMismatch(
+            LoginPasswordMismatchException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                "LOGIN_PASSWORD_MISMATCH",
                 exception.getMessage(),
                 request.getRequestURI()
         );

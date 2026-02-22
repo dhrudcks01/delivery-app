@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AxiosError } from 'axios';
 import { fetchMe, initializeAuth, loginAndStore, logout, registerAndStore } from './authClient';
 import { LoginRequest, MeResponse, RegisterRequest } from '../types/auth';
 
@@ -13,6 +14,11 @@ type AuthContextValue = AuthState & {
   signIn: (payload: LoginRequest) => Promise<void>;
   signUp: (payload: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
+};
+
+type ApiErrorResponse = {
+  code?: string;
+  message?: string;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -72,13 +78,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         me,
         errorMessage: null,
       });
-    } catch {
+    } catch (error) {
+      let loginErrorMessage = '로그인에 실패했습니다. 입력값을 확인해 주세요.';
+      if (error instanceof AxiosError) {
+        const errorCode = (error.response?.data as ApiErrorResponse | undefined)?.code;
+        if (errorCode === 'LOGIN_IDENTIFIER_NOT_FOUND') {
+          loginErrorMessage = '존재하지 않는 아이디입니다.';
+        } else if (errorCode === 'LOGIN_PASSWORD_MISMATCH') {
+          loginErrorMessage = '비밀번호가 올바르지 않습니다.';
+        }
+      }
+
       await logout();
       setState({
         isLoading: false,
         isAuthenticated: false,
         me: null,
-        errorMessage: '이메일 또는 비밀번호가 올바르지 않습니다.',
+        errorMessage: loginErrorMessage,
       });
     }
   }, []);

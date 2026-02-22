@@ -10,6 +10,8 @@ import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.DuplicateEmailException;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
+import com.delivery.auth.exception.LoginIdentifierNotFoundException;
+import com.delivery.auth.exception.LoginPasswordMismatchException;
 import com.delivery.auth.repository.AuthIdentityRepository;
 import com.delivery.auth.repository.UserRepository;
 import com.delivery.auth.security.JwtTokenProvider;
@@ -62,10 +64,10 @@ public class AuthService {
     @Transactional
     public AuthTokenResponse login(LoginRequest request) {
         UserEntity user = userRepository.findByEmail(request.email())
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElseThrow(LoginIdentifierNotFoundException::new);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new InvalidCredentialsException();
+            throw new LoginPasswordMismatchException();
         }
 
         return issueTokens(user);
