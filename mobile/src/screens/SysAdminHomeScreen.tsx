@@ -9,11 +9,17 @@ import {
   rejectOpsAdminApplicationForSysAdmin,
   rejectSysAdminApplicationForSysAdmin,
 } from '../api/roleApplicationApi';
-import { getOpsAdminGrantCandidates, grantOpsAdminRole, revokeOpsAdminRole } from '../api/sysAdminRoleApi';
+import {
+  getOpsAdminGrantCandidates,
+  getSysAdminGrantCandidates,
+  grantOpsAdminRole,
+  grantSysAdminRole,
+  revokeOpsAdminRole,
+} from '../api/sysAdminRoleApi';
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { RoleApplication } from '../types/roleApplication';
-import { OpsAdminGrantCandidate } from '../types/opsAdmin';
+import { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
@@ -45,6 +51,12 @@ export function SysAdminHomeScreen() {
   const [selectedGrantCandidateId, setSelectedGrantCandidateId] = useState<number | null>(null);
   const [isLoadingGrantCandidates, setIsLoadingGrantCandidates] = useState(false);
   const [grantCandidateError, setGrantCandidateError] = useState<string | null>(null);
+  const [sysAdminGrantQuery, setSysAdminGrantQuery] = useState('');
+  const [sysAdminGrantCandidates, setSysAdminGrantCandidates] = useState<SysAdminGrantCandidate[]>([]);
+  const [selectedSysAdminGrantCandidateId, setSelectedSysAdminGrantCandidateId] = useState<number | null>(null);
+  const [isLoadingSysAdminGrantCandidates, setIsLoadingSysAdminGrantCandidates] = useState(false);
+  const [sysAdminGrantCandidateError, setSysAdminGrantCandidateError] = useState<string | null>(null);
+  const [isGrantingSysAdminRole, setIsGrantingSysAdminRole] = useState(false);
   const [userIdInput, setUserIdInput] = useState('');
   const [isGranting, setIsGranting] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
@@ -88,6 +100,10 @@ export function SysAdminHomeScreen() {
   const selectedGrantCandidate = useMemo(
     () => opsAdminGrantCandidates.find((item) => item.userId === selectedGrantCandidateId) ?? null,
     [opsAdminGrantCandidates, selectedGrantCandidateId],
+  );
+  const selectedSysAdminGrantCandidate = useMemo(
+    () => sysAdminGrantCandidates.find((item) => item.userId === selectedSysAdminGrantCandidateId) ?? null,
+    [sysAdminGrantCandidates, selectedSysAdminGrantCandidateId],
   );
 
   const statusParam = applicationStatusFilter === 'ALL' ? undefined : 'PENDING';
@@ -176,6 +192,32 @@ export function SysAdminHomeScreen() {
     }
   };
 
+  const loadSysAdminGrantCandidates = async () => {
+    setIsLoadingSysAdminGrantCandidates(true);
+    setSysAdminGrantCandidateError(null);
+
+    try {
+      const response = await getSysAdminGrantCandidates({
+        query: sysAdminGrantQuery.trim() || undefined,
+        page: 0,
+        size: 20,
+      });
+      setSysAdminGrantCandidates(response.content);
+      setSelectedSysAdminGrantCandidateId((current) => {
+        if (current && response.content.some((item) => item.userId === current)) {
+          return current;
+        }
+        return response.content[0]?.userId ?? null;
+      });
+    } catch (error) {
+      setSysAdminGrantCandidateError(toErrorMessage(error));
+      setSysAdminGrantCandidates([]);
+      setSelectedSysAdminGrantCandidateId(null);
+    } finally {
+      setIsLoadingSysAdminGrantCandidates(false);
+    }
+  };
+
   const handleGrant = async () => {
     if (!selectedGrantCandidate) {
       setRoleErrorMessage('권한 부여할 DRIVER 대상을 목록에서 선택해 주세요.');
@@ -196,6 +238,29 @@ export function SysAdminHomeScreen() {
       setRoleErrorMessage(toErrorMessage(error));
     } finally {
       setIsGranting(false);
+    }
+  };
+
+  const handleGrantSysAdminRole = async () => {
+    if (!selectedSysAdminGrantCandidate) {
+      setRoleErrorMessage('SYS_ADMIN 권한 부여 대상을 목록에서 선택해 주세요.');
+      return;
+    }
+
+    setIsGrantingSysAdminRole(true);
+    setRoleResultMessage(null);
+    setRoleErrorMessage(null);
+
+    try {
+      await grantSysAdminRole(selectedSysAdminGrantCandidate.userId);
+      setRoleResultMessage(
+        `사용자 #${selectedSysAdminGrantCandidate.userId} (${selectedSysAdminGrantCandidate.userEmail}) 에게 SYS_ADMIN 권한을 부여했습니다.`,
+      );
+      await loadSysAdminGrantCandidates();
+    } catch (error) {
+      setRoleErrorMessage(toErrorMessage(error));
+    } finally {
+      setIsGrantingSysAdminRole(false);
     }
   };
 
@@ -309,6 +374,7 @@ export function SysAdminHomeScreen() {
 
   useEffect(() => {
     void loadOpsAdminGrantCandidates();
+    void loadSysAdminGrantCandidates();
   }, []);
 
   return (
@@ -447,6 +513,59 @@ export function SysAdminHomeScreen() {
             <Text style={styles.buttonText}>반려</Text>
           </Pressable>
         </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>SYS_ADMIN 권한 부여 대상 검색 (비 SYS_ADMIN)</Text>
+        <Text style={styles.meta}>SYS_ADMIN 미보유 계정만 검색됩니다. 자기 자신의 권한은 변경할 수 없습니다.</Text>
+        <Text style={styles.label}>검색어 (이메일/이름)</Text>
+        <View style={styles.buttonRow}>
+          <TextInput
+            style={[styles.input, styles.flexInput]}
+            value={sysAdminGrantQuery}
+            onChangeText={setSysAdminGrantQuery}
+            placeholder="예: admin"
+            placeholderTextColor="#94a3b8"
+          />
+          <Pressable style={styles.secondaryButton} onPress={loadSysAdminGrantCandidates}>
+            <Text style={styles.secondaryButtonText}>검색</Text>
+          </Pressable>
+        </View>
+
+        {isLoadingSysAdminGrantCandidates && <Text style={styles.meta}>SYS_ADMIN 부여 대상 조회 중..</Text>}
+        {sysAdminGrantCandidateError && <Text style={styles.error}>{sysAdminGrantCandidateError}</Text>}
+        {sysAdminGrantCandidates.map((item) => (
+          <Pressable
+            key={item.userId}
+            style={[styles.listItem, selectedSysAdminGrantCandidateId === item.userId && styles.listItemActive]}
+            onPress={() => setSelectedSysAdminGrantCandidateId(item.userId)}
+          >
+            <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
+            <Text style={styles.listSub}>{item.userDisplayName}</Text>
+            <Text style={styles.listSub}>{item.userEmail}</Text>
+          </Pressable>
+        ))}
+        {!isLoadingSysAdminGrantCandidates && sysAdminGrantCandidates.length === 0 && (
+          <Text style={styles.meta}>조회된 SYS_ADMIN 부여 대상이 없습니다.</Text>
+        )}
+
+        {selectedSysAdminGrantCandidate && (
+          <View style={styles.resultBox}>
+            <Text style={styles.detailText}>선택 사용자 ID: {selectedSysAdminGrantCandidate.userId}</Text>
+            <Text style={styles.detailText}>이름: {selectedSysAdminGrantCandidate.userDisplayName}</Text>
+            <Text style={styles.detailText}>이메일: {selectedSysAdminGrantCandidate.userEmail}</Text>
+          </View>
+        )}
+
+        <Pressable
+          style={[styles.button, isGrantingSysAdminRole && styles.buttonDisabled]}
+          onPress={handleGrantSysAdminRole}
+          disabled={isGrantingSysAdminRole || !selectedSysAdminGrantCandidateId}
+        >
+          <Text style={styles.buttonText}>
+            {isGrantingSysAdminRole ? 'SYS_ADMIN 부여 중...' : '선택 대상 SYS_ADMIN 권한 부여'}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.card}>

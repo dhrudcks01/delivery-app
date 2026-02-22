@@ -39,3 +39,9 @@ export type OpsAdminGrantCandidate = {
   userEmail: string;
   userDisplayName: string;
 };
+
+export type SysAdminGrantCandidate = {
+  userId: number;
+  userEmail: string;
+  userDisplayName: string;
+};

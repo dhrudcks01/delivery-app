@@ -14,8 +14,10 @@ import com.delivery.auth.exception.OpsAdminApplicationStatusConflictException;
 import com.delivery.auth.exception.OpsAdminGrantTargetNotAllowedException;
 import com.delivery.auth.exception.SysAdminApplicationConflictException;
 import com.delivery.auth.exception.SysAdminApplicationNotAllowedException;
+import com.delivery.auth.exception.SysAdminGrantTargetNotAllowedException;
 import com.delivery.auth.exception.SysAdminApplicationNotFoundException;
 import com.delivery.auth.exception.SysAdminApplicationStatusConflictException;
+import com.delivery.auth.exception.SysAdminSelfRoleChangeNotAllowedException;
 import com.delivery.auth.exception.SysAdminSelfApprovalNotAllowedException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.address.exception.AddressSearchTimeoutException;
@@ -250,6 +252,34 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(SysAdminGrantTargetNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminGrantTargetNotAllowed(
+            SysAdminGrantTargetNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "SYS_ADMIN_GRANT_TARGET_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(SysAdminSelfRoleChangeNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminSelfRoleChangeNotAllowed(
+            SysAdminSelfRoleChangeNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "SYS_ADMIN_SELF_ROLE_CHANGE_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(SysAdminSelfApprovalNotAllowedException.class)

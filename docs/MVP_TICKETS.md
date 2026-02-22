@@ -262,7 +262,7 @@
 
 ---
 
-### [ ] T-0211 SYS_ADMIN 권한 부여 대상 검색/선택 정책(대상: 비 SYS_ADMIN)
+### [x] T-0211 SYS_ADMIN 권한 부여 대상 검색/선택 정책(대상: 비 SYS_ADMIN)
 **Goal**
 - SYS_ADMIN이 SYS_ADMIN이 아닌 계정을 검색해 SYS_ADMIN 권한을 부여할 수 있도록 한다.
 

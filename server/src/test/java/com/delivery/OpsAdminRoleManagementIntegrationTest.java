@@ -48,6 +48,7 @@ class OpsAdminRoleManagementIntegrationTest {
     @BeforeEach
     void setUpRoles() {
         upsertRole("USER", "일반 사용자");
+        upsertRole("DRIVER", "기사");
         upsertRole("OPS_ADMIN", "운영 관리자");
         upsertRole("SYS_ADMIN", "시스템 관리자");
     }
@@ -55,7 +56,7 @@ class OpsAdminRoleManagementIntegrationTest {
     @Test
     void sysAdminCanGrantAndRevokeOpsAdminRole() throws Exception {
         TestUser sysAdmin = createUser("sys-admin@example.com", "SYS_ADMIN");
-        TestUser target = createUser("target-user@example.com", "USER");
+        TestUser target = createUser("target-user@example.com", "DRIVER");
 
         mockMvc.perform(post("/sys-admin/users/{userId}/roles/ops-admin", target.id())
                         .header("Authorization", "Bearer " + sysAdmin.accessToken()))
@@ -77,7 +78,7 @@ class OpsAdminRoleManagementIntegrationTest {
     @Test
     void nonSysAdminCannotGrantOpsAdminRole() throws Exception {
         TestUser opsAdmin = createUser("ops-admin@example.com", "OPS_ADMIN");
-        TestUser target = createUser("target-non-sys@example.com", "USER");
+        TestUser target = createUser("target-non-sys@example.com", "DRIVER");
 
         mockMvc.perform(post("/sys-admin/users/{userId}/roles/ops-admin", target.id())
                         .header("Authorization", "Bearer " + opsAdmin.accessToken()))
@@ -111,6 +112,82 @@ class OpsAdminRoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].userId").value(driverOnly.id()))
                 .andExpect(jsonPath("$.content[0].userEmail").value("driver-only@example.com"));
+    }
+
+    @Test
+    void sysAdminCanSearchAndGrantSysAdminRoleToNonSysAdminUser() throws Exception {
+        TestUser sysAdmin = createUser("sys-admin-grant@example.com", "SYS_ADMIN");
+        TestUser target = createUser("sys-target@example.com", "OPS_ADMIN");
+
+        mockMvc.perform(get("/sys-admin/users/sys-admin-grant-candidates")
+                        .header("Authorization", "Bearer " + sysAdmin.accessToken())
+                        .param("query", "sys-target")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].userId").value(target.id()))
+                .andExpect(jsonPath("$.content[0].userEmail").value("sys-target@example.com"));
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/sys-admin", target.id())
+                        .header("Authorization", "Bearer " + sysAdmin.accessToken()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/sys-admin/secure")
+                        .header("Authorization", "Bearer " + target.accessToken()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void sysAdminCannotGrantOrRevokeOwnSysAdminRole() throws Exception {
+        TestUser selfSysAdmin = createUser("self-sys-admin@example.com", "SYS_ADMIN");
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/sys-admin", selfSysAdmin.id())
+                        .header("Authorization", "Bearer " + selfSysAdmin.accessToken()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SYS_ADMIN_SELF_ROLE_CHANGE_NOT_ALLOWED"));
+
+        mockMvc.perform(delete("/sys-admin/users/{userId}/roles/sys-admin", selfSysAdmin.id())
+                        .header("Authorization", "Bearer " + selfSysAdmin.accessToken()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SYS_ADMIN_SELF_ROLE_CHANGE_NOT_ALLOWED"));
+    }
+
+    @Test
+    void grantSysAdminRoleFailsWhenTargetAlreadyHasSysAdmin() throws Exception {
+        TestUser actor = createUser("sys-grant-actor@example.com", "SYS_ADMIN");
+        TestUser targetSysAdmin = createUser("sys-grant-target@example.com", "SYS_ADMIN");
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/sys-admin", targetSysAdmin.id())
+                        .header("Authorization", "Bearer " + actor.accessToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SYS_ADMIN_GRANT_TARGET_NOT_ALLOWED"));
+    }
+
+    @Test
+    void sysAdminRoleChangesAreRecordedInAuditLog() throws Exception {
+        TestUser actor = createUser("sys-audit-actor@example.com", "SYS_ADMIN");
+        TestUser target = createUser("sys-audit-target@example.com", "OPS_ADMIN");
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/sys-admin", target.id())
+                        .header("Authorization", "Bearer " + actor.accessToken()))
+                .andExpect(status().isNoContent());
+
+        Integer grantCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM role_change_audit_logs
+                WHERE actor_user_id = ?
+                  AND target_user_id = ?
+                  AND role_code = 'SYS_ADMIN'
+                  AND action = 'GRANT'
+                """,
+                Integer.class,
+                actor.id(),
+                target.id()
+        );
+        org.assertj.core.api.Assertions.assertThat(grantCount).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(grantCount).isGreaterThanOrEqualTo(1);
     }
 
     @Test
