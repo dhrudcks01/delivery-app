@@ -127,6 +127,28 @@ class AuthRbacIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void opsAdminAndSysAdminCanAccessLoginAuditLogsButUserCannot() throws Exception {
+        createLoginAuditLog("audit-user", "127.0.0.1", "JUnit", "SUCCESS");
+
+        String userToken = createAccessToken("auth-rbac-only-user@example.com", List.of("USER"));
+        mockMvc.perform(get("/ops-admin/login-audit-logs")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isForbidden());
+
+        String opsAdminToken = createAccessToken("auth-rbac-ops@example.com", List.of("OPS_ADMIN"));
+        mockMvc.perform(get("/ops-admin/login-audit-logs")
+                        .header("Authorization", "Bearer " + opsAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        String sysAdminToken = createAccessToken("auth-rbac-sys@example.com", List.of("SYS_ADMIN"));
+        mockMvc.perform(get("/ops-admin/login-audit-logs")
+                        .header("Authorization", "Bearer " + sysAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
     private String createAccessToken(String email, List<String> roles) throws Exception {
         String password = "password123";
         createUser(email, password, roles);
@@ -164,6 +186,19 @@ class AuthRbacIntegrationTest {
                 """,
                 userId,
                 roleCode
+        );
+    }
+
+    private void createLoginAuditLog(String identifier, String ipAddress, String userAgent, String result) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO login_audit_logs (login_identifier, ip_address, user_agent, result)
+                VALUES (?, ?, ?, ?)
+                """,
+                identifier,
+                ipAddress,
+                userAgent,
+                result
         );
     }
 

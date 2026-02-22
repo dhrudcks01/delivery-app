@@ -104,6 +104,8 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+
+        assertThat(countAuditLogs(email, "SUCCESS")).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -137,6 +139,8 @@ class AuthIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("LOGIN_IDENTIFIER_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("존재하지 않는 아이디입니다."));
+
+        assertThat(countAuditLogs("not-found-id", "IDENTIFIER_NOT_FOUND")).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -156,6 +160,8 @@ class AuthIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("LOGIN_PASSWORD_MISMATCH"))
                 .andExpect(jsonPath("$.message").value("비밀번호가 올바르지 않습니다."));
+
+        assertThat(countAuditLogs(email, "PASSWORD_MISMATCH")).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -297,5 +303,15 @@ class AuthIntegrationTest {
     }
 
     private record RefreshPayload(String refreshToken) {
+    }
+
+    private int countAuditLogs(String identifier, String result) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM login_audit_logs WHERE login_identifier = ? AND result = ?",
+                Integer.class,
+                identifier,
+                result
+        );
+        return count == null ? 0 : count;
     }
 }

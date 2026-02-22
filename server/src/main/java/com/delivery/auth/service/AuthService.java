@@ -31,17 +31,20 @@ public class AuthService {
     private final AuthIdentityRepository authIdentityRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final LoginAuditLogService loginAuditLogService;
 
     public AuthService(
             UserRepository userRepository,
             AuthIdentityRepository authIdentityRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider
+            JwtTokenProvider jwtTokenProvider,
+            LoginAuditLogService loginAuditLogService
     ) {
         this.userRepository = userRepository;
         this.authIdentityRepository = authIdentityRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.loginAuditLogService = loginAuditLogService;
     }
 
     @Transactional
@@ -62,14 +65,20 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthTokenResponse login(LoginRequest request) {
-        UserEntity user = userRepository.findByEmail(request.email())
-                .orElseThrow(LoginIdentifierNotFoundException::new);
+    public AuthTokenResponse login(LoginRequest request, String ipAddress, String userAgent) {
+        String identifier = request.email().trim();
+        UserEntity user = userRepository.findByEmail(identifier)
+                .orElseThrow(() -> {
+                    loginAuditLogService.record(identifier, ipAddress, userAgent, "IDENTIFIER_NOT_FOUND");
+                    return new LoginIdentifierNotFoundException();
+                });
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginAuditLogService.record(identifier, ipAddress, userAgent, "PASSWORD_MISMATCH");
             throw new LoginPasswordMismatchException();
         }
 
+        loginAuditLogService.record(identifier, ipAddress, userAgent, "SUCCESS");
         return issueTokens(user);
     }
 
