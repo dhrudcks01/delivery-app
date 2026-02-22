@@ -66,6 +66,25 @@ class AuthIntegrationTest {
     }
 
     @Test
+    void registerAllowsNonEmailIdentifierString() throws Exception {
+        String identifier = "register-user-001";
+        String password = "password123";
+        String body = objectMapper.writeValueAsString(new RegisterPayload(identifier, password, "문자열식별자유저"));
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+
+        UserEntity user = userRepository.findByEmail(identifier).orElseThrow();
+        assertThat(user.getDisplayName()).isEqualTo("문자열식별자유저");
+        assertThat(authIdentityRepository.existsByProviderAndProviderUserId("LOCAL", identifier)).isTrue();
+    }
+
+    @Test
     void loginReturnsTokensWhenCredentialsAreValid() throws Exception {
         String email = "login-user@example.com";
         String password = "password123";

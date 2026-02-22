@@ -20,18 +20,18 @@ type SignupScreenProps = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
 export function SignupScreen({ navigation }: SignupScreenProps) {
   const { signUp, isLoading, errorMessage } = useAuth();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSignup = async () => {
-    const trimmedEmail = email.trim();
+    const trimmedIdentifier = identifier.trim();
     const trimmedDisplayName = displayName.trim();
     const trimmedPassword = password.trim();
 
-    if (!trimmedEmail || !trimmedDisplayName || !trimmedPassword) {
-      setFormError('이메일, 이름, 비밀번호를 모두 입력해 주세요.');
+    if (!trimmedIdentifier || !trimmedDisplayName || !trimmedPassword) {
+      setFormError('아이디, 이름, 비밀번호를 모두 입력해 주세요.');
       return;
     }
     if (trimmedPassword.length < 8) {
@@ -41,7 +41,7 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
 
     setFormError(null);
     await signUp({
-      email: trimmedEmail,
+      email: trimmedIdentifier,
       displayName: trimmedDisplayName,
       password: trimmedPassword,
     });
@@ -60,20 +60,20 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
           contentInsetAdjustmentBehavior="always"
         >
           <View style={styles.hero}>
-            <Text style={styles.badge}>이메일 회원가입</Text>
+            <Text style={styles.badge}>아이디 회원가입</Text>
             <Text style={styles.title}>가입 후 바로 시작하세요</Text>
             <Text style={styles.description}>회원가입 성공 시 자동 로그인되어 역할 화면으로 이동합니다.</Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>이메일</Text>
+            <Text style={styles.label}>아이디</Text>
             <TextInput
               style={styles.input}
-              value={email}
-              onChangeText={setEmail}
+              value={identifier}
+              onChangeText={setIdentifier}
               autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="email@example.com"
+              keyboardType="default"
+              placeholder="아이디"
               placeholderTextColor="#94a3b8"
             />
 
