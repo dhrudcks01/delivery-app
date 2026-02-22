@@ -13,6 +13,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -71,6 +73,17 @@ public class DriverApplicationService {
         DriverApplicationEntity entity = driverApplicationRepository.findByIdAndUser(applicationId, user)
                 .orElseThrow(DriverApplicationNotFoundException::new);
         return toResponse(entity);
+    }
+
+    @Transactional
+    public Page<DriverApplicationResponse> getApplicationsForOps(String status, Pageable pageable) {
+        Page<DriverApplicationEntity> page;
+        if (status == null || status.isBlank()) {
+            page = driverApplicationRepository.findAll(pageable);
+        } else {
+            page = driverApplicationRepository.findAllByStatus(status.trim().toUpperCase(), pageable);
+        }
+        return page.map(this::toResponse);
     }
 
     @Transactional
@@ -144,12 +157,18 @@ public class DriverApplicationService {
     }
 
     private DriverApplicationResponse toResponse(DriverApplicationEntity entity) {
+        UserEntity applicant = entity.getUser();
+        UserEntity processor = entity.getProcessedBy();
         return new DriverApplicationResponse(
                 entity.getId(),
-                entity.getUser().getId(),
+                applicant.getId(),
+                applicant.getEmail(),
+                applicant.getDisplayName(),
                 entity.getStatus(),
                 toJsonNode(entity.getPayload()),
-                entity.getProcessedBy() != null ? entity.getProcessedBy().getId() : null,
+                processor != null ? processor.getId() : null,
+                processor != null ? processor.getEmail() : null,
+                processor != null ? processor.getDisplayName() : null,
                 entity.getProcessedAt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

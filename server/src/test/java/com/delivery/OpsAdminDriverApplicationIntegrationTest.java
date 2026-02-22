@@ -61,7 +61,9 @@ class OpsAdminDriverApplicationIntegrationTest {
                         .header("Authorization", "Bearer " + opsAdminAccessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.userEmail").value("apply-user@example.com"))
                 .andExpect(jsonPath("$.processedBy").isNumber())
+                .andExpect(jsonPath("$.processedByEmail").value("ops-admin@example.com"))
                 .andExpect(jsonPath("$.processedAt").isNotEmpty());
 
         mockMvc.perform(get("/driver/secure")
@@ -79,7 +81,9 @@ class OpsAdminDriverApplicationIntegrationTest {
                         .header("Authorization", "Bearer " + opsAdminAccessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(jsonPath("$.userEmail").value("reject-user@example.com"))
                 .andExpect(jsonPath("$.processedBy").isNumber())
+                .andExpect(jsonPath("$.processedByEmail").value("reject-admin@example.com"))
                 .andExpect(jsonPath("$.processedAt").isNotEmpty());
 
         mockMvc.perform(get("/driver/secure")
@@ -111,6 +115,54 @@ class OpsAdminDriverApplicationIntegrationTest {
                         .header("Authorization", "Bearer " + opsAdminAccessToken))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DRIVER_APPLICATION_STATUS_CONFLICT"));
+    }
+
+    @Test
+    void opsAdminCanListApplicationsWithStatusFilterAndPagination() throws Exception {
+        String pendingUserToken = createUserAndLogin("pending-user@example.com", "USER");
+        String approvedUserToken = createUserAndLogin("approved-user@example.com", "USER");
+        String opsAdminAccessToken = createUserAndLogin("ops-list-admin@example.com", "OPS_ADMIN");
+
+        Long approvedApplicationId = createApplication(approvedUserToken);
+        createApplication(pendingUserToken);
+
+        mockMvc.perform(post("/ops-admin/driver-applications/{applicationId}/approve", approvedApplicationId)
+                        .header("Authorization", "Bearer " + opsAdminAccessToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/ops-admin/driver-applications")
+                        .header("Authorization", "Bearer " + opsAdminAccessToken)
+                        .param("status", "PENDING")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sort", "createdAt,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("PENDING"))
+                .andExpect(jsonPath("$.content[0].userEmail").value("pending-user@example.com"))
+                .andExpect(jsonPath("$.content[0].processedAt").isEmpty())
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(10));
+    }
+
+    @Test
+    void opsAdminListUsesCreatedAtDescByDefault() throws Exception {
+        String firstUserToken = createUserAndLogin("first-order-user@example.com", "USER");
+        String secondUserToken = createUserAndLogin("second-order-user@example.com", "USER");
+        String opsAdminAccessToken = createUserAndLogin("ops-order-admin@example.com", "OPS_ADMIN");
+
+        Long firstApplicationId = createApplication(firstUserToken);
+        Long secondApplicationId = createApplication(secondUserToken);
+
+        mockMvc.perform(get("/ops-admin/driver-applications")
+                        .header("Authorization", "Bearer " + opsAdminAccessToken)
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(secondApplicationId))
+                .andExpect(jsonPath("$.content[1].id").value(firstApplicationId))
+                .andExpect(jsonPath("$.content[0].userEmail").value("second-order-user@example.com"))
+                .andExpect(jsonPath("$.content[0].processedBy").isEmpty());
     }
 
     private Long createApplication(String accessToken) throws Exception {
