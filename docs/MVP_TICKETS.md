@@ -190,7 +190,7 @@
 
 ---
 
-### [ ] T-0207 OPS_ADMIN 권한 신청/승인 플로우(OPS_ADMIN_REQUEST)
+### [x] T-0207 OPS_ADMIN 권한 신청/승인 플로우(OPS_ADMIN_REQUEST)
 **Goal**
 - 사용자(또는 DRIVER)가 OPS_ADMIN 권한을 신청하고 SYS_ADMIN이 승인/반려하는 절차를 추가한다.
 

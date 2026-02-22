@@ -5,6 +5,10 @@ import java.util.List;
 import com.delivery.auth.exception.DuplicateEmailException;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
+import com.delivery.auth.exception.OpsAdminApplicationConflictException;
+import com.delivery.auth.exception.OpsAdminApplicationNotAllowedException;
+import com.delivery.auth.exception.OpsAdminApplicationNotFoundException;
+import com.delivery.auth.exception.OpsAdminApplicationStatusConflictException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.address.exception.AddressSearchTimeoutException;
 import com.delivery.address.exception.AddressSearchUnavailableException;
@@ -84,6 +88,62 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(OpsAdminApplicationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleOpsAdminApplicationNotFound(
+            OpsAdminApplicationNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "OPS_ADMIN_APPLICATION_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(OpsAdminApplicationStatusConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleOpsAdminApplicationStatusConflict(
+            OpsAdminApplicationStatusConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "OPS_ADMIN_APPLICATION_STATUS_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(OpsAdminApplicationConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleOpsAdminApplicationConflict(
+            OpsAdminApplicationConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "OPS_ADMIN_APPLICATION_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(OpsAdminApplicationNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleOpsAdminApplicationNotAllowed(
+            OpsAdminApplicationNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "OPS_ADMIN_APPLICATION_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(DriverApplicationNotFoundException.class)
