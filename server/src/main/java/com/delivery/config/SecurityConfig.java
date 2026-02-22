@@ -1,6 +1,7 @@
 package com.delivery.config;
 
 import com.delivery.auth.config.JwtProperties;
+import com.delivery.config.logging.ApiRequestLoggingFilter;
 import com.delivery.config.security.RestAccessDeniedHandler;
 import com.delivery.config.security.RestAuthenticationEntryPoint;
 import com.delivery.config.security.JwtAuthenticationFilter;
@@ -22,15 +23,18 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ApiRequestLoggingFilter apiRequestLoggingFilter;
 
     public SecurityConfig(
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            ApiRequestLoggingFilter apiRequestLoggingFilter
     ) {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.apiRequestLoggingFilter = apiRequestLoggingFilter;
     }
 
     @Bean
@@ -54,7 +58,8 @@ public class SecurityConfig {
                 .requestMatchers("/user/**").hasAnyRole("USER", "DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/admin/**").hasRole("SYS_ADMIN")
                 .anyRequest().authenticated())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(apiRequestLoggingFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 
