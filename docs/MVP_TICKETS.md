@@ -536,7 +536,7 @@
 
 # EPIC 6) 테스트 및 문서(최소)
 
-### [ ] T-0601 Auth + RBAC 통합 테스트
+### [x] T-0601 Auth + RBAC 통합 테스트
 ### [ ] T-0602 상태 전이 테스트(REQUESTED→ASSIGNED→MEASURED→PAID/FAILED)
 ### [ ] T-0603 요금 계산 단위 테스트
 ### [ ] T-0604 자동 결제 멱등성 테스트(요청별 1회 결제)
