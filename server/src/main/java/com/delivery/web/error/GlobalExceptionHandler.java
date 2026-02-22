@@ -9,6 +9,11 @@ import com.delivery.auth.exception.OpsAdminApplicationConflictException;
 import com.delivery.auth.exception.OpsAdminApplicationNotAllowedException;
 import com.delivery.auth.exception.OpsAdminApplicationNotFoundException;
 import com.delivery.auth.exception.OpsAdminApplicationStatusConflictException;
+import com.delivery.auth.exception.SysAdminApplicationConflictException;
+import com.delivery.auth.exception.SysAdminApplicationNotAllowedException;
+import com.delivery.auth.exception.SysAdminApplicationNotFoundException;
+import com.delivery.auth.exception.SysAdminApplicationStatusConflictException;
+import com.delivery.auth.exception.SysAdminSelfApprovalNotAllowedException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.address.exception.AddressSearchTimeoutException;
 import com.delivery.address.exception.AddressSearchUnavailableException;
@@ -144,6 +149,76 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(SysAdminApplicationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminApplicationNotFound(
+            SysAdminApplicationNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "SYS_ADMIN_APPLICATION_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(SysAdminApplicationStatusConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminApplicationStatusConflict(
+            SysAdminApplicationStatusConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "SYS_ADMIN_APPLICATION_STATUS_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(SysAdminApplicationConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminApplicationConflict(
+            SysAdminApplicationConflictException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "SYS_ADMIN_APPLICATION_CONFLICT",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(SysAdminApplicationNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminApplicationNotAllowed(
+            SysAdminApplicationNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "SYS_ADMIN_APPLICATION_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(SysAdminSelfApprovalNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleSysAdminSelfApprovalNotAllowed(
+            SysAdminSelfApprovalNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "SYS_ADMIN_SELF_APPROVAL_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(DriverApplicationNotFoundException.class)

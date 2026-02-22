@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 public class RoleManagementService {
 
     private static final String OPS_ADMIN = "OPS_ADMIN";
+    private static final String SYS_ADMIN = "SYS_ADMIN";
 
     private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
@@ -22,7 +23,7 @@ public class RoleManagementService {
     @Transactional
     public void grantOpsAdminRole(Long userId) {
         ensureUserExists(userId);
-        Long roleId = ensureOpsAdminRole();
+        Long roleId = ensureRole(OPS_ADMIN, "운영 관리자");
 
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM user_roles WHERE user_id = ? AND role_id = ?",
@@ -53,16 +54,36 @@ public class RoleManagementService {
         );
     }
 
+    @Transactional
+    public void grantSysAdminRole(Long userId) {
+        ensureUserExists(userId);
+        Long roleId = ensureRole(SYS_ADMIN, "시스템 관리자");
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_roles WHERE user_id = ? AND role_id = ?",
+                Integer.class,
+                userId,
+                roleId
+        );
+        if (count == null || count == 0) {
+            jdbcTemplate.update(
+                    "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
+                    userId,
+                    roleId
+            );
+        }
+    }
+
     private void ensureUserExists(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException();
         }
     }
 
-    private Long ensureOpsAdminRole() {
+    private Long ensureRole(String code, String description) {
         Long roleId = jdbcTemplate.query(
                 "SELECT id FROM roles WHERE code = ?",
-                ps -> ps.setString(1, OPS_ADMIN),
+                ps -> ps.setString(1, code),
                 rs -> rs.next() ? rs.getLong("id") : null
         );
         if (roleId != null) {
@@ -71,14 +92,14 @@ public class RoleManagementService {
 
         jdbcTemplate.update(
                 "INSERT INTO roles (code, description) VALUES (?, ?)",
-                OPS_ADMIN,
-                "운영 관리자"
+                code,
+                description
         );
 
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM roles WHERE code = ?",
                 Long.class,
-                OPS_ADMIN
+                code
         );
     }
 }

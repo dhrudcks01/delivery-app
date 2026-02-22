@@ -202,7 +202,7 @@
 
 ---
 
-### [ ] T-0208 SYS_ADMIN 권한 신청/승인 플로우(SYS_ADMIN_REQUEST)
+### [x] T-0208 SYS_ADMIN 권한 신청/승인 플로우(SYS_ADMIN_REQUEST)
 **Goal**
 - SYS_ADMIN 권한도 직접 ID 부여가 아닌 신청 기반 승인 절차로 관리한다.
 
