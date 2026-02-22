@@ -320,11 +320,12 @@ export function OpsAdminHomeScreen() {
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>기사 신청 승인/반려</Text>
+          <Text style={styles.cardTitle}>기사 신청 승인/반려 (OPS_ADMIN/SYS_ADMIN)</Text>
           <Pressable style={styles.ghostButton} onPress={loadPendingApplications}>
             <Text style={styles.ghostButtonText}>대기 목록 새로고침</Text>
           </Pressable>
         </View>
+        <Text style={styles.meta}>OPS_ADMIN 또는 SYS_ADMIN 권한으로 기사 신청을 처리할 수 있습니다.</Text>
         {isLoadingApplications && <Text style={styles.meta}>기사 신청 목록 로딩 중..</Text>}
         {applicationListError && <Text style={styles.error}>{applicationListError}</Text>}
         {applications.map((item) => (

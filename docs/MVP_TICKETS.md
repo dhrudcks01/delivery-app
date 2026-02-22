@@ -238,7 +238,7 @@
 
 ---
 
-### [ ] T-0209 DRIVER 권한 신청/승인 정책 정렬(USER 신청 + OPS_ADMIN/SYS_ADMIN 승인)
+### [x] T-0209 DRIVER 권한 신청/승인 정책 정렬(USER 신청 + OPS_ADMIN/SYS_ADMIN 승인)
 **Goal**
 - USER 계정이 DRIVER 권한을 신청하고, OPS_ADMIN 또는 SYS_ADMIN이 승인/반려할 수 있도록 정책을 명확히 반영한다.
 

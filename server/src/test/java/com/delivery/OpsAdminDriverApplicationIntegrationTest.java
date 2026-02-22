@@ -48,6 +48,7 @@ class OpsAdminDriverApplicationIntegrationTest {
     void setUpRoles() {
         upsertRole("USER", "일반 사용자");
         upsertRole("OPS_ADMIN", "운영 관리자");
+        upsertRole("SYS_ADMIN", "시스템 관리자");
         upsertRole("DRIVER", "기사");
     }
 
@@ -89,6 +90,30 @@ class OpsAdminDriverApplicationIntegrationTest {
         mockMvc.perform(get("/driver/secure")
                         .header("Authorization", "Bearer " + userAccessToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void sysAdminCanApproveAndRejectApplication() throws Exception {
+        String approveUserToken = createUserAndLogin("sys-approve-user@example.com", "USER");
+        String rejectUserToken = createUserAndLogin("sys-reject-user@example.com", "USER");
+        String sysAdminAccessToken = createUserAndLogin("sys-admin-reviewer@example.com", "SYS_ADMIN");
+
+        Long approveApplicationId = createApplication(approveUserToken);
+        Long rejectApplicationId = createApplication(rejectUserToken);
+
+        mockMvc.perform(post("/ops-admin/driver-applications/{applicationId}/approve", approveApplicationId)
+                        .header("Authorization", "Bearer " + sysAdminAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.processedByEmail").value("sys-admin-reviewer@example.com"))
+                .andExpect(jsonPath("$.processedAt").isNotEmpty());
+
+        mockMvc.perform(post("/ops-admin/driver-applications/{applicationId}/reject", rejectApplicationId)
+                        .header("Authorization", "Bearer " + sysAdminAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(jsonPath("$.processedByEmail").value("sys-admin-reviewer@example.com"))
+                .andExpect(jsonPath("$.processedAt").isNotEmpty());
     }
 
     @Test

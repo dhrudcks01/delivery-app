@@ -32,7 +32,7 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
   - 목록/상세/측정 완료 액션 흐름 정리
   - 상태 필터(처리 필요/처리 완료/전체) 제공
   - ASSIGNED 건 우선 처리 배지 표시
-- OPS_ADMIN 기사신청 승인 화면 개선
+- OPS_ADMIN/SYS_ADMIN 기사신청 승인 화면 개선
   - PENDING 기사신청 목록 조회/선택
   - 선택 신청 상세 확인 후 승인/반려 처리
   - 처리 완료 시 대기 목록 즉시 갱신
