@@ -2,7 +2,7 @@
 
 Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
 
-## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 ~ T-0519 구현 범위
+## T-0501 ~ T-0504, T-0507 ~ T-0508, T-0516 ~ T-0520 구현 범위
 
 - Expo TypeScript 앱 기본 스캐폴딩
 - React Navigation 기반 네비게이션
@@ -35,6 +35,10 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
   - PENDING 기사신청 목록 조회/선택
   - 선택 신청 상세 확인 후 승인/반려 처리
   - 처리 완료 시 대기 목록 즉시 갱신
+- 권한 신청/승인 화면
+  - USER/DRIVER: OPS_ADMIN 권한 신청
+  - OPS_ADMIN: SYS_ADMIN 권한 신청
+  - SYS_ADMIN: OPS_ADMIN/SYS_ADMIN 신청 목록, 승인/반려, 처리 이력 표시
 
 ## 환경 변수
 

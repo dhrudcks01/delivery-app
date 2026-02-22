@@ -7,6 +7,7 @@ import {
   getMyAssignedWasteRequests,
   measureAssignedWasteRequest,
 } from '../api/driverWasteApi';
+import { createOpsAdminApplication } from '../api/roleApplicationApi';
 import { uploadImageFile } from '../api/uploadApi';
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
@@ -36,11 +37,13 @@ export function DriverHomeScreen() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isMeasuring, setIsMeasuring] = useState(false);
+  const [isSubmittingOpsAdminApplication, setIsSubmittingOpsAdminApplication] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [measureError, setMeasureError] = useState<string | null>(null);
+  const [opsAdminApplicationError, setOpsAdminApplicationError] = useState<string | null>(null);
 
   const [assignedRequests, setAssignedRequests] = useState<DriverAssignedWasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
@@ -49,6 +52,8 @@ export function DriverHomeScreen() {
 
   const [measuredWeightKgText, setMeasuredWeightKgText] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [opsAdminApplicationReason, setOpsAdminApplicationReason] = useState('');
+  const [opsAdminApplicationResult, setOpsAdminApplicationResult] = useState<string | null>(null);
 
   const selectedTitle = useMemo(() => {
     if (!selectedRequest) {
@@ -185,6 +190,30 @@ export function DriverHomeScreen() {
     }
   };
 
+  const handleSubmitOpsAdminApplication = async () => {
+    const reason = opsAdminApplicationReason.trim();
+    if (!reason) {
+      setOpsAdminApplicationError('신청 사유를 입력해 주세요.');
+      return;
+    }
+
+    setIsSubmittingOpsAdminApplication(true);
+    setOpsAdminApplicationError(null);
+    setOpsAdminApplicationResult(null);
+
+    try {
+      const response = await createOpsAdminApplication(reason);
+      setOpsAdminApplicationReason('');
+      setOpsAdminApplicationResult(
+        `OPS_ADMIN 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`,
+      );
+    } catch (error) {
+      setOpsAdminApplicationError(toErrorMessage(error));
+    } finally {
+      setIsSubmittingOpsAdminApplication(false);
+    }
+  };
+
   useEffect(() => {
     refreshAssignedRequests();
   }, []);
@@ -194,6 +223,31 @@ export function DriverHomeScreen() {
       <Text style={styles.title}>DRIVER 전용 배정건</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>OPS_ADMIN 권한 신청</Text>
+        <Text style={styles.meta}>DRIVER 계정은 운영 권한을 신청할 수 있습니다.</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={opsAdminApplicationReason}
+          onChangeText={setOpsAdminApplicationReason}
+          multiline
+          placeholder="신청 사유를 입력해 주세요."
+          placeholderTextColor="#94a3b8"
+          editable={!isSubmittingOpsAdminApplication}
+        />
+        {opsAdminApplicationResult && <Text style={styles.success}>{opsAdminApplicationResult}</Text>}
+        {opsAdminApplicationError && <Text style={styles.error}>{opsAdminApplicationError}</Text>}
+        <Pressable
+          style={[styles.button, isSubmittingOpsAdminApplication && styles.buttonDisabled]}
+          onPress={handleSubmitOpsAdminApplication}
+          disabled={isSubmittingOpsAdminApplication}
+        >
+          <Text style={styles.buttonText}>
+            {isSubmittingOpsAdminApplication ? '신청 중...' : 'OPS_ADMIN 권한 신청'}
+          </Text>
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
@@ -458,6 +512,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: ui.colors.textStrong,
   },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
   photoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,6 +546,10 @@ const styles = StyleSheet.create({
   },
   error: {
     color: ui.colors.error,
+    fontSize: 13,
+  },
+  success: {
+    color: ui.colors.success,
     fontSize: 13,
   },
   button: {

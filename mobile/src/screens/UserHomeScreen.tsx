@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { createOpsAdminApplication } from '../api/roleApplicationApi';
 import {
   completePaymentMethodRegistration,
   getMyPaymentMethodStatus,
@@ -75,6 +76,7 @@ export function UserHomeScreen() {
   const [isRegisteringPaymentMethod, setIsRegisteringPaymentMethod] = useState(false);
   const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [isSubmittingOpsAdminApplication, setIsSubmittingOpsAdminApplication] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -83,6 +85,7 @@ export function UserHomeScreen() {
   const [paymentRegistrationResult, setPaymentRegistrationResult] = useState<string | null>(null);
   const [paymentMethodStatusError, setPaymentMethodStatusError] = useState<string | null>(null);
   const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
+  const [opsAdminApplicationError, setOpsAdminApplicationError] = useState<string | null>(null);
 
   const [requests, setRequests] = useState<WasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
@@ -91,6 +94,8 @@ export function UserHomeScreen() {
   const [isRegistrationModalVisible, setIsRegistrationModalVisible] = useState(false);
   const [paymentMethodStatus, setPaymentMethodStatus] = useState<PaymentMethodStatusResponse | null>(null);
   const [addressSearchResults, setAddressSearchResults] = useState<AddressItem[]>([]);
+  const [opsAdminApplicationReason, setOpsAdminApplicationReason] = useState('');
+  const [opsAdminApplicationResult, setOpsAdminApplicationResult] = useState<string | null>(null);
 
   const selectedStatus = selectedRequest?.status;
   const canCancelSelected = selectedStatus === 'REQUESTED';
@@ -220,6 +225,30 @@ export function UserHomeScreen() {
     setAddressSearchError(null);
   };
 
+  const handleSubmitOpsAdminApplication = async () => {
+    const reason = opsAdminApplicationReason.trim();
+    if (!reason) {
+      setOpsAdminApplicationError('신청 사유를 입력해 주세요.');
+      return;
+    }
+
+    setIsSubmittingOpsAdminApplication(true);
+    setOpsAdminApplicationError(null);
+    setOpsAdminApplicationResult(null);
+
+    try {
+      const response = await createOpsAdminApplication(reason);
+      setOpsAdminApplicationReason('');
+      setOpsAdminApplicationResult(
+        `OPS_ADMIN 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`,
+      );
+    } catch (error) {
+      setOpsAdminApplicationError(toErrorMessage(error));
+    } finally {
+      setIsSubmittingOpsAdminApplication(false);
+    }
+  };
+
   const handleCancel = async () => {
     if (!selectedRequestId || !canCancelSelected) {
       return;
@@ -322,6 +351,31 @@ export function UserHomeScreen() {
         <Text style={styles.title}>USER 수거 요청</Text>
         <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
         <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>OPS_ADMIN 권한 신청</Text>
+          <Text style={styles.meta}>USER/DRIVER 계정은 운영 권한을 신청할 수 있습니다.</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={opsAdminApplicationReason}
+            onChangeText={setOpsAdminApplicationReason}
+            multiline
+            placeholder="신청 사유를 입력해 주세요."
+            placeholderTextColor="#94a3b8"
+            editable={!isSubmittingOpsAdminApplication}
+          />
+          {opsAdminApplicationResult && <Text style={styles.successText}>{opsAdminApplicationResult}</Text>}
+          {opsAdminApplicationError && <Text style={styles.error}>{opsAdminApplicationError}</Text>}
+          <Pressable
+            style={[styles.button, isSubmittingOpsAdminApplication && styles.buttonDisabled]}
+            onPress={handleSubmitOpsAdminApplication}
+            disabled={isSubmittingOpsAdminApplication}
+          >
+            <Text style={styles.buttonText}>
+              {isSubmittingOpsAdminApplication ? '신청 중..' : 'OPS_ADMIN 권한 신청'}
+            </Text>
+          </Pressable>
+        </View>
 
         <View style={styles.card}>
           <View style={styles.rowBetween}>

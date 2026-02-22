@@ -6,6 +6,7 @@ import {
   getDriverApplicationsForOps,
   rejectDriverApplication,
 } from '../api/opsAdminDriverApplicationApi';
+import { createSysAdminApplication } from '../api/roleApplicationApi';
 import {
   assignWasteRequestForOps,
   getFailedPaymentsForOps,
@@ -67,6 +68,10 @@ export function OpsAdminHomeScreen() {
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
   const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
   const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
+  const [sysAdminApplicationReason, setSysAdminApplicationReason] = useState('');
+  const [sysAdminApplicationError, setSysAdminApplicationError] = useState<string | null>(null);
+  const [sysAdminApplicationResult, setSysAdminApplicationResult] = useState<string | null>(null);
+  const [isSubmittingSysAdminApplication, setIsSubmittingSysAdminApplication] = useState(false);
 
   const parsedDriverId = useMemo(() => {
     const parsed = Number(driverIdInput.trim());
@@ -243,6 +248,30 @@ export function OpsAdminHomeScreen() {
     }
   };
 
+  const handleSubmitSysAdminApplication = async () => {
+    const reason = sysAdminApplicationReason.trim();
+    if (!reason) {
+      setSysAdminApplicationError('신청 사유를 입력해 주세요.');
+      return;
+    }
+
+    setIsSubmittingSysAdminApplication(true);
+    setSysAdminApplicationError(null);
+    setSysAdminApplicationResult(null);
+
+    try {
+      const response = await createSysAdminApplication(reason);
+      setSysAdminApplicationReason('');
+      setSysAdminApplicationResult(
+        `SYS_ADMIN 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`,
+      );
+    } catch (error) {
+      setSysAdminApplicationError(toErrorMessage(error));
+    } finally {
+      setIsSubmittingSysAdminApplication(false);
+    }
+  };
+
   useEffect(() => {
     void loadPendingApplications();
     void loadWasteRequests();
@@ -263,6 +292,31 @@ export function OpsAdminHomeScreen() {
       <Text style={styles.title}>OPS_ADMIN 운영 관리</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청</Text>
+        <Text style={styles.meta}>OPS_ADMIN 계정은 SYS_ADMIN 권한을 신청할 수 있습니다.</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={sysAdminApplicationReason}
+          onChangeText={setSysAdminApplicationReason}
+          multiline
+          placeholder="신청 사유를 입력해 주세요."
+          placeholderTextColor="#94a3b8"
+          editable={!isSubmittingSysAdminApplication}
+        />
+        {sysAdminApplicationResult && <Text style={styles.success}>{sysAdminApplicationResult}</Text>}
+        {sysAdminApplicationError && <Text style={styles.error}>{sysAdminApplicationError}</Text>}
+        <Pressable
+          style={[styles.button, isSubmittingSysAdminApplication && styles.buttonDisabled]}
+          onPress={handleSubmitSysAdminApplication}
+          disabled={isSubmittingSysAdminApplication}
+        >
+          <Text style={styles.buttonText}>
+            {isSubmittingSysAdminApplication ? '신청 중..' : 'SYS_ADMIN 권한 신청'}
+          </Text>
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
@@ -480,6 +534,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     color: ui.colors.textStrong,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   success: {
     color: ui.colors.success,
