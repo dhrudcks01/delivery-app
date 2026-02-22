@@ -11,6 +11,7 @@ import com.delivery.auth.exception.OpsAdminApplicationConflictException;
 import com.delivery.auth.exception.OpsAdminApplicationNotAllowedException;
 import com.delivery.auth.exception.OpsAdminApplicationNotFoundException;
 import com.delivery.auth.exception.OpsAdminApplicationStatusConflictException;
+import com.delivery.auth.exception.OpsAdminGrantTargetNotAllowedException;
 import com.delivery.auth.exception.SysAdminApplicationConflictException;
 import com.delivery.auth.exception.SysAdminApplicationNotAllowedException;
 import com.delivery.auth.exception.SysAdminApplicationNotFoundException;
@@ -175,6 +176,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.BAD_REQUEST.value(),
                 "OPS_ADMIN_APPLICATION_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(OpsAdminGrantTargetNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleOpsAdminGrantTargetNotAllowed(
+            OpsAdminGrantTargetNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "OPS_ADMIN_GRANT_TARGET_NOT_ALLOWED",
                 exception.getMessage(),
                 request.getRequestURI()
         );

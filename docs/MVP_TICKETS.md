@@ -250,7 +250,7 @@
 
 ---
 
-### [ ] T-0210 OPS_ADMIN 권한 부여 대상 검색/선택 정책(대상: DRIVER)
+### [x] T-0210 OPS_ADMIN 권한 부여 대상 검색/선택 정책(대상: DRIVER)
 **Goal**
 - OPS_ADMIN이 DRIVER 계정을 검색해 OPS_ADMIN 권한을 부여할 수 있도록 대상 제한 정책을 반영한다.
 

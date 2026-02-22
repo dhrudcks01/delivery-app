@@ -33,3 +33,9 @@ export type AssignWasteRequestPayload = {
 };
 
 export type OpsWasteRequest = WasteRequest;
+
+export type OpsAdminGrantCandidate = {
+  userId: number;
+  userEmail: string;
+  userDisplayName: string;
+};

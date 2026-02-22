@@ -40,6 +40,7 @@ Delivery MVP 모바일 앱(Expo + TypeScript) 프로젝트입니다.
   - USER/DRIVER: OPS_ADMIN 권한 신청
   - OPS_ADMIN: SYS_ADMIN 권한 신청
   - SYS_ADMIN: OPS_ADMIN/SYS_ADMIN 신청 목록, 승인/반려, 처리 이력 표시
+  - SYS_ADMIN: DRIVER 계정 검색 기반 OPS_ADMIN 권한 부여 동선 제공
 
 ## 환경 변수
 

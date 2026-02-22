@@ -9,10 +9,11 @@ import {
   rejectOpsAdminApplicationForSysAdmin,
   rejectSysAdminApplicationForSysAdmin,
 } from '../api/roleApplicationApi';
-import { grantOpsAdminRole, revokeOpsAdminRole } from '../api/sysAdminRoleApi';
+import { getOpsAdminGrantCandidates, grantOpsAdminRole, revokeOpsAdminRole } from '../api/sysAdminRoleApi';
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { RoleApplication } from '../types/roleApplication';
+import { OpsAdminGrantCandidate } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
@@ -39,6 +40,11 @@ function getRoleApplicationSummary(application: RoleApplication): string {
 export function SysAdminHomeScreen() {
   const { me, signOut } = useAuth();
 
+  const [opsAdminGrantQuery, setOpsAdminGrantQuery] = useState('');
+  const [opsAdminGrantCandidates, setOpsAdminGrantCandidates] = useState<OpsAdminGrantCandidate[]>([]);
+  const [selectedGrantCandidateId, setSelectedGrantCandidateId] = useState<number | null>(null);
+  const [isLoadingGrantCandidates, setIsLoadingGrantCandidates] = useState(false);
+  const [grantCandidateError, setGrantCandidateError] = useState<string | null>(null);
   const [userIdInput, setUserIdInput] = useState('');
   const [isGranting, setIsGranting] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
@@ -78,6 +84,10 @@ export function SysAdminHomeScreen() {
   const selectedSysAdminApplication = useMemo(
     () => sysAdminApplications.find((item) => item.id === selectedSysAdminApplicationId) ?? null,
     [sysAdminApplications, selectedSysAdminApplicationId],
+  );
+  const selectedGrantCandidate = useMemo(
+    () => opsAdminGrantCandidates.find((item) => item.userId === selectedGrantCandidateId) ?? null,
+    [opsAdminGrantCandidates, selectedGrantCandidateId],
   );
 
   const statusParam = applicationStatusFilter === 'ALL' ? undefined : 'PENDING';
@@ -140,9 +150,35 @@ export function SysAdminHomeScreen() {
     await Promise.all([loadOpsAdminApplications(), loadSysAdminApplications()]);
   };
 
+  const loadOpsAdminGrantCandidates = async () => {
+    setIsLoadingGrantCandidates(true);
+    setGrantCandidateError(null);
+
+    try {
+      const response = await getOpsAdminGrantCandidates({
+        query: opsAdminGrantQuery.trim() || undefined,
+        page: 0,
+        size: 20,
+      });
+      setOpsAdminGrantCandidates(response.content);
+      setSelectedGrantCandidateId((current) => {
+        if (current && response.content.some((item) => item.userId === current)) {
+          return current;
+        }
+        return response.content[0]?.userId ?? null;
+      });
+    } catch (error) {
+      setGrantCandidateError(toErrorMessage(error));
+      setOpsAdminGrantCandidates([]);
+      setSelectedGrantCandidateId(null);
+    } finally {
+      setIsLoadingGrantCandidates(false);
+    }
+  };
+
   const handleGrant = async () => {
-    if (!parsedUserId) {
-      setRoleErrorMessage('권한 부여할 사용자 ID를 숫자로 입력해 주세요.');
+    if (!selectedGrantCandidate) {
+      setRoleErrorMessage('권한 부여할 DRIVER 대상을 목록에서 선택해 주세요.');
       return;
     }
 
@@ -151,8 +187,11 @@ export function SysAdminHomeScreen() {
     setRoleErrorMessage(null);
 
     try {
-      await grantOpsAdminRole(parsedUserId);
-      setRoleResultMessage(`사용자 #${parsedUserId} 에게 OPS_ADMIN 권한을 부여했습니다.`);
+      await grantOpsAdminRole(selectedGrantCandidate.userId);
+      setRoleResultMessage(
+        `사용자 #${selectedGrantCandidate.userId} (${selectedGrantCandidate.userEmail}) 에게 OPS_ADMIN 권한을 부여했습니다.`,
+      );
+      await loadOpsAdminGrantCandidates();
     } catch (error) {
       setRoleErrorMessage(toErrorMessage(error));
     } finally {
@@ -267,6 +306,10 @@ export function SysAdminHomeScreen() {
   useEffect(() => {
     void refreshAllApplications();
   }, [applicationStatusFilter]);
+
+  useEffect(() => {
+    void loadOpsAdminGrantCandidates();
+  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -407,8 +450,48 @@ export function SysAdminHomeScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>OPS_ADMIN 권한 직접 부여/회수</Text>
-        <Text style={styles.label}>대상 사용자 ID</Text>
+        <Text style={styles.cardTitle}>OPS_ADMIN 권한 부여 대상 검색 (DRIVER)</Text>
+        <Text style={styles.meta}>DRIVER 권한 보유 + OPS_ADMIN 미보유 계정만 검색됩니다.</Text>
+        <Text style={styles.label}>검색어 (이메일/이름)</Text>
+        <View style={styles.buttonRow}>
+          <TextInput
+            style={[styles.input, styles.flexInput]}
+            value={opsAdminGrantQuery}
+            onChangeText={setOpsAdminGrantQuery}
+            placeholder="예: driver"
+            placeholderTextColor="#94a3b8"
+          />
+          <Pressable style={styles.secondaryButton} onPress={loadOpsAdminGrantCandidates}>
+            <Text style={styles.secondaryButtonText}>검색</Text>
+          </Pressable>
+        </View>
+
+        {isLoadingGrantCandidates && <Text style={styles.meta}>권한 부여 대상 조회 중..</Text>}
+        {grantCandidateError && <Text style={styles.error}>{grantCandidateError}</Text>}
+        {opsAdminGrantCandidates.map((item) => (
+          <Pressable
+            key={item.userId}
+            style={[styles.listItem, selectedGrantCandidateId === item.userId && styles.listItemActive]}
+            onPress={() => setSelectedGrantCandidateId(item.userId)}
+          >
+            <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
+            <Text style={styles.listSub}>{item.userDisplayName}</Text>
+            <Text style={styles.listSub}>{item.userEmail}</Text>
+          </Pressable>
+        ))}
+        {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (
+          <Text style={styles.meta}>조회된 부여 대상이 없습니다.</Text>
+        )}
+
+        {selectedGrantCandidate && (
+          <View style={styles.resultBox}>
+            <Text style={styles.detailText}>선택 사용자 ID: {selectedGrantCandidate.userId}</Text>
+            <Text style={styles.detailText}>이름: {selectedGrantCandidate.userDisplayName}</Text>
+            <Text style={styles.detailText}>이메일: {selectedGrantCandidate.userEmail}</Text>
+          </View>
+        )}
+
+        <Text style={styles.label}>권한 회수용 사용자 ID</Text>
         <TextInput
           style={styles.input}
           value={userIdInput}
@@ -427,7 +510,7 @@ export function SysAdminHomeScreen() {
             onPress={handleGrant}
             disabled={isGranting || isRevoking}
           >
-            <Text style={styles.buttonText}>{isGranting ? '부여 중...' : '권한 부여'}</Text>
+            <Text style={styles.buttonText}>{isGranting ? '부여 중...' : '선택 대상 권한 부여'}</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.rejectButton, isRevoking && styles.buttonDisabled]}
@@ -507,6 +590,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  flexInput: {
+    flex: 1,
+  },
   button: {
     flex: 1,
     paddingVertical: 11,
@@ -535,6 +621,20 @@ const styles = StyleSheet.create({
     color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: ui.colors.primary,
+    borderRadius: ui.radius.control,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#eef8f6',
+  },
+  secondaryButtonText: {
+    color: ui.colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
   },
   filterRow: {
     flexDirection: 'row',

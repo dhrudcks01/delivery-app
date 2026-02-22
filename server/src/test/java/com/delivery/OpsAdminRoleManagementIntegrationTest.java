@@ -94,6 +94,43 @@ class OpsAdminRoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
     }
 
+    @Test
+    void sysAdminCanSearchOpsAdminGrantCandidatesWithDriverCondition() throws Exception {
+        TestUser sysAdmin = createUser("sys-admin-search@example.com", "SYS_ADMIN");
+        TestUser driverOnly = createUser("driver-only@example.com", "DRIVER");
+        TestUser driverAndOps = createUser("driver-ops@example.com", "DRIVER");
+        assignRole(driverAndOps.id(), "OPS_ADMIN");
+        createUser("user-only@example.com", "USER");
+
+        mockMvc.perform(get("/sys-admin/users/ops-admin-grant-candidates")
+                        .header("Authorization", "Bearer " + sysAdmin.accessToken())
+                        .param("query", "driver")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].userId").value(driverOnly.id()))
+                .andExpect(jsonPath("$.content[0].userEmail").value("driver-only@example.com"));
+    }
+
+    @Test
+    void grantOpsAdminRoleFailsWhenTargetIsNotEligibleDriver() throws Exception {
+        TestUser sysAdmin = createUser("sys-admin-validation@example.com", "SYS_ADMIN");
+        TestUser userOnly = createUser("user-no-driver@example.com", "USER");
+        TestUser driverAndOps = createUser("driver-with-ops@example.com", "DRIVER");
+        assignRole(driverAndOps.id(), "OPS_ADMIN");
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/ops-admin", userOnly.id())
+                        .header("Authorization", "Bearer " + sysAdmin.accessToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OPS_ADMIN_GRANT_TARGET_NOT_ALLOWED"));
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/ops-admin", driverAndOps.id())
+                        .header("Authorization", "Bearer " + sysAdmin.accessToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OPS_ADMIN_GRANT_TARGET_NOT_ALLOWED"));
+    }
+
     private TestUser createUser(String email, String roleCode) throws Exception {
         String password = "password123";
         UserEntity user = userRepository.save(new UserEntity(
