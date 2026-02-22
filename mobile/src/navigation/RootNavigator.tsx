@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
+import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
 import { UserHomeScreen } from '../screens/UserHomeScreen';
 
@@ -12,6 +13,7 @@ type HomeScreenName = 'UserHome' | 'DriverHome' | 'OpsAdminHome' | 'SysAdminHome
 
 export type RootStackParamList = {
   Login: undefined;
+  Signup: undefined;
   RoleHub: undefined;
   UserHome: undefined;
   DriverHome: undefined;
@@ -107,6 +109,9 @@ export function RootNavigator() {
       screenOptions={{ headerTitleAlign: 'center' }}
     >
       {!isAuthenticated && <RootStack.Screen name="Login" component={LoginScreen} options={{ title: '로그인' }} />}
+      {!isAuthenticated && (
+        <RootStack.Screen name="Signup" component={SignupScreen} options={{ title: '회원가입' }} />
+      )}
 
       {isAuthenticated && isMultiRole && (
         <RootStack.Screen name="RoleHub" component={RoleHubScreen} options={{ title: '역할 선택' }} />

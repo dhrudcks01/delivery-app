@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchMe, initializeAuth, loginAndStore, logout } from './authClient';
-import { LoginRequest, MeResponse } from '../types/auth';
+import { fetchMe, initializeAuth, loginAndStore, logout, registerAndStore } from './authClient';
+import { LoginRequest, MeResponse, RegisterRequest } from '../types/auth';
 
 type AuthState = {
   isLoading: boolean;
@@ -11,6 +11,7 @@ type AuthState = {
 
 type AuthContextValue = AuthState & {
   signIn: (payload: LoginRequest) => Promise<void>;
+  signUp: (payload: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -82,6 +83,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signUp = useCallback(async (payload: RegisterRequest) => {
+    setState((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
+
+    try {
+      await registerAndStore(payload);
+      const me = await fetchMe();
+      setState({
+        isLoading: false,
+        isAuthenticated: true,
+        me,
+        errorMessage: null,
+      });
+    } catch {
+      await logout();
+      setState({
+        isLoading: false,
+        isAuthenticated: false,
+        me: null,
+        errorMessage: '회원가입 처리 중 오류가 발생했습니다. 입력값을 확인해 주세요.',
+      });
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     await logout();
     setState({
@@ -96,9 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       signIn,
+      signUp,
       signOut,
     }),
-    [state, signIn, signOut],
+    [state, signIn, signUp, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

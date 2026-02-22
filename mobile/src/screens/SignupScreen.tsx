@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -12,36 +12,38 @@ import {
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { API_BASE_URL } from '../api/config';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 
-type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
+type SignupScreenProps = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
-export function LoginScreen({ navigation }: LoginScreenProps) {
-  const { signIn, isLoading, errorMessage } = useAuth();
+export function SignupScreen({ navigation }: SignupScreenProps) {
+  const { signUp, isLoading, errorMessage } = useAuth();
   const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
-  const passwordInputRef = useRef<TextInput | null>(null);
 
-  useEffect(() => {
-    if (errorMessage) {
-      setPassword('');
+  const handleSignup = async () => {
+    const trimmedEmail = email.trim();
+    const trimmedDisplayName = displayName.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail || !trimmedDisplayName || !trimmedPassword) {
+      setFormError('이메일, 이름, 비밀번호를 모두 입력해 주세요.');
+      return;
     }
-  }, [errorMessage]);
-
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setFormError('이메일과 비밀번호를 모두 입력해 주세요.');
+    if (trimmedPassword.length < 8) {
+      setFormError('비밀번호는 8자 이상 입력해 주세요.');
       return;
     }
 
     setFormError(null);
-    await signIn({
-      email: email.trim(),
-      password,
+    await signUp({
+      email: trimmedEmail,
+      displayName: trimmedDisplayName,
+      password: trimmedPassword,
     });
   };
 
@@ -58,13 +60,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           contentInsetAdjustmentBehavior="always"
         >
           <View style={styles.hero}>
-            <Text style={styles.badge}>오늘수거 스타일 MVP</Text>
-            <Text style={styles.title}>빠르게 로그인하고 수거를 시작하세요</Text>
-            <Text style={styles.description}>계정 정보를 입력하면 역할에 맞는 화면으로 이동합니다.</Text>
+            <Text style={styles.badge}>이메일 회원가입</Text>
+            <Text style={styles.title}>가입 후 바로 시작하세요</Text>
+            <Text style={styles.description}>회원가입 성공 시 자동 로그인되어 역할 화면으로 이동합니다.</Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.meta}>API: {API_BASE_URL}</Text>
             <Text style={styles.label}>이메일</Text>
             <TextInput
               style={styles.input}
@@ -74,32 +75,36 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               keyboardType="email-address"
               placeholder="email@example.com"
               placeholderTextColor="#94a3b8"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-              blurOnSubmit={false}
+            />
+
+            <Text style={styles.label}>이름</Text>
+            <TextInput
+              style={styles.input}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="홍길동"
+              placeholderTextColor="#94a3b8"
             />
 
             <Text style={styles.label}>비밀번호</Text>
             <TextInput
-              ref={passwordInputRef}
               style={styles.input}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              placeholder="비밀번호"
+              placeholder="비밀번호(8자 이상)"
               placeholderTextColor="#94a3b8"
-              returnKeyType="done"
-              onSubmitEditing={handleLogin}
+              onSubmitEditing={handleSignup}
             />
 
             {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
 
-            <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin}>
-              <Text style={styles.buttonText}>{isLoading ? '로그인 중...' : '로그인'}</Text>
+            <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSignup}>
+              <Text style={styles.buttonText}>{isLoading ? '가입 중...' : '회원가입'}</Text>
             </Pressable>
 
-            <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.linkText}>회원가입</Text>
+            <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.linkText}>이미 계정이 있나요? 로그인으로 이동</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -147,11 +152,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: ui.colors.text,
   },
-  meta: {
-    marginBottom: 8,
-    fontSize: 12,
-    color: ui.colors.textMuted,
-  },
   form: {
     backgroundColor: ui.colors.card,
     borderRadius: ui.radius.card,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   linkButton: {
-    marginTop: 10,
+    marginTop: 12,
     alignItems: 'center',
     paddingVertical: 8,
   },

@@ -11,6 +11,12 @@ export type LoginRequest = {
   password: string;
 };
 
+export type RegisterRequest = {
+  email: string;
+  password: string;
+  displayName: string;
+};
+
 export type RefreshTokenRequest = {
   refreshToken: string;
 };
