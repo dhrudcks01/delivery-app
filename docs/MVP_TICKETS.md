@@ -186,6 +186,22 @@
 
 ---
 
+### [ ] T-0115 도로명 주소 검색 API Juso 스펙 정합화(서버)
+**Goal**
+- 현재 범용 주소 검색 연동(T-0112)을 Juso 검색 API 스펙에 맞게 정식 연동하여, 운영 키(confmKey)로 안정적으로 검색되도록 한다.
+
+**DoD**
+- `app.address-search` 설정과 서버 호출 파라미터를 Juso 스펙에 맞게 정리
+  - `base-url`: `https://business.juso.go.kr/addrlink/addrLinkApi.do` 기준
+  - `api-key`는 Juso `confmKey`로 사용
+  - 요청 파라미터: `confmKey`, `keyword`, `currentPage`, `countPerPage`, `resultType=json`
+- 특수문자(`=` 포함) 키 사용 시 URI 인코딩 문제 없이 호출되도록 수정
+- Juso 응답(`results.juso[]`)을 기존 앱 응답 모델(`roadAddress`, `jibunAddress`, `zipCode`)로 매핑
+- Juso 오류 코드/타임아웃/장애 상황을 표준 에러 응답으로 매핑(502/504)
+- 관련 단위/통합 테스트 보강 및 `./gradlew test` 통과
+
+---
+
 # EPIC 2) 기사 신청 → 승인 → DRIVER 역할 추가
 
 ### [x] T-0201 DB: driver_applications
@@ -591,6 +607,32 @@
 - SYS_ADMIN: OPS_ADMIN/SYS_ADMIN 신청 목록, 승인/반려 UI 제공
 - 상태값(PENDING/APPROVED/REJECTED) 및 처리 이력 표시
 
+
+---
+
+### [ ] T-0521 로그인 이후 공통 하단 탭 내비게이션 구성(홈/신청/이용내역/내정보)
+**Goal**
+- 로그인 이후 사용자 공통 진입 경험을 일관화하기 위해, 하단 고정 탭(홈/신청/이용내역/내정보) 기반 내비게이션을 구성한다.
+
+**DoD**
+- 로그인 성공 후 기본 진입을 하단 탭 내비게이션으로 통일
+- 탭 4종(홈/신청/이용내역/내정보) 고정 노출 및 탭 전환 상태 유지
+- 역할(USER/DRIVER/OPS_ADMIN/SYS_ADMIN)별 접근 가능한 탭/화면 매핑 정책 명확화
+- 기존 핵심 플로우(수거 신청, 배정 확인, 권한 요청 등)가 탭 구조에서 끊기지 않도록 라우팅 정리
+- iOS/Android에서 탭 UI(안전영역, 키보드, 스크롤) 동작 확인
+
+---
+
+### [ ] T-0522 관리자 권한별 화면 스크롤/상태 점검 및 수정
+**Goal**
+- OPS_ADMIN/SYS_ADMIN 화면에서 발생하는 스크롤 불가 및 상태 확인 어려움 문제를 권한별로 점검하고 수정한다.
+
+**DoD**
+- 관리자 권한별(OPS_ADMIN, SYS_ADMIN, 복수 권한) 주요 화면 스크롤 동작 점검 체크리스트 수립
+- 스크롤 불가 재현 케이스 수정(컨테이너 높이, nested scroll, keyboard 충돌 포함)
+- 권한별 페이지에서 목록/상세/처리 버튼 상태가 정상 노출되는지 검증
+- 로딩/빈 상태/오류 상태 UI를 권한별 화면에 일관 적용
+- 최소 1개 이상 권한별 화면에 대한 회귀 테스트 또는 수동 검증 시나리오 문서화
 
 ---
 
