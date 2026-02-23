@@ -1,34 +1,18 @@
-import { AxiosError } from 'axios';
+﻿import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { WebView } from 'react-native-webview';
-import { createOpsAdminApplication } from '../api/roleApplicationApi';
-import {
-  completePaymentMethodRegistration,
-  getMyPaymentMethodStatus,
-  startPaymentMethodRegistration,
-} from '../api/paymentApi';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
-import {
-  cancelMyWasteRequest,
-  createWasteRequest,
-  getMyWasteRequestDetail,
-  getMyWasteRequests,
-} from '../api/wasteApi';
+import { cancelMyWasteRequest, createWasteRequest, getMyWasteRequestDetail, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { AddressItem } from '../types/address';
-import { PaymentMethodStatusResponse } from '../types/payment';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
 import { ui } from '../theme/ui';
+
+type UserHomeSection = 'all' | 'history' | 'request-form';
+
+type UserHomeScreenProps = {
+  section?: UserHomeSection;
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -45,22 +29,8 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
-function parseQueryParams(url: string): Record<string, string> {
-  const queryIndex = url.indexOf('?');
-  if (queryIndex < 0) {
-    return {};
-  }
-  const query = url.substring(queryIndex + 1);
-  const searchParams = new URLSearchParams(query);
-  const result: Record<string, string> = {};
-  searchParams.forEach((value, key) => {
-    result[key] = value;
-  });
-  return result;
-}
-
-export function UserHomeScreen() {
-  const { me, signOut } = useAuth();
+export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
+  const { me } = useAuth();
 
   const [address, setAddress] = useState('');
   const [addressDetail, setAddressDetail] = useState('');
@@ -68,40 +38,27 @@ export function UserHomeScreen() {
   const [contactPhone, setContactPhone] = useState('');
   const [note, setNote] = useState('');
 
-  const [isLoadingList, setIsLoadingList] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [isPreparingRegistration, setIsPreparingRegistration] = useState(false);
-  const [isRegisteringPaymentMethod, setIsRegisteringPaymentMethod] = useState(false);
-  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
-  const [isSubmittingOpsAdminApplication, setIsSubmittingOpsAdminApplication] = useState(false);
-
-  const [listError, setListError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [paymentRegistrationError, setPaymentRegistrationError] = useState<string | null>(null);
-  const [paymentRegistrationResult, setPaymentRegistrationResult] = useState<string | null>(null);
-  const [paymentMethodStatusError, setPaymentMethodStatusError] = useState<string | null>(null);
-  const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
-  const [opsAdminApplicationError, setOpsAdminApplicationError] = useState<string | null>(null);
-
   const [requests, setRequests] = useState<WasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<WasteRequest | null>(null);
-  const [registrationUrl, setRegistrationUrl] = useState<string | null>(null);
-  const [isRegistrationModalVisible, setIsRegistrationModalVisible] = useState(false);
-  const [paymentMethodStatus, setPaymentMethodStatus] = useState<PaymentMethodStatusResponse | null>(null);
   const [addressSearchResults, setAddressSearchResults] = useState<AddressItem[]>([]);
-  const [opsAdminApplicationReason, setOpsAdminApplicationReason] = useState('');
-  const [opsAdminApplicationResult, setOpsAdminApplicationResult] = useState<string | null>(null);
+
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+
+  const [listError, setListError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
+
+  const showRequestForm = section === 'all' || section === 'request-form';
+  const showHistory = section === 'all' || section === 'history';
 
   const selectedStatus = selectedRequest?.status;
   const canCancelSelected = selectedStatus === 'REQUESTED';
-  const isSelectedPaymentFailed = selectedStatus === 'PAYMENT_FAILED';
-  const activePaymentMethodCount =
-    paymentMethodStatus?.paymentMethods.filter((item) => item.status === 'ACTIVE').length ?? 0;
 
   const selectedTitle = useMemo(() => {
     if (!selectedRequest) {
@@ -128,20 +85,6 @@ export function UserHomeScreen() {
     }
   };
 
-  const refreshPaymentMethods = async () => {
-    setIsLoadingPaymentMethods(true);
-    setPaymentMethodStatusError(null);
-
-    try {
-      const data = await getMyPaymentMethodStatus();
-      setPaymentMethodStatus(data);
-    } catch (error) {
-      setPaymentMethodStatusError(toErrorMessage(error));
-    } finally {
-      setIsLoadingPaymentMethods(false);
-    }
-  };
-
   const loadRequestDetail = async (requestId: number) => {
     setIsLoadingDetail(true);
     setDetailError(null);
@@ -156,6 +99,36 @@ export function UserHomeScreen() {
     } finally {
       setIsLoadingDetail(false);
     }
+  };
+
+  const handleAddressSearch = async () => {
+    const query = addressQuery.trim();
+    if (!query) {
+      setAddressSearchError('검색어를 입력해 주세요.');
+      setAddressSearchResults([]);
+      return;
+    }
+
+    setIsSearchingAddress(true);
+    setAddressSearchError(null);
+
+    try {
+      const response = await searchRoadAddresses(query, 7);
+      setAddressSearchResults(response.results);
+      if (response.results.length === 0) {
+        setAddressSearchError('검색 결과가 없습니다.');
+      }
+    } catch (error) {
+      setAddressSearchResults([]);
+      setAddressSearchError(toErrorMessage(error));
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  const handleSelectAddress = (item: AddressItem) => {
+    setAddress(item.roadAddress);
+    setAddressSearchError(null);
   };
 
   const handleCreate = async () => {
@@ -195,60 +168,6 @@ export function UserHomeScreen() {
     }
   };
 
-  const handleAddressSearch = async () => {
-    const query = addressQuery.trim();
-    if (!query) {
-      setAddressSearchError('검색어를 입력해 주세요.');
-      setAddressSearchResults([]);
-      return;
-    }
-
-    setIsSearchingAddress(true);
-    setAddressSearchError(null);
-
-    try {
-      const response = await searchRoadAddresses(query, 7);
-      setAddressSearchResults(response.results);
-      if (response.results.length === 0) {
-        setAddressSearchError('검색 결과가 없습니다.');
-      }
-    } catch (error) {
-      setAddressSearchResults([]);
-      setAddressSearchError(toErrorMessage(error));
-    } finally {
-      setIsSearchingAddress(false);
-    }
-  };
-
-  const handleSelectAddress = (item: AddressItem) => {
-    setAddress(item.roadAddress);
-    setAddressSearchError(null);
-  };
-
-  const handleSubmitOpsAdminApplication = async () => {
-    const reason = opsAdminApplicationReason.trim();
-    if (!reason) {
-      setOpsAdminApplicationError('신청 사유를 입력해 주세요.');
-      return;
-    }
-
-    setIsSubmittingOpsAdminApplication(true);
-    setOpsAdminApplicationError(null);
-    setOpsAdminApplicationResult(null);
-
-    try {
-      const response = await createOpsAdminApplication(reason);
-      setOpsAdminApplicationReason('');
-      setOpsAdminApplicationResult(
-        `OPS_ADMIN 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`,
-      );
-    } catch (error) {
-      setOpsAdminApplicationError(toErrorMessage(error));
-    } finally {
-      setIsSubmittingOpsAdminApplication(false);
-    }
-  };
-
   const handleCancel = async () => {
     if (!selectedRequestId || !canCancelSelected) {
       return;
@@ -268,169 +187,17 @@ export function UserHomeScreen() {
     }
   };
 
-  const handleStartPaymentMethodRegistration = async () => {
-    setIsPreparingRegistration(true);
-    setPaymentRegistrationError(null);
-    setPaymentRegistrationResult(null);
-
-    try {
-      const response = await startPaymentMethodRegistration();
-      setRegistrationUrl(response.registrationUrl);
-      setIsRegistrationModalVisible(true);
-    } catch (error) {
-      setPaymentRegistrationError(toErrorMessage(error));
-    } finally {
-      setIsPreparingRegistration(false);
-    }
-  };
-
-  const handleCloseRegistrationModal = () => {
-    setIsRegistrationModalVisible(false);
-    setRegistrationUrl(null);
-    setIsRegisteringPaymentMethod(false);
-  };
-
-  const handleRegistrationSuccessRedirect = async (url: string) => {
-    if (isRegisteringPaymentMethod) {
-      return;
-    }
-
-    const queryParams = parseQueryParams(url);
-    const customerKey = queryParams.customerKey;
-    const authKey = queryParams.authKey;
-
-    if (!customerKey || !authKey) {
-      setPaymentRegistrationError('등록 완료 파라미터가 올바르지 않습니다.');
-      handleCloseRegistrationModal();
-      return;
-    }
-
-    setIsRegisteringPaymentMethod(true);
-    try {
-      await completePaymentMethodRegistration(customerKey, authKey);
-      setPaymentRegistrationResult('결제수단 등록이 완료되었습니다.');
-      await refreshPaymentMethods();
-    } catch (error) {
-      setPaymentRegistrationError(toErrorMessage(error));
-    } finally {
-      handleCloseRegistrationModal();
-    }
-  };
-
-  const handleRegistrationFailRedirect = (url: string) => {
-    const queryParams = parseQueryParams(url);
-    const message = queryParams.message ?? '결제수단 등록에 실패했습니다.';
-    setPaymentRegistrationError(message);
-    handleCloseRegistrationModal();
-  };
-
-  const handleShouldStartRegistrationRequest = (request: { url: string }) => {
-    const { url } = request;
-
-    if (url.includes('/user/payment-methods/registration/success')) {
-      void handleRegistrationSuccessRedirect(url);
-      return false;
-    }
-
-    if (url.includes('/user/payment-methods/registration/fail')) {
-      handleRegistrationFailRedirect(url);
-      return false;
-    }
-
-    return true;
-  };
-
   useEffect(() => {
     void refreshRequests();
-    void refreshPaymentMethods();
   }, []);
 
   return (
-    <>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>USER 수거 요청</Text>
-        <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
-        <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>USER 수거 요청</Text>
+      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>OPS_ADMIN 권한 신청</Text>
-          <Text style={styles.meta}>USER/DRIVER 계정은 운영 권한을 신청할 수 있습니다.</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={opsAdminApplicationReason}
-            onChangeText={setOpsAdminApplicationReason}
-            multiline
-            placeholder="신청 사유를 입력해 주세요."
-            placeholderTextColor="#94a3b8"
-            editable={!isSubmittingOpsAdminApplication}
-          />
-          {opsAdminApplicationResult && <Text style={styles.successText}>{opsAdminApplicationResult}</Text>}
-          {opsAdminApplicationError && <Text style={styles.error}>{opsAdminApplicationError}</Text>}
-          <Pressable
-            style={[styles.button, isSubmittingOpsAdminApplication && styles.buttonDisabled]}
-            onPress={handleSubmitOpsAdminApplication}
-            disabled={isSubmittingOpsAdminApplication}
-          >
-            <Text style={styles.buttonText}>
-              {isSubmittingOpsAdminApplication ? '신청 중..' : 'OPS_ADMIN 권한 신청'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>결제수단 상태</Text>
-            <Pressable style={styles.ghostButton} onPress={refreshPaymentMethods}>
-              <Text style={styles.ghostButtonText}>상태 새로고침</Text>
-            </Pressable>
-          </View>
-          <Text style={styles.helpText}>
-            활성 결제수단: {activePaymentMethodCount}개
-            {paymentMethodStatus?.canReregister ? ' (재등록 가능)' : ''}
-          </Text>
-
-          {isLoadingPaymentMethods && <Text style={styles.meta}>결제수단 상태를 불러오는 중..</Text>}
-          {paymentMethodStatusError && <Text style={styles.error}>{paymentMethodStatusError}</Text>}
-
-          {paymentMethodStatus?.paymentMethods.length ? (
-            <View style={styles.paymentMethodList}>
-              {paymentMethodStatus.paymentMethods.map((method) => (
-                <View key={method.id} style={styles.paymentMethodItem}>
-                  <Text style={styles.paymentMethodTitle}>
-                    #{method.id} {method.provider}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.paymentMethodStatus,
-                      method.status === 'ACTIVE' ? styles.paymentMethodStatusActive : styles.paymentMethodStatusInactive,
-                    ]}
-                  >
-                    {method.status}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            !isLoadingPaymentMethods && <Text style={styles.meta}>등록된 결제수단이 없습니다.</Text>
-          )}
-
-          {paymentRegistrationResult && <Text style={styles.successText}>{paymentRegistrationResult}</Text>}
-          {paymentRegistrationError && <Text style={styles.error}>{paymentRegistrationError}</Text>}
-          <Pressable
-            style={[styles.button, isPreparingRegistration && styles.buttonDisabled]}
-            onPress={handleStartPaymentMethodRegistration}
-            disabled={isPreparingRegistration}
-          >
-            <Text style={styles.buttonText}>
-              {isPreparingRegistration
-                ? '등록 페이지 준비 중..'
-                : activePaymentMethodCount > 0
-                  ? '결제수단 재등록하기'
-                  : '결제수단 등록하기'}
-            </Text>
-          </Pressable>
-        </View>
-
+      {showRequestForm && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>요청 생성</Text>
 
@@ -452,7 +219,7 @@ export function UserHomeScreen() {
             </Pressable>
           </View>
 
-          {isSearchingAddress && <Text style={styles.meta}>주소를 검색하는 중..</Text>}
+          {isSearchingAddress && <Text style={styles.meta}>주소를 검색하고 있습니다.</Text>}
           {addressSearchError && <Text style={styles.error}>{addressSearchError}</Text>}
           {addressSearchResults.length > 0 && (
             <View style={styles.addressResultList}>
@@ -466,9 +233,7 @@ export function UserHomeScreen() {
                     onPress={() => handleSelectAddress(item)}
                   >
                     <Text style={styles.addressRoad}>{item.roadAddress}</Text>
-                    <Text style={styles.addressMeta}>
-                      [{item.zipCode}] 지번: {item.jibunAddress || '-'}
-                    </Text>
+                    <Text style={styles.addressMeta}>[{item.zipCode}] 지번 {item.jibunAddress || '-'}</Text>
                   </Pressable>
                 );
               })}
@@ -476,13 +241,7 @@ export function UserHomeScreen() {
           )}
 
           <Text style={styles.label}>선택 주소</Text>
-          <TextInput
-            style={styles.input}
-            value={address}
-            editable={false}
-            placeholder="주소 검색 후 선택해 주세요"
-            placeholderTextColor="#94a3b8"
-          />
+          <TextInput style={styles.input} value={address} editable={false} placeholder="주소 검색 후 선택해 주세요" placeholderTextColor="#94a3b8" />
 
           <Text style={styles.label}>상세 주소</Text>
           <TextInput
@@ -518,10 +277,12 @@ export function UserHomeScreen() {
             <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
           </Pressable>
         </View>
+      )}
 
+      {showHistory && (
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>내 요청 목록</Text>
+            <Text style={styles.cardTitle}>신청/이용 내역</Text>
             <Pressable style={styles.ghostButton} onPress={refreshRequests}>
               <Text style={styles.ghostButtonText}>새로고침</Text>
             </Pressable>
@@ -536,9 +297,7 @@ export function UserHomeScreen() {
               style={[styles.listItem, selectedRequestId === item.id && styles.listItemActive]}
               onPress={() => loadRequestDetail(item.id)}
             >
-              <Text style={styles.listTitle}>
-                #{item.id} {item.status}
-              </Text>
+              <Text style={styles.listTitle}>#{item.id} {item.status}</Text>
               <Text style={styles.listSub}>{item.address}</Text>
               <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
             </Pressable>
@@ -546,7 +305,9 @@ export function UserHomeScreen() {
 
           {!isLoadingList && requests.length === 0 && <Text style={styles.meta}>생성된 요청이 없습니다.</Text>}
         </View>
+      )}
 
+      {showHistory && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>요청 상세</Text>
           <Text style={styles.detailTitle}>{selectedTitle}</Text>
@@ -565,22 +326,6 @@ export function UserHomeScreen() {
               <Text style={styles.detailText}>생성일: {formatDate(selectedRequest.createdAt)}</Text>
               <Text style={styles.detailText}>수정일: {formatDate(selectedRequest.updatedAt)}</Text>
 
-              {isSelectedPaymentFailed && (
-                <View style={styles.failedPaymentNotice}>
-                  <Text style={styles.failedPaymentTitle}>결제 실패 안내</Text>
-                  <Text style={styles.failedPaymentText}>
-                    결제수단을 재등록한 뒤 운영자 재시도를 기다려 주세요. 상태가 갱신되지 않으면 고객센터로 문의해 주세요.
-                  </Text>
-                  <Pressable
-                    style={[styles.button, isPreparingRegistration && styles.buttonDisabled]}
-                    onPress={handleStartPaymentMethodRegistration}
-                    disabled={isPreparingRegistration}
-                  >
-                    <Text style={styles.buttonText}>결제수단 재등록 바로가기</Text>
-                  </Pressable>
-                </View>
-              )}
-
               <Pressable
                 style={[
                   styles.button,
@@ -597,40 +342,8 @@ export function UserHomeScreen() {
             </View>
           )}
         </View>
-
-        <Pressable style={[styles.button, styles.logoutButton]} onPress={signOut}>
-          <Text style={styles.buttonText}>로그아웃</Text>
-        </Pressable>
-      </ScrollView>
-
-      <Modal visible={isRegistrationModalVisible} animationType="slide" onRequestClose={handleCloseRegistrationModal}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>결제수단 등록</Text>
-          <Pressable onPress={handleCloseRegistrationModal} style={styles.modalCloseButton}>
-            <Text style={styles.modalCloseText}>닫기</Text>
-          </Pressable>
-        </View>
-
-        {registrationUrl ? (
-          <WebView
-            source={{ uri: registrationUrl }}
-            onShouldStartLoadWithRequest={handleShouldStartRegistrationRequest}
-            startInLoadingState
-            renderLoading={() => (
-              <View style={styles.modalLoading}>
-                <ActivityIndicator size="large" color="#0f172a" />
-                <Text style={styles.meta}>결제수단 등록 페이지 로딩 중..</Text>
-              </View>
-            )}
-          />
-        ) : (
-          <View style={styles.modalLoading}>
-            <ActivityIndicator size="large" color="#0f172a" />
-            <Text style={styles.meta}>등록 페이지를 준비하고 있습니다.</Text>
-          </View>
-        )}
-      </Modal>
-    </>
+      )}
+    </ScrollView>
   );
 }
 
@@ -661,14 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: ui.colors.textStrong,
-  },
-  helpText: {
-    fontSize: 13,
-    color: ui.colors.text,
-  },
-  successText: {
-    color: ui.colors.success,
-    fontSize: 13,
   },
   label: {
     fontSize: 13,
@@ -789,89 +494,5 @@ const styles = StyleSheet.create({
   detailText: {
     color: ui.colors.textStrong,
     fontSize: 13,
-  },
-  paymentMethodList: {
-    gap: 6,
-  },
-  paymentMethodItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  paymentMethodTitle: {
-    color: ui.colors.textStrong,
-    fontWeight: '700',
-  },
-  paymentMethodStatus: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  paymentMethodStatusActive: {
-    color: ui.colors.success,
-  },
-  paymentMethodStatusInactive: {
-    color: ui.colors.textMuted,
-  },
-  failedPaymentNotice: {
-    marginTop: 8,
-    marginBottom: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: ui.colors.warningBorder,
-    borderRadius: 10,
-    backgroundColor: ui.colors.warningBg,
-    gap: 8,
-  },
-  failedPaymentTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: ui.colors.warningText,
-  },
-  failedPaymentText: {
-    fontSize: 12,
-    color: ui.colors.warningText,
-    lineHeight: 18,
-  },
-  logoutButton: {
-    marginBottom: 20,
-  },
-  modalHeader: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: ui.colors.cardBorder,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  modalCloseButton: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  modalCloseText: {
-    color: ui.colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  modalLoading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
   },
 });

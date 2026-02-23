@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
@@ -119,9 +121,8 @@ function TabHomeScreen({
       <RoleSwitcher roles={roles} activeRole={activeRole} onSelectRole={onSelectRole} />
       <View style={styles.tabCard}>
         <Text style={styles.tabCardTitle}>탭 정책</Text>
-        <Text style={styles.tabCardText}>홈: 역할 뷰/요약</Text>
-        <Text style={styles.tabCardText}>신청: 역할별 핵심 처리 화면</Text>
-        <Text style={styles.tabCardText}>이용내역: 역할별 목록/상세 확인 화면</Text>
+        <Text style={styles.tabCardText}>신청: 역할별 작업 화면</Text>
+        <Text style={styles.tabCardText}>이용내역: 역할별 목록/상세 조회</Text>
         <Text style={styles.tabCardText}>내정보: 계정 정보/로그아웃</Text>
       </View>
     </ScrollView>
@@ -133,20 +134,29 @@ function TabProfileScreen({
   roles,
   activeRole,
   onSelectRole,
+  onOpenRequestForm,
   onSignOut,
 }: {
   email: string | null;
   roles: AppRole[];
   activeRole: AppRole;
   onSelectRole: (role: AppRole) => void;
+  onOpenRequestForm: () => void;
   onSignOut: () => void;
 }) {
+  const isUserRole = activeRole === 'USER';
+
   return (
     <ScrollView contentContainerStyle={styles.tabContainer}>
       <Text style={styles.tabTitle}>내정보</Text>
       <Text style={styles.tabMeta}>로그인: {email ?? '-'}</Text>
       <Text style={styles.tabMeta}>보유 역할: {roles.join(', ')}</Text>
       <RoleSwitcher roles={roles} activeRole={activeRole} onSelectRole={onSelectRole} />
+      {isUserRole && (
+        <Pressable style={styles.requestEntryButton} onPress={onOpenRequestForm}>
+          <Text style={styles.requestEntryButtonText}>기사 신청하기</Text>
+        </Pressable>
+      )}
       <Pressable style={styles.signOutButton} onPress={onSignOut}>
         <Text style={styles.signOutButtonText}>로그아웃</Text>
       </Pressable>
@@ -154,16 +164,32 @@ function TabProfileScreen({
   );
 }
 
+function UserRequestTabGuideScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.tabContainer}>
+      <Text style={styles.tabTitle}>신청 안내</Text>
+      <Text style={styles.tabMeta}>USER 계정 정책</Text>
+      <View style={styles.tabCard}>
+        <Text style={styles.tabCardTitle}>기사 신청 진입 경로</Text>
+        <Text style={styles.tabCardText}>내정보 탭에서 "기사 신청하기" 메뉴로 진입해 주세요.</Text>
+      </View>
+    </ScrollView>
+  );
+}
+
 function AppTabsScreen() {
   const { me, signOut } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const roles = toKnownRoles(me?.roles);
   const [activeRole, setActiveRole] = useState<AppRole>(roles[0] ?? 'USER');
+  const isUserRole = activeRole === 'USER';
 
   useEffect(() => {
     if (!roles.includes(activeRole)) {
       setActiveRole(roles[0] ?? 'USER');
     }
   }, [activeRole, roles]);
+
   const sharedTabOptions = {
     headerTitleAlign: 'center' as const,
     tabBarActiveTintColor: ui.colors.primary,
@@ -188,12 +214,12 @@ function AppTabsScreen() {
       <AppTabs.Screen
         name="RequestTab"
         options={{ title: TAB_TO_LABEL.RequestTab, headerShown: false }}
-        children={() => renderRoleScreen(activeRole)}
+        children={() => (isUserRole ? <UserRequestTabGuideScreen /> : renderRoleScreen(activeRole))}
       />
       <AppTabs.Screen
         name="HistoryTab"
         options={{ title: TAB_TO_LABEL.HistoryTab, headerShown: false }}
-        children={() => renderRoleScreen(activeRole)}
+        children={() => (isUserRole ? <UserHomeScreen section="history" /> : renderRoleScreen(activeRole))}
       />
       <AppTabs.Screen
         name="ProfileTab"
@@ -204,6 +230,7 @@ function AppTabsScreen() {
             roles={roles}
             activeRole={activeRole}
             onSelectRole={setActiveRole}
+            onOpenRequestForm={() => navigation.navigate('UserHome')}
             onSignOut={() => {
               void signOut();
             }}
@@ -228,30 +255,22 @@ export function RootNavigator() {
       screenOptions={{ headerTitleAlign: 'center' }}
     >
       {!isAuthenticated && <RootStack.Screen name="Login" component={LoginScreen} options={{ title: '로그인' }} />}
-      {!isAuthenticated && (
-          <RootStack.Screen name="Signup" component={SignupScreen} options={{ title: '회원가입' }} />
+      {!isAuthenticated && <RootStack.Screen name="Signup" component={SignupScreen} options={{ title: '회원가입' }} />}
+
+      {isAuthenticated && (
+        <RootStack.Screen name="AppTabs" component={AppTabsScreen} options={{ headerShown: false }} />
       )}
 
       {isAuthenticated && (
         <RootStack.Screen
-          name="AppTabs"
-          component={AppTabsScreen}
-          options={{ headerShown: false }}
+          name="UserHome"
+          options={{ title: '기사 신청', headerShown: true }}
+          children={() => <UserHomeScreen section="request-form" />}
         />
       )}
-
-      {isAuthenticated && (
-        <RootStack.Screen name="UserHome" component={UserHomeScreen} options={{ title: 'USER' }} />
-      )}
-      {isAuthenticated && (
-        <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />
-      )}
-      {isAuthenticated && (
-        <RootStack.Screen name="OpsAdminHome" component={OpsAdminHomeScreen} options={{ title: 'OPS_ADMIN' }} />
-      )}
-      {isAuthenticated && (
-        <RootStack.Screen name="SysAdminHome" component={SysAdminHomeScreen} options={{ title: 'SYS_ADMIN' }} />
-      )}
+      {isAuthenticated && <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />}
+      {isAuthenticated && <RootStack.Screen name="OpsAdminHome" component={OpsAdminHomeScreen} options={{ title: 'OPS_ADMIN' }} />}
+      {isAuthenticated && <RootStack.Screen name="SysAdminHome" component={SysAdminHomeScreen} options={{ title: 'SYS_ADMIN' }} />}
     </RootStack.Navigator>
   );
 }
@@ -328,6 +347,19 @@ const styles = StyleSheet.create({
   roleChipTextActive: {
     color: ui.colors.primary,
   },
+  requestEntryButton: {
+    marginTop: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ui.colors.primary,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: '#eef8f6',
+  },
+  requestEntryButtonText: {
+    color: ui.colors.primary,
+    fontWeight: '700',
+  },
   signOutButton: {
     marginTop: 16,
     borderRadius: 10,
@@ -342,3 +374,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
