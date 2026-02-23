@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.address-search")
 public class AddressSearchProperties {
 
-    private String baseUrl = "https://api.example.com/address/search";
+    private String baseUrl = "https://business.juso.go.kr/addrlink/addrLinkApi.do";
     private String apiKey = "";
     private int connectTimeoutMillis = 2000;
     private int readTimeoutMillis = 3000;

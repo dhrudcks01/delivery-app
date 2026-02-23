@@ -49,6 +49,8 @@ The bootstrap password is never hardcoded in source code. Manage it only via env
 - Endpoint: `GET /addresses/road-search?query={검색어}&limit={개수}`
 - 인증: JWT 필요
 - 응답: 검색어, 적용 limit, 주소 목록
+- 외부 연동: Juso 검색 API (`addrLinkApi.do`)
+  - 요청 파라미터 매핑: `keyword`, `countPerPage`, `currentPage=1`, `resultType=json`, `confmKey`
 - 외부 API 타임아웃/장애 시 표준 에러 응답
   - `ADDRESS_SEARCH_TIMEOUT` (504)
   - `ADDRESS_SEARCH_UNAVAILABLE` (502)

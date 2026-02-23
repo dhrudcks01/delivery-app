@@ -37,8 +37,8 @@ class AddressSearchServiceTest {
         mockServer = MockRestServiceServer.bindTo(restTemplate).build();
 
         properties = new AddressSearchProperties();
-        properties.setBaseUrl("https://address-api.example.com/search");
-        properties.setApiKey("test-api-key");
+        properties.setBaseUrl("https://business.juso.go.kr/addrlink/addrLinkApi.do");
+        properties.setApiKey("test-api-key=");
         properties.setDefaultLimit(10);
         properties.setMaxLimit(2);
 
@@ -49,10 +49,13 @@ class AddressSearchServiceTest {
     void searchReturnsMappedAddressesAndAppliesMaxLimit() {
         URI expectedUri = UriComponentsBuilder
                 .fromHttpUrl(properties.getBaseUrl())
-                .queryParam("query", "강남역")
-                .queryParam("limit", 2)
-                .queryParam("apiKey", "test-api-key")
-                .build(true)
+                .queryParam("keyword", "강남역")
+                .queryParam("currentPage", 1)
+                .queryParam("countPerPage", 2)
+                .queryParam("resultType", "json")
+                .queryParam("confmKey", "test-api-key=")
+                .build()
+                .encode()
                 .toUri();
 
         mockServer.expect(once(), requestTo(expectedUri))
@@ -60,11 +63,17 @@ class AddressSearchServiceTest {
                 .andRespond(withSuccess(
                         """
                         {
-                          "results": [
-                            {"roadAddress":"서울 강남구 테헤란로 1", "jibunAddress":"역삼동 123", "zipCode":"06234"},
-                            {"roadAddress":"서울 강남구 테헤란로 2", "jibunAddress":"역삼동 124", "zipCode":"06235"},
-                            {"roadAddress":"서울 강남구 테헤란로 3", "jibunAddress":"역삼동 125", "zipCode":"06236"}
-                          ]
+                          "results": {
+                            "common": {
+                              "errorCode":"0",
+                              "errorMessage":"정상"
+                            },
+                            "juso": [
+                              {"roadAddr":"서울 강남구 테헤란로 1", "jibunAddr":"역삼동 123", "zipNo":"06234"},
+                              {"roadAddr":"서울 강남구 테헤란로 2", "jibunAddr":"역삼동 124", "zipNo":"06235"},
+                              {"roadAddr":"서울 강남구 테헤란로 3", "jibunAddr":"역삼동 125", "zipNo":"06236"}
+                            ]
+                          }
                         }
                         """,
                         MediaType.APPLICATION_JSON
@@ -82,7 +91,7 @@ class AddressSearchServiceTest {
 
     @Test
     void searchThrowsTimeoutExceptionWhenExternalApiTimesOut() {
-        mockServer.expect(once(), requestTo(org.hamcrest.Matchers.containsString("query=%EA%B0%95%EB%82%A8")))
+        mockServer.expect(once(), requestTo(org.hamcrest.Matchers.containsString("keyword=%EA%B0%95%EB%82%A8")))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(request -> {
                     throw new ResourceAccessException("Read timed out", new SocketTimeoutException("Read timed out"));
@@ -96,13 +105,38 @@ class AddressSearchServiceTest {
 
     @Test
     void searchThrowsUnavailableExceptionWhenExternalApiReturnsError() {
-        mockServer.expect(once(), requestTo(org.hamcrest.Matchers.containsString("query=%EA%B0%95%EB%82%A8")))
+        mockServer.expect(once(), requestTo(org.hamcrest.Matchers.containsString("keyword=%EA%B0%95%EB%82%A8")))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withServerError());
 
         assertThatThrownBy(() -> addressSearchService.search("강남", 1))
                 .isInstanceOf(AddressSearchUnavailableException.class)
                 .hasMessage("주소 검색 API 호출에 실패했습니다.");
+        mockServer.verify();
+    }
+
+    @Test
+    void searchThrowsUnavailableExceptionWhenJusoReturnsErrorCode() {
+        mockServer.expect(once(), requestTo(org.hamcrest.Matchers.containsString("keyword=%EA%B0%95%EB%82%A8")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        """
+                        {
+                          "results": {
+                            "common": {
+                              "errorCode":"E0005",
+                              "errorMessage":"승인되지 않은 KEY입니다."
+                            },
+                            "juso": []
+                          }
+                        }
+                        """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        assertThatThrownBy(() -> addressSearchService.search("강남", 1))
+                .isInstanceOf(AddressSearchUnavailableException.class)
+                .hasMessageContaining("code=E0005");
         mockServer.verify();
     }
 }

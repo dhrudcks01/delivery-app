@@ -21,6 +21,8 @@ import java.util.List;
 @Service
 public class AddressSearchService {
 
+    private static final int FIRST_PAGE = 1;
+
     private final RestTemplate restTemplate;
     private final AddressSearchProperties addressSearchProperties;
 
@@ -38,6 +40,7 @@ public class AddressSearchService {
 
         try {
             JsonNode root = restTemplate.getForObject(uri, JsonNode.class);
+            validateJusoError(root);
             List<AddressSearchResponse.AddressItem> results = parseAddressItems(root, normalizedLimit);
             return new AddressSearchResponse(query, normalizedLimit, results);
         } catch (ResourceAccessException exception) {
@@ -61,14 +64,16 @@ public class AddressSearchService {
     private URI createSearchUri(String query, int limit) {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromHttpUrl(addressSearchProperties.getBaseUrl())
-                .queryParam("query", query)
-                .queryParam("limit", limit);
+                .queryParam("keyword", query)
+                .queryParam("currentPage", FIRST_PAGE)
+                .queryParam("countPerPage", limit)
+                .queryParam("resultType", "json");
 
         if (StringUtils.hasText(addressSearchProperties.getApiKey())) {
-            builder.queryParam("apiKey", addressSearchProperties.getApiKey());
+            builder.queryParam("confmKey", addressSearchProperties.getApiKey());
         }
 
-        return builder.build(true).toUri();
+        return builder.build().encode().toUri();
     }
 
     private List<AddressSearchResponse.AddressItem> parseAddressItems(JsonNode root, int limit) {
@@ -87,15 +92,19 @@ public class AddressSearchService {
                 break;
             }
             items.add(new AddressSearchResponse.AddressItem(
-                    firstText(item, "roadAddress", "road_address", "roadAddr", "address"),
-                    firstText(item, "jibunAddress", "jibun_address", "jibunAddr"),
-                    firstText(item, "zipCode", "postalCode", "postcode", "zoneNo")
+                    firstText(item, "roadAddr", "roadAddress", "road_address", "address"),
+                    firstText(item, "jibunAddr", "jibunAddress", "jibun_address"),
+                    firstText(item, "zipNo", "zipCode", "postalCode", "postcode", "zoneNo")
             ));
         }
         return items;
     }
 
     private JsonNode resolveResultArray(JsonNode root) {
+        JsonNode jusoArray = root.path("results").path("juso");
+        if (jusoArray.isArray()) {
+            return jusoArray;
+        }
         if (root.path("results").isArray()) {
             return root.path("results");
         }
@@ -109,6 +118,27 @@ public class AddressSearchService {
             return root.path("documents");
         }
         return root.path("results");
+    }
+
+    private void validateJusoError(JsonNode root) {
+        if (root == null) {
+            return;
+        }
+
+        JsonNode common = root.path("results").path("common");
+        if (!common.isObject()) {
+            return;
+        }
+
+        String errorCode = common.path("errorCode").asText("");
+        if (!StringUtils.hasText(errorCode) || "0".equals(errorCode)) {
+            return;
+        }
+
+        String errorMessage = common.path("errorMessage").asText("주소 검색 API 호출에 실패했습니다.");
+        throw new AddressSearchUnavailableException(
+                "주소 검색 API 호출에 실패했습니다. (code=%s, message=%s)".formatted(errorCode, errorMessage)
+        );
     }
 
     private String firstText(JsonNode node, String... keys) {

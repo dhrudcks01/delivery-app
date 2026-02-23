@@ -41,7 +41,7 @@ app:
       success-url: ${APP_PAYMENT_REGISTRATION_SUCCESS_URL:http://localhost:8080/user/payment-methods/registration/success}
       fail-url: ${APP_PAYMENT_REGISTRATION_FAIL_URL:http://localhost:8080/user/payment-methods/registration/fail}
   address-search:
-    base-url: ${APP_ADDRESS_SEARCH_BASE_URL:https://api.example.com/address/search}
+    base-url: ${APP_ADDRESS_SEARCH_BASE_URL:https://business.juso.go.kr/addrlink/addrLinkApi.do}
     api-key: ${APP_ADDRESS_SEARCH_API_KEY:}
     connect-timeout-millis: ${APP_ADDRESS_SEARCH_CONNECT_TIMEOUT_MILLIS:2000}
     read-timeout-millis: ${APP_ADDRESS_SEARCH_READ_TIMEOUT_MILLIS:3000}
