@@ -288,10 +288,23 @@ export function OpsAdminHomeScreen() {
   }, [applications, selectedApplicationId]);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      contentInsetAdjustmentBehavior="always"
+    >
       <Text style={styles.title}>OPS_ADMIN 운영 관리</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+      <View style={styles.statusCard}>
+        <Text style={styles.statusTitle}>화면 상태 점검</Text>
+        <Text style={styles.statusText}>
+          신청 로딩: {isLoadingApplications ? '진행 중' : '대기'} / 요청 로딩: {isLoadingWasteList ? '진행 중' : '대기'}
+        </Text>
+        <Text style={styles.statusText}>
+          실패결제 로딩: {isLoadingFailedPayments ? '진행 중' : '대기'} / 선택 요청 ID: {selectedWasteRequestId ?? '-'}
+        </Text>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청</Text>
@@ -502,7 +515,9 @@ export function OpsAdminHomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flexGrow: 1,
     padding: 16,
+    paddingBottom: 28,
     backgroundColor: ui.colors.screen,
     gap: 12,
   },
@@ -513,6 +528,23 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 13,
+    color: ui.colors.text,
+  },
+  statusCard: {
+    backgroundColor: '#eef8f6',
+    borderWidth: 1,
+    borderColor: '#c2d7d2',
+    borderRadius: ui.radius.card,
+    padding: 12,
+    gap: 4,
+  },
+  statusTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: ui.colors.textStrong,
+  },
+  statusText: {
+    fontSize: 12,
     color: ui.colors.text,
   },
   card: {

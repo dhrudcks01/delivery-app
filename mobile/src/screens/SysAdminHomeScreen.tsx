@@ -378,10 +378,23 @@ export function SysAdminHomeScreen() {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      contentInsetAdjustmentBehavior="always"
+    >
       <Text style={styles.title}>SYS_ADMIN 홈</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+      <View style={styles.statusCard}>
+        <Text style={styles.statusTitle}>화면 상태 점검</Text>
+        <Text style={styles.statusText}>
+          OPS 신청 로딩: {isLoadingOpsAdminApplications ? '진행 중' : '대기'} / SYS 신청 로딩: {isLoadingSysAdminApplications ? '진행 중' : '대기'}
+        </Text>
+        <Text style={styles.statusText}>
+          OPS 대상 로딩: {isLoadingGrantCandidates ? '진행 중' : '대기'} / SYS 대상 로딩: {isLoadingSysAdminGrantCandidates ? '진행 중' : '대기'}
+        </Text>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>상태 필터</Text>
@@ -650,9 +663,10 @@ export function SysAdminHomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: ui.colors.screen,
     padding: 16,
+    paddingBottom: 28,
     gap: 12,
   },
   title: {
@@ -662,6 +676,23 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 13,
+    color: ui.colors.text,
+  },
+  statusCard: {
+    backgroundColor: '#eef8f6',
+    borderWidth: 1,
+    borderColor: '#c2d7d2',
+    borderRadius: ui.radius.card,
+    padding: 12,
+    gap: 4,
+  },
+  statusTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: ui.colors.textStrong,
+  },
+  statusText: {
+    fontSize: 12,
     color: ui.colors.text,
   },
   card: {
