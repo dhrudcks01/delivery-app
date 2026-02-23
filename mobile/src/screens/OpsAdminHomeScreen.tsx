@@ -1,4 +1,4 @@
-import { AxiosError } from 'axios';
+﻿import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
@@ -6,7 +6,6 @@ import {
   getDriverApplicationsForOps,
   rejectDriverApplication,
 } from '../api/opsAdminDriverApplicationApi';
-import { createSysAdminApplication } from '../api/roleApplicationApi';
 import {
   assignWasteRequestForOps,
   getFailedPaymentsForOps,
@@ -68,10 +67,6 @@ export function OpsAdminHomeScreen() {
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
   const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
   const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
-  const [sysAdminApplicationReason, setSysAdminApplicationReason] = useState('');
-  const [sysAdminApplicationError, setSysAdminApplicationError] = useState<string | null>(null);
-  const [sysAdminApplicationResult, setSysAdminApplicationResult] = useState<string | null>(null);
-  const [isSubmittingSysAdminApplication, setIsSubmittingSysAdminApplication] = useState(false);
 
   const parsedDriverId = useMemo(() => {
     const parsed = Number(driverIdInput.trim());
@@ -160,7 +155,7 @@ export function OpsAdminHomeScreen() {
 
   const handleApproveApplication = async () => {
     if (!selectedApplicationId) {
-      setApplicationActionError('승인할 신청을 목록에서 선택해 주세요.');
+      setApplicationActionError('승인할 요청을 목록에서 선택해 주세요.');
       return;
     }
 
@@ -171,7 +166,7 @@ export function OpsAdminHomeScreen() {
     try {
       const response = await approveDriverApplication(selectedApplicationId);
       setLatestApplicationResult(response);
-      setApplicationResultMessage(`신청 #${response.id} 승인 완료 (${response.userEmail})`);
+      setApplicationResultMessage(`요청 #${response.id} 승인 완료 (${response.userEmail})`);
       await loadPendingApplications();
     } catch (error) {
       setApplicationActionError(toErrorMessage(error));
@@ -182,7 +177,7 @@ export function OpsAdminHomeScreen() {
 
   const handleRejectApplication = async () => {
     if (!selectedApplicationId) {
-      setApplicationActionError('반려할 신청을 목록에서 선택해 주세요.');
+      setApplicationActionError('반려할 요청을 목록에서 선택해 주세요.');
       return;
     }
 
@@ -193,7 +188,7 @@ export function OpsAdminHomeScreen() {
     try {
       const response = await rejectDriverApplication(selectedApplicationId);
       setLatestApplicationResult(response);
-      setApplicationResultMessage(`신청 #${response.id} 반려 완료 (${response.userEmail})`);
+      setApplicationResultMessage(`요청 #${response.id} 반려 완료 (${response.userEmail})`);
       await loadPendingApplications();
     } catch (error) {
       setApplicationActionError(toErrorMessage(error));
@@ -248,30 +243,6 @@ export function OpsAdminHomeScreen() {
     }
   };
 
-  const handleSubmitSysAdminApplication = async () => {
-    const reason = sysAdminApplicationReason.trim();
-    if (!reason) {
-      setSysAdminApplicationError('신청 사유를 입력해 주세요.');
-      return;
-    }
-
-    setIsSubmittingSysAdminApplication(true);
-    setSysAdminApplicationError(null);
-    setSysAdminApplicationResult(null);
-
-    try {
-      const response = await createSysAdminApplication(reason);
-      setSysAdminApplicationReason('');
-      setSysAdminApplicationResult(
-        `SYS_ADMIN 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`,
-      );
-    } catch (error) {
-      setSysAdminApplicationError(toErrorMessage(error));
-    } finally {
-      setIsSubmittingSysAdminApplication(false);
-    }
-  };
-
   useEffect(() => {
     void loadPendingApplications();
     void loadWasteRequests();
@@ -297,38 +268,13 @@ export function OpsAdminHomeScreen() {
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
       <View style={styles.statusCard}>
-        <Text style={styles.statusTitle}>화면 상태 점검</Text>
+        <Text style={styles.statusTitle}>화면 상태 요약</Text>
         <Text style={styles.statusText}>
           신청 로딩: {isLoadingApplications ? '진행 중' : '대기'} / 요청 로딩: {isLoadingWasteList ? '진행 중' : '대기'}
         </Text>
         <Text style={styles.statusText}>
           실패결제 로딩: {isLoadingFailedPayments ? '진행 중' : '대기'} / 선택 요청 ID: {selectedWasteRequestId ?? '-'}
         </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청</Text>
-        <Text style={styles.meta}>OPS_ADMIN 계정은 SYS_ADMIN 권한을 신청할 수 있습니다.</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={sysAdminApplicationReason}
-          onChangeText={setSysAdminApplicationReason}
-          multiline
-          placeholder="신청 사유를 입력해 주세요."
-          placeholderTextColor="#94a3b8"
-          editable={!isSubmittingSysAdminApplication}
-        />
-        {sysAdminApplicationResult && <Text style={styles.success}>{sysAdminApplicationResult}</Text>}
-        {sysAdminApplicationError && <Text style={styles.error}>{sysAdminApplicationError}</Text>}
-        <Pressable
-          style={[styles.button, isSubmittingSysAdminApplication && styles.buttonDisabled]}
-          onPress={handleSubmitSysAdminApplication}
-          disabled={isSubmittingSysAdminApplication}
-        >
-          <Text style={styles.buttonText}>
-            {isSubmittingSysAdminApplication ? '신청 중..' : 'SYS_ADMIN 권한 신청'}
-          </Text>
-        </Pressable>
       </View>
 
       <View style={styles.card}>
@@ -351,7 +297,7 @@ export function OpsAdminHomeScreen() {
               setApplicationResultMessage(null);
             }}
           >
-            <Text style={styles.listTitle}>신청 #{item.id}</Text>
+            <Text style={styles.listTitle}>요청 #{item.id}</Text>
             <Text style={styles.listSub}>신청자: {item.userDisplayName} ({item.userEmail})</Text>
             <Text style={styles.listSub}>신청시각: {formatDate(item.createdAt)}</Text>
           </Pressable>
@@ -362,7 +308,7 @@ export function OpsAdminHomeScreen() {
 
         {selectedApplication && (
           <View style={styles.resultBox}>
-            <Text style={styles.detailText}>선택 신청 ID: {selectedApplication.id}</Text>
+            <Text style={styles.detailText}>선택 요청 ID: {selectedApplication.id}</Text>
             <Text style={styles.detailText}>상태: {selectedApplication.status}</Text>
             <Text style={styles.detailText}>
               신청자: {selectedApplication.userDisplayName} ({selectedApplication.userEmail})
@@ -393,7 +339,7 @@ export function OpsAdminHomeScreen() {
         </View>
         {latestApplicationResult && (
           <View style={styles.resultBox}>
-            <Text style={styles.detailText}>최근 처리 신청 ID: {latestApplicationResult.id}</Text>
+            <Text style={styles.detailText}>최근 처리 요청 ID: {latestApplicationResult.id}</Text>
             <Text style={styles.detailText}>상태: {latestApplicationResult.status}</Text>
             <Text style={styles.detailText}>신청자: {latestApplicationResult.userEmail}</Text>
             <Text style={styles.detailText}>처리시각: {formatDate(latestApplicationResult.processedAt)}</Text>
@@ -426,9 +372,7 @@ export function OpsAdminHomeScreen() {
             style={[styles.listItem, selectedWasteRequestId === item.id && styles.listItemActive]}
             onPress={() => void loadWasteRequestDetail(item.id)}
           >
-            <Text style={styles.listTitle}>
-              #{item.id} {item.status}
-            </Text>
+            <Text style={styles.listTitle}>#{item.id} {item.status}</Text>
             <Text style={styles.listSub}>{item.address}</Text>
             <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
           </Pressable>
@@ -568,10 +512,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: ui.colors.textStrong,
   },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
   success: {
     color: ui.colors.success,
     fontSize: 13,
@@ -584,6 +524,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   buttonRow: {
     flexDirection: 'row',

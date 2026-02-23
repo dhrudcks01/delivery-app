@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
+import { RoleCenterScreen } from '../screens/RoleCenterScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
 import { UserHomeScreen } from '../screens/UserHomeScreen';
@@ -21,6 +22,7 @@ export type RootStackParamList = {
   Signup: undefined;
   AppTabs: undefined;
   UserHome: undefined;
+  RoleCenter: { activeRole: AppRole };
   DriverHome: undefined;
   OpsAdminHome: undefined;
   SysAdminHome: undefined;
@@ -135,6 +137,7 @@ function TabProfileScreen({
   activeRole,
   onSelectRole,
   onOpenRequestForm,
+  onOpenRoleCenter,
   onSignOut,
 }: {
   email: string | null;
@@ -142,6 +145,7 @@ function TabProfileScreen({
   activeRole: AppRole;
   onSelectRole: (role: AppRole) => void;
   onOpenRequestForm: () => void;
+  onOpenRoleCenter: () => void;
   onSignOut: () => void;
 }) {
   const isUserRole = activeRole === 'USER';
@@ -157,6 +161,9 @@ function TabProfileScreen({
           <Text style={styles.requestEntryButtonText}>기사 신청하기</Text>
         </Pressable>
       )}
+      <Pressable style={styles.requestEntryButton} onPress={onOpenRoleCenter}>
+        <Text style={styles.requestEntryButtonText}>권한 신청/승인</Text>
+      </Pressable>
       <Pressable style={styles.signOutButton} onPress={onSignOut}>
         <Text style={styles.signOutButtonText}>로그아웃</Text>
       </Pressable>
@@ -172,6 +179,19 @@ function UserRequestTabGuideScreen() {
       <View style={styles.tabCard}>
         <Text style={styles.tabCardTitle}>기사 신청 진입 경로</Text>
         <Text style={styles.tabCardText}>내정보 탭에서 "기사 신청하기" 메뉴로 진입해 주세요.</Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+function SysAdminRoleGuideScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.tabContainer}>
+      <Text style={styles.tabTitle}>권한 승인 안내</Text>
+      <Text style={styles.tabMeta}>SYS_ADMIN 계정 정책</Text>
+      <View style={styles.tabCard}>
+        <Text style={styles.tabCardTitle}>진입 경로</Text>
+        <Text style={styles.tabCardText}>내정보 탭에서 \"권한 신청/승인\" 메뉴를 통해 접근해 주세요.</Text>
       </View>
     </ScrollView>
   );
@@ -214,12 +234,24 @@ function AppTabsScreen() {
       <AppTabs.Screen
         name="RequestTab"
         options={{ title: TAB_TO_LABEL.RequestTab, headerShown: false }}
-        children={() => (isUserRole ? <UserRequestTabGuideScreen /> : renderRoleScreen(activeRole))}
+        children={() =>
+          isUserRole
+            ? <UserRequestTabGuideScreen />
+            : activeRole === 'SYS_ADMIN'
+              ? <SysAdminRoleGuideScreen />
+              : renderRoleScreen(activeRole)
+        }
       />
       <AppTabs.Screen
         name="HistoryTab"
         options={{ title: TAB_TO_LABEL.HistoryTab, headerShown: false }}
-        children={() => (isUserRole ? <UserHomeScreen section="history" /> : renderRoleScreen(activeRole))}
+        children={() =>
+          isUserRole
+            ? <UserHomeScreen section="history" />
+            : activeRole === 'SYS_ADMIN'
+              ? <SysAdminRoleGuideScreen />
+              : renderRoleScreen(activeRole)
+        }
       />
       <AppTabs.Screen
         name="ProfileTab"
@@ -231,6 +263,7 @@ function AppTabsScreen() {
             activeRole={activeRole}
             onSelectRole={setActiveRole}
             onOpenRequestForm={() => navigation.navigate('UserHome')}
+            onOpenRoleCenter={() => navigation.navigate('RoleCenter', { activeRole })}
             onSignOut={() => {
               void signOut();
             }}
@@ -266,6 +299,18 @@ export function RootNavigator() {
           name="UserHome"
           options={{ title: '기사 신청', headerShown: true }}
           children={() => <UserHomeScreen section="request-form" />}
+        />
+      )}
+      {isAuthenticated && (
+        <RootStack.Screen
+          name="RoleCenter"
+          options={{ title: '권한 신청/승인', headerShown: true }}
+          children={({ route, navigation: stackNav }) => (
+            <RoleCenterScreen
+              activeRole={route.params.activeRole}
+              onOpenSysAdminApproval={() => stackNav.navigate('SysAdminHome')}
+            />
+          )}
         />
       )}
       {isAuthenticated && <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />}
