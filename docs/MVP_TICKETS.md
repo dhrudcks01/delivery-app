@@ -675,7 +675,7 @@
 
 ---
 
-### [ ] T-0525 OPS_ADMIN 권한 부여 UX 강화(검색 기반 부여, OPS_ADMIN 계정 전용)
+### [x] T-0525 OPS_ADMIN 권한 부여 UX 강화(검색 기반 부여, OPS_ADMIN 계정 전용)
 **Goal**
 - OPS_ADMIN 계정에서 사용자 검색을 통해 OPS_ADMIN 권한을 부여할 수 있도록 운영 UX를 강화한다.
 

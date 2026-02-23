@@ -76,13 +76,32 @@ class OpsAdminRoleManagementIntegrationTest {
     }
 
     @Test
-    void nonSysAdminCannotGrantOpsAdminRole() throws Exception {
-        TestUser opsAdmin = createUser("ops-admin@example.com", "OPS_ADMIN");
-        TestUser target = createUser("target-non-sys@example.com", "DRIVER");
+    void driverCannotGrantOpsAdminRole() throws Exception {
+        TestUser driver = createUser("driver-no-access@example.com", "DRIVER");
+        TestUser target = createUser("target-non-admin@example.com", "DRIVER");
 
         mockMvc.perform(post("/sys-admin/users/{userId}/roles/ops-admin", target.id())
-                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                        .header("Authorization", "Bearer " + driver.accessToken()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void opsAdminCanSearchAndGrantOpsAdminRole() throws Exception {
+        TestUser opsAdmin = createUser("ops-admin-granter@example.com", "OPS_ADMIN");
+        TestUser targetDriver = createUser("driver-target@example.com", "DRIVER");
+
+        mockMvc.perform(get("/sys-admin/users/ops-admin-grant-candidates")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("query", "driver-target")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].userId").value(targetDriver.id()));
+
+        mockMvc.perform(post("/sys-admin/users/{userId}/roles/ops-admin", targetDriver.id())
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -105,11 +124,10 @@ class OpsAdminRoleManagementIntegrationTest {
 
         mockMvc.perform(get("/sys-admin/users/ops-admin-grant-candidates")
                         .header("Authorization", "Bearer " + sysAdmin.accessToken())
-                        .param("query", "driver")
+                        .param("query", "driver-only@example.com")
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].userId").value(driverOnly.id()))
                 .andExpect(jsonPath("$.content[0].userEmail").value("driver-only@example.com"));
     }

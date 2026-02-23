@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createDriverApplication, getMyDriverApplications } from '../api/driverApplicationApi';
-import { createSysAdminApplication } from '../api/roleApplicationApi';
+import { getOpsAdminGrantCandidates, grantOpsAdminRole } from '../api/sysAdminRoleApi';
 import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
+import { OpsAdminGrantCandidate } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 type AppRole = 'USER' | 'DRIVER' | 'OPS_ADMIN' | 'SYS_ADMIN';
@@ -37,10 +38,13 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
   const [driverApplicationError, setDriverApplicationError] = useState<string | null>(null);
   const [driverApplicationResult, setDriverApplicationResult] = useState<string | null>(null);
 
-  const [sysAdminReason, setSysAdminReason] = useState('');
-  const [isSubmittingSysAdminApplication, setIsSubmittingSysAdminApplication] = useState(false);
-  const [sysAdminApplicationError, setSysAdminApplicationError] = useState<string | null>(null);
-  const [sysAdminApplicationResult, setSysAdminApplicationResult] = useState<string | null>(null);
+  const [opsAdminGrantQuery, setOpsAdminGrantQuery] = useState('');
+  const [opsAdminGrantCandidates, setOpsAdminGrantCandidates] = useState<OpsAdminGrantCandidate[]>([]);
+  const [selectedGrantCandidateId, setSelectedGrantCandidateId] = useState<number | null>(null);
+  const [isLoadingGrantCandidates, setIsLoadingGrantCandidates] = useState(false);
+  const [isGrantingOpsAdmin, setIsGrantingOpsAdmin] = useState(false);
+  const [opsAdminGrantError, setOpsAdminGrantError] = useState<string | null>(null);
+  const [opsAdminGrantResult, setOpsAdminGrantResult] = useState<string | null>(null);
 
   const loadDriverApplications = async () => {
     setIsLoadingDriverApplications(true);
@@ -52,6 +56,31 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
       setDriverApplicationError(toErrorMessage(error));
     } finally {
       setIsLoadingDriverApplications(false);
+    }
+  };
+
+  const loadOpsAdminGrantCandidates = async () => {
+    setIsLoadingGrantCandidates(true);
+    setOpsAdminGrantError(null);
+    try {
+      const response = await getOpsAdminGrantCandidates({
+        query: opsAdminGrantQuery.trim() || undefined,
+        page: 0,
+        size: 20,
+      });
+      setOpsAdminGrantCandidates(response.content);
+      setSelectedGrantCandidateId((current) => {
+        if (current && response.content.some((item) => item.userId === current)) {
+          return current;
+        }
+        return response.content[0]?.userId ?? null;
+      });
+    } catch (error) {
+      setOpsAdminGrantCandidates([]);
+      setSelectedGrantCandidateId(null);
+      setOpsAdminGrantError(toErrorMessage(error));
+    } finally {
+      setIsLoadingGrantCandidates(false);
     }
   };
 
@@ -78,31 +107,34 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
     }
   };
 
-  const handleSubmitSysAdminApplication = async () => {
-    const reason = sysAdminReason.trim();
-    if (!reason) {
-      setSysAdminApplicationError('신청 사유를 입력해 주세요.');
+  const handleGrantOpsAdmin = async () => {
+    const candidate = opsAdminGrantCandidates.find((item) => item.userId === selectedGrantCandidateId);
+    if (!candidate) {
+      setOpsAdminGrantError('부여할 사용자를 선택해 주세요.');
       return;
     }
 
-    setIsSubmittingSysAdminApplication(true);
-    setSysAdminApplicationError(null);
-    setSysAdminApplicationResult(null);
+    setIsGrantingOpsAdmin(true);
+    setOpsAdminGrantError(null);
+    setOpsAdminGrantResult(null);
 
     try {
-      const response = await createSysAdminApplication(reason);
-      setSysAdminReason('');
-      setSysAdminApplicationResult(`SYS_ADMIN 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`);
+      await grantOpsAdminRole(candidate.userId);
+      setOpsAdminGrantResult(`사용자 #${candidate.userId} (${candidate.userEmail}) 에게 OPS_ADMIN 권한을 부여했습니다.`);
+      await loadOpsAdminGrantCandidates();
     } catch (error) {
-      setSysAdminApplicationError(toErrorMessage(error));
+      setOpsAdminGrantError(toErrorMessage(error));
     } finally {
-      setIsSubmittingSysAdminApplication(false);
+      setIsGrantingOpsAdmin(false);
     }
   };
 
   useEffect(() => {
     if (activeRole === 'USER') {
       void loadDriverApplications();
+    }
+    if (activeRole === 'OPS_ADMIN') {
+      void loadOpsAdminGrantCandidates();
     }
   }, [activeRole]);
 
@@ -159,24 +191,48 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
 
       {activeRole === 'OPS_ADMIN' && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={sysAdminReason}
-            onChangeText={setSysAdminReason}
-            multiline
-            placeholder="SYS_ADMIN 신청 사유"
-            placeholderTextColor="#94a3b8"
-            editable={!isSubmittingSysAdminApplication}
-          />
-          {sysAdminApplicationResult && <Text style={styles.success}>{sysAdminApplicationResult}</Text>}
-          {sysAdminApplicationError && <Text style={styles.error}>{sysAdminApplicationError}</Text>}
+          <Text style={styles.cardTitle}>OPS_ADMIN 권한 부여</Text>
+          <Text style={styles.meta}>신청이 아닌 운영 부여 동선입니다. (대상: DRIVER + OPS_ADMIN 미보유)</Text>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={[styles.input, styles.queryInput]}
+              value={opsAdminGrantQuery}
+              onChangeText={setOpsAdminGrantQuery}
+              placeholder="검색어(이메일/이름)"
+              placeholderTextColor="#94a3b8"
+              editable={!isLoadingGrantCandidates}
+            />
+            <Pressable
+              style={[styles.ghostButton, isLoadingGrantCandidates && styles.buttonDisabled]}
+              onPress={() => void loadOpsAdminGrantCandidates()}
+              disabled={isLoadingGrantCandidates}
+            >
+              <Text style={styles.ghostButtonText}>검색</Text>
+            </Pressable>
+          </View>
+          {isLoadingGrantCandidates && <Text style={styles.meta}>부여 대상 조회 중..</Text>}
+          {opsAdminGrantCandidates.map((item) => (
+            <Pressable
+              key={item.userId}
+              style={[styles.listItem, selectedGrantCandidateId === item.userId && styles.listItemActive]}
+              onPress={() => setSelectedGrantCandidateId(item.userId)}
+            >
+              <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
+              <Text style={styles.listSub}>{item.userDisplayName}</Text>
+              <Text style={styles.listSub}>{item.userEmail}</Text>
+            </Pressable>
+          ))}
+          {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (
+            <Text style={styles.meta}>조건에 맞는 부여 대상이 없습니다.</Text>
+          )}
+          {opsAdminGrantResult && <Text style={styles.success}>{opsAdminGrantResult}</Text>}
+          {opsAdminGrantError && <Text style={styles.error}>{opsAdminGrantError}</Text>}
           <Pressable
-            style={[styles.button, isSubmittingSysAdminApplication && styles.buttonDisabled]}
-            onPress={handleSubmitSysAdminApplication}
-            disabled={isSubmittingSysAdminApplication}
+            style={[styles.button, isGrantingOpsAdmin && styles.buttonDisabled]}
+            onPress={handleGrantOpsAdmin}
+            disabled={isGrantingOpsAdmin}
           >
-            <Text style={styles.buttonText}>{isSubmittingSysAdminApplication ? '신청 중..' : 'SYS_ADMIN 권한 신청'}</Text>
+            <Text style={styles.buttonText}>{isGrantingOpsAdmin ? '권한 부여 중..' : '선택 사용자 권한 부여'}</Text>
           </Pressable>
         </View>
       )}
@@ -194,8 +250,8 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
       {activeRole === 'DRIVER' && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>권한 메뉴 안내</Text>
-          <Text style={styles.meta}>현재 역할에서는 권한 신청 메뉴가 제공되지 않습니다.</Text>
-          <Text style={styles.meta}>OPS_ADMIN 권한 신청 메뉴는 노출되지 않습니다.</Text>
+          <Text style={styles.meta}>현재 역할에서는 권한 신청/부여 메뉴가 제공되지 않습니다.</Text>
+          <Text style={styles.meta}>OPS_ADMIN 신청/부여 메뉴는 노출되지 않습니다.</Text>
         </View>
       )}
     </ScrollView>
@@ -260,6 +316,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  queryInput: {
+    flex: 1,
+  },
   ghostButton: {
     borderWidth: 1,
     borderColor: '#9fc2b9',
@@ -286,6 +350,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     gap: 2,
+  },
+  listItemActive: {
+    borderColor: ui.colors.primary,
+    backgroundColor: '#eef8f6',
   },
   listTitle: {
     color: ui.colors.textStrong,
