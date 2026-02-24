@@ -24,9 +24,12 @@ public class PaymentMethodRegistrationController {
     }
 
     @PostMapping("/start")
-    public ResponseEntity<PaymentMethodRegistrationStartResponse> start(Authentication authentication) {
+    public ResponseEntity<PaymentMethodRegistrationStartResponse> start(
+            Authentication authentication,
+            @RequestParam(required = false) String methodType
+    ) {
         PaymentMethodRegistrationStartResponse response = paymentMethodRegistrationService
-                .startRegistration(authentication.getName());
+                .startRegistration(authentication.getName(), methodType);
         return ResponseEntity.ok(response);
     }
 
@@ -34,12 +37,14 @@ public class PaymentMethodRegistrationController {
     public ResponseEntity<PaymentMethodRegistrationSuccessResponse> success(
             Authentication authentication,
             @RequestParam String customerKey,
-            @RequestParam String authKey
+            @RequestParam String authKey,
+            @RequestParam(required = false) String methodType
     ) {
         PaymentMethodRegistrationSuccessResponse response = paymentMethodRegistrationService.registerSuccess(
                 authentication.getName(),
                 customerKey,
-                authKey
+                authKey,
+                methodType
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

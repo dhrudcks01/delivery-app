@@ -2,6 +2,7 @@ package com.delivery.payment.service;
 
 import com.delivery.payment.entity.PaymentEntity;
 import com.delivery.payment.entity.PaymentMethodEntity;
+import com.delivery.payment.model.PaymentMethodType;
 import com.delivery.payment.repository.PaymentMethodRepository;
 import com.delivery.payment.repository.PaymentRepository;
 import com.delivery.waste.entity.WasteRequestEntity;
@@ -21,6 +22,8 @@ public class PaymentAutomationService {
     private static final String STATUS_PAYMENT_FAILED = "PAYMENT_FAILED";
     private static final String STATUS_PENDING = "PENDING";
     private static final String PROVIDER_TOSS = "TOSS";
+    private static final String FAILURE_CODE_UNSUPPORTED_AUTO_PAYMENT_METHOD = "UNSUPPORTED_AUTO_PAYMENT_METHOD";
+    private static final String FAILURE_MESSAGE_CARD_ONLY_AUTO_PAYMENT = "자동결제는 카드 직접 등록 수단만 지원합니다.";
 
     private final PaymentRepository paymentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -45,7 +48,11 @@ public class PaymentAutomationService {
         wasteStatusTransitionService.transition(request.getId(), STATUS_PAYMENT_PENDING, actorEmail);
 
         PaymentMethodEntity paymentMethod = paymentMethodRepository
-                .findFirstByUserAndStatusOrderByCreatedAtDesc(request.getUser(), STATUS_ACTIVE)
+                .findFirstByUserAndStatusAndMethodTypeOrderByCreatedAtDesc(
+                        request.getUser(),
+                        STATUS_ACTIVE,
+                        PaymentMethodType.CARD.name()
+                )
                 .orElse(null);
 
         PaymentEntity payment = new PaymentEntity(
@@ -60,7 +67,7 @@ public class PaymentAutomationService {
         paymentRepository.save(payment);
 
         if (paymentMethod == null) {
-            payment.markFailure("NO_ACTIVE_PAYMENT_METHOD", "활성 결제수단이 없습니다.");
+            payment.markFailure(FAILURE_CODE_UNSUPPORTED_AUTO_PAYMENT_METHOD, FAILURE_MESSAGE_CARD_ONLY_AUTO_PAYMENT);
             wasteStatusTransitionService.transition(request.getId(), STATUS_PAYMENT_FAILED, actorEmail);
             return;
         }

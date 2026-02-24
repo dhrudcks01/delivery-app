@@ -9,6 +9,7 @@ import com.delivery.payment.entity.PaymentEntity;
 import com.delivery.payment.entity.PaymentMethodEntity;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
+import com.delivery.payment.model.PaymentMethodType;
 import com.delivery.payment.repository.PaymentMethodRepository;
 import com.delivery.payment.repository.PaymentRepository;
 import com.delivery.waste.dto.WasteRequestResponse;
@@ -33,6 +34,8 @@ public class PaymentFailureHandlingService {
     private static final String STATUS_PAYMENT_PENDING = "PAYMENT_PENDING";
     private static final String STATUS_PAID = "PAID";
     private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String FAILURE_CODE_UNSUPPORTED_AUTO_PAYMENT_METHOD = "UNSUPPORTED_AUTO_PAYMENT_METHOD";
+    private static final String FAILURE_MESSAGE_CARD_ONLY_AUTO_PAYMENT = "자동결제는 카드 직접 등록 수단만 지원합니다.";
 
     private final UserRepository userRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -63,6 +66,7 @@ public class PaymentFailureHandlingService {
                         .map(method -> new PaymentMethodStatusResponse.PaymentMethodStatusItem(
                                 method.getId(),
                                 method.getProvider(),
+                                method.getMethodType(),
                                 method.getStatus(),
                                 method.getCreatedAt(),
                                 method.getUpdatedAt()
@@ -106,13 +110,17 @@ public class PaymentFailureHandlingService {
         wasteStatusTransitionService.transition(wasteRequestId, STATUS_PAYMENT_PENDING, actorEmail);
 
         PaymentMethodEntity paymentMethod = paymentMethodRepository
-                .findFirstByUserAndStatusOrderByCreatedAtDesc(request.getUser(), STATUS_ACTIVE)
+                .findFirstByUserAndStatusAndMethodTypeOrderByCreatedAtDesc(
+                        request.getUser(),
+                        STATUS_ACTIVE,
+                        PaymentMethodType.CARD.name()
+                )
                 .orElse(null);
 
         payment.markPendingForRetry(paymentMethod);
 
         if (paymentMethod == null) {
-            payment.markFailure("NO_ACTIVE_PAYMENT_METHOD", "활성 결제수단이 없습니다.");
+            payment.markFailure(FAILURE_CODE_UNSUPPORTED_AUTO_PAYMENT_METHOD, FAILURE_MESSAGE_CARD_ONLY_AUTO_PAYMENT);
             WasteRequestEntity failed = wasteStatusTransitionService.transition(
                     wasteRequestId,
                     STATUS_PAYMENT_FAILED,

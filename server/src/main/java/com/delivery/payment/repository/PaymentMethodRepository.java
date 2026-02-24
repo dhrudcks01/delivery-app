@@ -14,4 +14,10 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethodEnti
     List<PaymentMethodEntity> findAllByUserAndStatusOrderByCreatedAtDesc(UserEntity user, String status);
 
     Optional<PaymentMethodEntity> findFirstByUserAndStatusOrderByCreatedAtDesc(UserEntity user, String status);
+
+    Optional<PaymentMethodEntity> findFirstByUserAndStatusAndMethodTypeOrderByCreatedAtDesc(
+            UserEntity user,
+            String status,
+            String methodType
+    );
 }

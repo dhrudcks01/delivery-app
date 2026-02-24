@@ -63,6 +63,7 @@ class PaymentMethodRegistrationIntegrationTest {
                         .param("authKey", "billing-auth-key-123"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.provider").value("TOSS"))
+                .andExpect(jsonPath("$.methodType").value("CARD"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         mockMvc.perform(get("/user/payment-methods")
@@ -70,6 +71,7 @@ class PaymentMethodRegistrationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.canReregister").value(true))
                 .andExpect(jsonPath("$.paymentMethods.length()").value(1))
+                .andExpect(jsonPath("$.paymentMethods[0].methodType").value("CARD"))
                 .andExpect(jsonPath("$.paymentMethods[0].status").value("ACTIVE"));
 
         Long count = jdbcTemplate.queryForObject(
@@ -97,12 +99,14 @@ class PaymentMethodRegistrationIntegrationTest {
                         .param("customerKey", secondCustomerKey)
                         .param("authKey", "billing-auth-key-2"))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.methodType").value("CARD"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         mockMvc.perform(get("/user/payment-methods")
                         .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paymentMethods.length()").value(2))
+                .andExpect(jsonPath("$.paymentMethods[0].methodType").value("CARD"))
                 .andExpect(jsonPath("$.paymentMethods[0].status").value("ACTIVE"))
                 .andExpect(jsonPath("$.paymentMethods[1].status").value("INACTIVE"));
     }
@@ -121,12 +125,49 @@ class PaymentMethodRegistrationIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_PAYMENT_METHOD_REGISTRATION"));
     }
 
+    @Test
+    void userCanRegisterTransferAndKakaopayTypes() throws Exception {
+        TestUser transferUser = createUserWithUserRole();
+        String transferCustomerKey = startRegistration(transferUser.accessToken(), transferUser.id(), "TRANSFER_TOSS");
+
+        mockMvc.perform(get("/user/payment-methods/registration/success")
+                        .header("Authorization", "Bearer " + transferUser.accessToken())
+                        .param("customerKey", transferCustomerKey)
+                        .param("authKey", "billing-auth-transfer")
+                        .param("methodType", "TRANSFER_TOSS"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.provider").value("TOSS"))
+                .andExpect(jsonPath("$.methodType").value("TRANSFER_TOSS"));
+
+        TestUser kakaoUser = createUserWithUserRole();
+        String kakaoCustomerKey = startRegistration(kakaoUser.accessToken(), kakaoUser.id(), "KAKAOPAY");
+
+        mockMvc.perform(get("/user/payment-methods/registration/success")
+                        .header("Authorization", "Bearer " + kakaoUser.accessToken())
+                        .param("customerKey", kakaoCustomerKey)
+                        .param("authKey", "billing-auth-kakao")
+                        .param("methodType", "KAKAOPAY"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.provider").value("KAKAOPAY"))
+                .andExpect(jsonPath("$.methodType").value("KAKAOPAY"));
+    }
+
     private String startRegistration(String accessToken, Long userId) throws Exception {
-        String startResponse = mockMvc.perform(post("/user/payment-methods/registration/start")
-                        .header("Authorization", "Bearer " + accessToken))
+        return startRegistration(accessToken, userId, null);
+    }
+
+    private String startRegistration(String accessToken, Long userId, String methodType) throws Exception {
+        var requestBuilder = post("/user/payment-methods/registration/start")
+                .header("Authorization", "Bearer " + accessToken);
+        if (methodType != null) {
+            requestBuilder = requestBuilder.param("methodType", methodType);
+        }
+
+        String startResponse = mockMvc.perform(requestBuilder)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerKey").value(org.hamcrest.Matchers.startsWith("delivery_user_" + userId + "_")))
                 .andExpect(jsonPath("$.registrationUrl").value(org.hamcrest.Matchers.containsString("customerKey=")))
+                .andExpect(jsonPath("$.methodType").value(methodType == null ? "CARD" : methodType))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

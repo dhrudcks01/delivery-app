@@ -10,6 +10,7 @@ public record PaymentMethodStatusResponse(
     public record PaymentMethodStatusItem(
             Long id,
             String provider,
+            String methodType,
             String status,
             Instant createdAt,
             Instant updatedAt

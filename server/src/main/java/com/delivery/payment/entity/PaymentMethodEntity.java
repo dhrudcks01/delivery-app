@@ -31,6 +31,9 @@ public class PaymentMethodEntity {
     @Column(nullable = false, length = 30)
     private String provider;
 
+    @Column(name = "method_type", nullable = false, length = 30)
+    private String methodType;
+
     @Column(name = "customer_key", nullable = false, length = 191)
     private String customerKey;
 
@@ -52,12 +55,14 @@ public class PaymentMethodEntity {
     public PaymentMethodEntity(
             UserEntity user,
             String provider,
+            String methodType,
             String customerKey,
             String billingKeyOrToken,
             String status
     ) {
         this.user = Objects.requireNonNull(user);
         this.provider = Objects.requireNonNull(provider);
+        this.methodType = Objects.requireNonNull(methodType);
         this.customerKey = Objects.requireNonNull(customerKey);
         this.billingKeyOrToken = Objects.requireNonNull(billingKeyOrToken);
         this.status = Objects.requireNonNull(status);
@@ -89,6 +94,10 @@ public class PaymentMethodEntity {
 
     public String getProvider() {
         return provider;
+    }
+
+    public String getMethodType() {
+        return methodType;
     }
 
     public String getCustomerKey() {

@@ -109,6 +109,7 @@ class PaymentAutomationIdempotencyIntegrationTest {
         paymentMethodRepository.save(new PaymentMethodEntity(
                 user,
                 "TOSS",
+                "CARD",
                 "delivery_user_" + user.getId() + "_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "billing-token-idempotency",
                 "ACTIVE"
