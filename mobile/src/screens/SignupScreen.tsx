@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 
@@ -48,76 +44,63 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoid}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+    <KeyboardAwareScrollScreen
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="always"
-        >
-          <View style={styles.hero}>
-            <Text style={styles.badge}>아이디 회원가입</Text>
-            <Text style={styles.title}>가입 후 바로 시작하세요</Text>
-            <Text style={styles.description}>회원가입 성공 시 자동 로그인되어 역할 화면으로 이동합니다.</Text>
-          </View>
+      <View style={styles.hero}>
+        <Text style={styles.badge}>아이디 회원가입</Text>
+        <Text style={styles.title}>가입 후 바로 시작하세요</Text>
+        <Text style={styles.description}>회원가입 성공 시 자동 로그인되어 역할 화면으로 이동합니다.</Text>
+      </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>아이디</Text>
-            <TextInput
-              style={styles.input}
-              value={identifier}
-              onChangeText={setIdentifier}
-              autoCapitalize="none"
-              keyboardType="default"
-              placeholder="아이디"
-              placeholderTextColor="#94a3b8"
-            />
+      <View style={styles.form}>
+        <Text style={styles.label}>아이디</Text>
+        <TextInput
+          style={styles.input}
+          value={identifier}
+          onChangeText={setIdentifier}
+          autoCapitalize="none"
+          keyboardType="default"
+          placeholder="아이디"
+          placeholderTextColor="#94a3b8"
+        />
 
-            <Text style={styles.label}>이름</Text>
-            <TextInput
-              style={styles.input}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="홍길동"
-              placeholderTextColor="#94a3b8"
-            />
+        <Text style={styles.label}>이름</Text>
+        <TextInput
+          style={styles.input}
+          value={displayName}
+          onChangeText={setDisplayName}
+          placeholder="홍길동"
+          placeholderTextColor="#94a3b8"
+        />
 
-            <Text style={styles.label}>비밀번호</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="비밀번호(8자 이상)"
-              placeholderTextColor="#94a3b8"
-              onSubmitEditing={handleSignup}
-            />
+        <Text style={styles.label}>비밀번호</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          placeholder="비밀번호(8자 이상)"
+          placeholderTextColor="#94a3b8"
+          onSubmitEditing={handleSignup}
+        />
 
-            {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
+        {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
 
-            <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSignup}>
-              <Text style={styles.buttonText}>{isLoading ? '가입 중...' : '회원가입'}</Text>
-            </Pressable>
+        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSignup}>
+          <Text style={styles.buttonText}>{isLoading ? '가입 중...' : '회원가입'}</Text>
+        </Pressable>
 
-            <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.linkText}>이미 계정이 있나요? 로그인으로 이동</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.linkText}>이미 계정이 있나요? 로그인으로 이동</Text>
+        </Pressable>
+      </View>
+    </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
-    flex: 1,
-    backgroundColor: ui.colors.screen,
-  },
   container: {
     flexGrow: 1,
     justifyContent: 'center',

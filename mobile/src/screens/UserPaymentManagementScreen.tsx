@@ -2,9 +2,7 @@ import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Linking,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +10,7 @@ import {
 } from 'react-native';
 import { getMyPaymentMethodStatus, startPaymentMethodRegistration } from '../api/paymentApi';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { ui } from '../theme/ui';
 import { PaymentMethodStatusResponse, PaymentMethodType } from '../types/payment';
 import { ApiErrorResponse } from '../types/waste';
@@ -80,7 +79,7 @@ export function UserPaymentManagementScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
 
-  const [isMethodModalVisible, setIsMethodModalVisible] = useState(false);
+  const [isMethodPickerVisible, setIsMethodPickerVisible] = useState(false);
   const [selectedMethodType, setSelectedMethodType] = useState<PaymentMethodType>('CARD');
   const [isCardFormVisible, setIsCardFormVisible] = useState(false);
 
@@ -141,7 +140,7 @@ export function UserPaymentManagementScreen() {
       return;
     }
     setSelectedMethodType('CARD');
-    setIsMethodModalVisible(true);
+    setIsMethodPickerVisible(true);
   };
 
   const handleSubmitMethodSelection = async () => {
@@ -150,7 +149,7 @@ export function UserPaymentManagementScreen() {
     }
 
     if (selectedMethodType === 'CARD') {
-      setIsMethodModalVisible(false);
+      setIsMethodPickerVisible(false);
       setIsCardFormVisible(true);
       setErrorMessage(null);
       setResultMessage(null);
@@ -163,7 +162,7 @@ export function UserPaymentManagementScreen() {
 
     try {
       await openRegistrationPage(selectedMethodType);
-      setIsMethodModalVisible(false);
+      setIsMethodPickerVisible(false);
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
@@ -209,198 +208,100 @@ export function UserPaymentManagementScreen() {
   };
 
   return (
-    <>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>결제수단 관리</Text>
-        <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <Text style={styles.title}>결제수단 관리</Text>
+      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
 
-        {isLoading && <Text style={styles.meta}>결제수단 상태를 조회하는 중입니다.</Text>}
-        {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
-        {resultMessage && <Text style={styles.success}>{resultMessage}</Text>}
+      {isLoading && <Text style={styles.meta}>결제수단 상태를 조회하는 중입니다.</Text>}
+      {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+      {resultMessage && <Text style={styles.success}>{resultMessage}</Text>}
 
-        <View style={styles.policyCard}>
-          <Text style={styles.policyTitle}>자동결제 정책</Text>
-          <Text style={styles.policyText}>자동결제는 카드 직접 등록 수단만 지원합니다.</Text>
-          <Text style={styles.policyText}>계좌이체(토스), 카카오페이는 등록 후 수동 결제로 사용합니다.</Text>
-        </View>
+      <View style={styles.policyCard}>
+        <Text style={styles.policyTitle}>자동결제 정책</Text>
+        <Text style={styles.policyText}>자동결제는 카드 직접 등록 수단만 지원합니다.</Text>
+        <Text style={styles.policyText}>계좌이체(토스), 카카오페이는 등록 후 수동 결제로 사용합니다.</Text>
+      </View>
 
-        {!hasPaymentMethods && !isLoading && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>등록된 결제수단이 없어요</Text>
-            <Text style={styles.emptyDescription}>결제시 사용할 결제수단을 등록해 주세요</Text>
-            <Pressable
-              style={[styles.primaryButton, (!canRegisterMethod || isSubmitting) && styles.buttonDisabled]}
-              onPress={handleOpenMethodModal}
-              disabled={!canRegisterMethod || isSubmitting}
-            >
-              <Text style={styles.primaryButtonText}>+ 결제수단 등록하기</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {hasPaymentMethods && (
-          <View style={styles.card}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.cardTitle}>등록된 결제수단</Text>
-              <Pressable style={styles.ghostButton} onPress={loadStatus}>
-                <Text style={styles.ghostButtonText}>상태 새로고침</Text>
-              </Pressable>
-            </View>
-            {status?.paymentMethods.map((item) => (
-              <View key={item.id} style={styles.listItem}>
-                <Text style={styles.listTitle}>{toMethodLabel(item.methodType)}</Text>
-                <Text style={styles.listSub}>타입: {item.methodType}</Text>
-                <Text style={styles.listSub}>제공사: {item.provider}</Text>
-                <Text style={styles.listSub}>상태: {item.status}</Text>
-                <Text style={styles.listSub}>등록일: {formatDate(item.createdAt)}</Text>
-                <Text style={styles.listSub}>갱신일: {formatDate(item.updatedAt)}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {hasPaymentMethods && (
+      {!hasPaymentMethods && !isLoading && (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>등록된 결제수단이 없어요</Text>
+          <Text style={styles.emptyDescription}>결제시 사용할 결제수단을 등록해 주세요</Text>
           <Pressable
             style={[styles.primaryButton, (!canRegisterMethod || isSubmitting) && styles.buttonDisabled]}
             onPress={handleOpenMethodModal}
             disabled={!canRegisterMethod || isSubmitting}
           >
-            <Text style={styles.primaryButtonText}>결제수단 등록/변경</Text>
+            <Text style={styles.primaryButtonText}>+ 결제수단 등록하기</Text>
           </Pressable>
-        )}
+        </View>
+      )}
 
-        {!canRegisterMethod && (
-          <Text style={styles.meta}>
-            현재 상태에서는 결제수단 재등록이 제한됩니다. 결제 실패 상태 또는 운영 정책을 확인해 주세요.
-          </Text>
-        )}
-
-        {isCardFormVisible && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>카드 추가</Text>
-
-            <View style={styles.cardPreview}>
-              <Text style={styles.cardPreviewNumber}>
-                {cardNumberDisplay || '**** **** **** ****'}
-              </Text>
-            </View>
-
-            <View style={styles.ownerTypeRow}>
-              <Pressable
-                style={[styles.ownerTypeButton, cardOwnerType === 'PERSONAL' && styles.ownerTypeButtonSelected]}
-                onPress={() => setCardOwnerType('PERSONAL')}
-              >
-                <Text style={[styles.ownerTypeText, cardOwnerType === 'PERSONAL' && styles.ownerTypeTextSelected]}>
-                  개인카드
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.ownerTypeButton, cardOwnerType === 'BUSINESS' && styles.ownerTypeButtonSelected]}
-                onPress={() => setCardOwnerType('BUSINESS')}
-              >
-                <Text style={[styles.ownerTypeText, cardOwnerType === 'BUSINESS' && styles.ownerTypeTextSelected]}>
-                  법인카드
-                </Text>
-              </Pressable>
-            </View>
-
-            <TextInput
-              style={styles.input}
-              value={cardNumberDisplay}
-              onChangeText={(value) => setCardNumber(normalizeCardNumber(value))}
-              keyboardType="number-pad"
-              placeholder="카드번호"
-              placeholderTextColor="#94a3b8"
-              maxLength={19}
-            />
-            <View style={styles.rowGap8}>
-              <TextInput
-                style={[styles.input, styles.flexInput]}
-                value={expiry}
-                onChangeText={(value) => setExpiry(normalizeExpiry(value))}
-                keyboardType="number-pad"
-                placeholder="MM/YY"
-                placeholderTextColor="#94a3b8"
-                maxLength={5}
-              />
-              <TextInput
-                style={[styles.input, styles.flexInput]}
-                value={passwordTwoDigits}
-                onChangeText={(value) => setPasswordTwoDigits(value.replace(/[^0-9]/g, '').slice(0, 2))}
-                keyboardType="number-pad"
-                secureTextEntry
-                placeholder="비밀번호 앞 2자리"
-                placeholderTextColor="#94a3b8"
-                maxLength={2}
-              />
-            </View>
-            <TextInput
-              style={styles.input}
-              value={ownerIdentity}
-              onChangeText={(value) => setOwnerIdentity(value.replace(/[^0-9]/g, '').slice(0, 6))}
-              keyboardType="number-pad"
-              placeholder={cardOwnerType === 'BUSINESS' ? '사업자번호 앞 6자리' : '주민등록번호 앞 6자리'}
-              placeholderTextColor="#94a3b8"
-              maxLength={6}
-            />
-
-            <View style={styles.rowGap8}>
-              <Pressable
-                style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
-                onPress={() => {
-                  setIsCardFormVisible(false);
-                  resetCardForm();
-                }}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.secondaryButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.primaryButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
-                onPress={() => void handleSubmitCardForm()}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.primaryButtonText}>{isSubmitting ? '등록 중..' : '카드 추가'}</Text>
-              </Pressable>
-            </View>
+      {hasPaymentMethods && (
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitle}>등록된 결제수단</Text>
+            <Pressable style={styles.ghostButton} onPress={loadStatus}>
+              <Text style={styles.ghostButtonText}>상태 새로고침</Text>
+            </Pressable>
           </View>
-        )}
-      </ScrollView>
-
-      <Modal
-        visible={isMethodModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsMethodModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.modalTitle}>결제수단 등록</Text>
-              <Pressable onPress={() => setIsMethodModalVisible(false)}>
-                <Text style={styles.modalClose}>닫기</Text>
-              </Pressable>
+          {status?.paymentMethods.map((item) => (
+            <View key={item.id} style={styles.listItem}>
+              <Text style={styles.listTitle}>{toMethodLabel(item.methodType)}</Text>
+              <Text style={styles.listSub}>타입: {item.methodType}</Text>
+              <Text style={styles.listSub}>제공사: {item.provider}</Text>
+              <Text style={styles.listSub}>상태: {item.status}</Text>
+              <Text style={styles.listSub}>등록일: {formatDate(item.createdAt)}</Text>
+              <Text style={styles.listSub}>갱신일: {formatDate(item.updatedAt)}</Text>
             </View>
+          ))}
+        </View>
+      )}
 
-            {METHOD_OPTIONS.map((option) => {
-              const selected = option.type === selectedMethodType;
-              return (
-                <Pressable
-                  key={option.type}
-                  style={[styles.methodOptionCard, selected && styles.methodOptionCardSelected]}
-                  onPress={() => setSelectedMethodType(option.type)}
-                >
-                  <View style={styles.methodOptionTextWrap}>
-                    <Text style={styles.methodOptionTitle}>{option.title}</Text>
-                    <Text style={styles.methodOptionSubtitle}>{option.subtitle}</Text>
-                  </View>
-                  <View style={[styles.radio, selected && styles.radioSelected]} />
-                </Pressable>
-              );
-            })}
+      {hasPaymentMethods && (
+        <Pressable
+          style={[styles.primaryButton, (!canRegisterMethod || isSubmitting) && styles.buttonDisabled]}
+          onPress={handleOpenMethodModal}
+          disabled={!canRegisterMethod || isSubmitting}
+        >
+          <Text style={styles.primaryButtonText}>결제수단 등록/변경</Text>
+        </Pressable>
+      )}
 
+      {!canRegisterMethod && (
+        <Text style={styles.meta}>
+          현재 상태에서는 결제수단 재등록이 제한됩니다. 결제 실패 상태 또는 운영 정책을 확인해 주세요.
+        </Text>
+      )}
+
+      {isMethodPickerVisible && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>결제수단 선택</Text>
+          {METHOD_OPTIONS.map((option) => {
+            const selected = option.type === selectedMethodType;
+            return (
+              <Pressable
+                key={option.type}
+                style={[styles.methodOptionCard, selected && styles.methodOptionCardSelected]}
+                onPress={() => setSelectedMethodType(option.type)}
+              >
+                <View style={styles.methodOptionTextWrap}>
+                  <Text style={styles.methodOptionTitle}>{option.title}</Text>
+                  <Text style={styles.methodOptionSubtitle}>{option.subtitle}</Text>
+                </View>
+                <View style={[styles.radio, selected && styles.radioSelected]} />
+              </Pressable>
+            );
+          })}
+          <View style={styles.rowGap8}>
             <Pressable
-              style={[styles.modalSubmitButton, isSubmitting && styles.buttonDisabled]}
+              style={[styles.secondaryButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
+              onPress={() => setIsMethodPickerVisible(false)}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.secondaryButtonText}>닫기</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalSubmitButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
               onPress={() => void handleSubmitMethodSelection()}
               disabled={isSubmitting}
             >
@@ -408,8 +309,103 @@ export function UserPaymentManagementScreen() {
             </Pressable>
           </View>
         </View>
-      </Modal>
-    </>
+      )}
+
+      {isCardFormVisible && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>카드 추가</Text>
+
+          <View style={styles.cardPreview}>
+            <Text style={styles.cardPreviewNumber}>
+              {cardNumberDisplay || '**** **** **** ****'}
+            </Text>
+          </View>
+
+          <View style={styles.ownerTypeRow}>
+            <Pressable
+              style={[styles.ownerTypeButton, cardOwnerType === 'PERSONAL' && styles.ownerTypeButtonSelected]}
+              onPress={() => setCardOwnerType('PERSONAL')}
+            >
+              <Text style={[styles.ownerTypeText, cardOwnerType === 'PERSONAL' && styles.ownerTypeTextSelected]}>
+                개인카드
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.ownerTypeButton, cardOwnerType === 'BUSINESS' && styles.ownerTypeButtonSelected]}
+              onPress={() => setCardOwnerType('BUSINESS')}
+            >
+              <Text style={[styles.ownerTypeText, cardOwnerType === 'BUSINESS' && styles.ownerTypeTextSelected]}>
+                법인카드
+              </Text>
+            </Pressable>
+          </View>
+
+          <TextInput
+            style={styles.input}
+            value={cardNumberDisplay}
+            onChangeText={(value) => setCardNumber(normalizeCardNumber(value))}
+            keyboardType="number-pad"
+            placeholder="카드번호"
+            placeholderTextColor="#94a3b8"
+            maxLength={19}
+            returnKeyType="next"
+          />
+          <View style={styles.rowGap8}>
+            <TextInput
+              style={[styles.input, styles.flexInput]}
+              value={expiry}
+              onChangeText={(value) => setExpiry(normalizeExpiry(value))}
+              keyboardType="number-pad"
+              placeholder="MM/YY"
+              placeholderTextColor="#94a3b8"
+              maxLength={5}
+              returnKeyType="next"
+            />
+            <TextInput
+              style={[styles.input, styles.flexInput]}
+              value={passwordTwoDigits}
+              onChangeText={(value) => setPasswordTwoDigits(value.replace(/[^0-9]/g, '').slice(0, 2))}
+              keyboardType="number-pad"
+              secureTextEntry
+              placeholder="비밀번호 앞 2자리"
+              placeholderTextColor="#94a3b8"
+              maxLength={2}
+              returnKeyType="next"
+            />
+          </View>
+          <TextInput
+            style={styles.input}
+            value={ownerIdentity}
+            onChangeText={(value) => setOwnerIdentity(value.replace(/[^0-9]/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            placeholder={cardOwnerType === 'BUSINESS' ? '사업자번호 앞 6자리' : '주민등록번호 앞 6자리'}
+            placeholderTextColor="#94a3b8"
+            maxLength={6}
+            returnKeyType="done"
+          />
+
+          <View style={styles.rowGap8}>
+            <Pressable
+              style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
+              onPress={() => {
+                setIsCardFormVisible(false);
+                resetCardForm();
+              }}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.secondaryButtonText}>취소</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.primaryButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
+              onPress={() => void handleSubmitCardForm()}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.primaryButtonText}>{isSubmitting ? '등록 중..' : '카드 추가'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+    </KeyboardAwareScrollScreen>
   );
 }
 
@@ -600,27 +596,6 @@ const styles = StyleSheet.create({
   flexInput: {
     flex: 1,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: ui.colors.textStrong,
-  },
-  modalClose: {
-    color: ui.colors.textMuted,
-    fontWeight: '700',
-  },
   methodOptionCard: {
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -665,6 +640,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    paddingHorizontal: 12,
   },
   modalSubmitButtonText: {
     color: '#ffffff',

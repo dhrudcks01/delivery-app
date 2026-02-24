@@ -1,8 +1,9 @@
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { loadUserAddresses, saveUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { AddressItem } from '../types/address';
@@ -241,7 +242,7 @@ export function UserAddressManagementScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>주소관리</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
 
@@ -299,6 +300,8 @@ export function UserAddressManagementScreen() {
             onChangeText={setAddressQuery}
             placeholder="도로명 주소 검색어 입력"
             placeholderTextColor="#94a3b8"
+            returnKeyType="search"
+            onSubmitEditing={() => void handleSearchAddress()}
           />
           <Pressable
             style={[styles.ghostButton, isSearching && styles.actionButtonDisabled]}
@@ -345,6 +348,7 @@ export function UserAddressManagementScreen() {
           onChangeText={setDetailAddress}
           placeholder="동/호수 등 상세 주소"
           placeholderTextColor="#94a3b8"
+          returnKeyType="done"
         />
 
         <Pressable
@@ -370,7 +374,7 @@ export function UserAddressManagementScreen() {
           </Pressable>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollScreen>
   );
 }
 

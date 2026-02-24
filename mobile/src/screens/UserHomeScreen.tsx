@@ -1,9 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { cancelMyWasteRequest, createWasteRequest, getMyWasteRequestDetail, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { loadUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { UserAddress } from '../types/userAddress';
@@ -193,7 +194,7 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>USER 수거 요청</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
@@ -224,6 +225,7 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
             onChangeText={setContactPhone}
             placeholder="010-1234-5678"
             placeholderTextColor="#94a3b8"
+            returnKeyType="next"
           />
 
           <Text style={styles.label}>요청사항(선택)</Text>
@@ -234,6 +236,7 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
             multiline
             placeholder="요청사항"
             placeholderTextColor="#94a3b8"
+            returnKeyType="done"
           />
 
           {submitError && <Text style={styles.error}>{submitError}</Text>}
@@ -314,7 +317,7 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
           )}
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollScreen>
   );
 }
 

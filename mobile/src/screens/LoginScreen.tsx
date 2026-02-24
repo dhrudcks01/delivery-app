@@ -1,19 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { API_BASE_URL } from '../api/config';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 
@@ -46,73 +42,60 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoid}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+    <KeyboardAwareScrollScreen
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="always"
-        >
-          <View style={styles.hero}>
-            <Text style={styles.badge}>오늘수거 스타일 MVP</Text>
-            <Text style={styles.title}>빠르게 로그인하고 수거를 시작하세요</Text>
-            <Text style={styles.description}>계정 정보를 입력하면 역할에 맞는 화면으로 이동합니다.</Text>
-          </View>
+      <View style={styles.hero}>
+        <Text style={styles.badge}>오늘수거 스타일 MVP</Text>
+        <Text style={styles.title}>빠르게 로그인하고 수거를 시작하세요</Text>
+        <Text style={styles.description}>계정 정보를 입력하면 역할에 맞는 화면으로 이동합니다.</Text>
+      </View>
 
-          <View style={styles.form}>
-            <Text style={styles.meta}>API: {API_BASE_URL}</Text>
-            <Text style={styles.label}>이메일</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="email@example.com"
-              placeholderTextColor="#94a3b8"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-              blurOnSubmit={false}
-            />
+      <View style={styles.form}>
+        <Text style={styles.meta}>API: {API_BASE_URL}</Text>
+        <Text style={styles.label}>이메일</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="email@example.com"
+          placeholderTextColor="#94a3b8"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordInputRef.current?.focus()}
+          blurOnSubmit={false}
+        />
 
-            <Text style={styles.label}>비밀번호</Text>
-            <TextInput
-              ref={passwordInputRef}
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="비밀번호"
-              placeholderTextColor="#94a3b8"
-              returnKeyType="done"
-              onSubmitEditing={handleLogin}
-            />
+        <Text style={styles.label}>비밀번호</Text>
+        <TextInput
+          ref={passwordInputRef}
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          placeholder="비밀번호"
+          placeholderTextColor="#94a3b8"
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
+        />
 
-            {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
+        {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
 
-            <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin}>
-              <Text style={styles.buttonText}>{isLoading ? '로그인 중...' : '로그인'}</Text>
-            </Pressable>
+        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin}>
+          <Text style={styles.buttonText}>{isLoading ? '로그인 중...' : '로그인'}</Text>
+        </Pressable>
 
-            <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.linkText}>회원가입</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Signup')}>
+          <Text style={styles.linkText}>회원가입</Text>
+        </Pressable>
+      </View>
+    </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
-    flex: 1,
-    backgroundColor: ui.colors.screen,
-  },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
