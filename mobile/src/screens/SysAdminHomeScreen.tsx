@@ -44,7 +44,7 @@ function getRoleApplicationSummary(application: RoleApplication): string {
 }
 
 export function SysAdminHomeScreen() {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
 
   const [opsAdminGrantQuery, setOpsAdminGrantQuery] = useState('');
   const [opsAdminGrantCandidates, setOpsAdminGrantCandidates] = useState<OpsAdminGrantCandidate[]>([]);
@@ -654,9 +654,6 @@ export function SysAdminHomeScreen() {
         </View>
       </View>
 
-      <Pressable style={[styles.button, styles.logoutButton]} onPress={signOut}>
-        <Text style={styles.buttonText}>로그아웃</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -835,8 +832,5 @@ const styles = StyleSheet.create({
   detailText: {
     color: ui.colors.textStrong,
     fontSize: 13,
-  },
-  logoutButton: {
-    marginBottom: 20,
   },
 });

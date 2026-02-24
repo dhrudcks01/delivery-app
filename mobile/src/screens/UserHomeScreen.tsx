@@ -1,12 +1,13 @@
-﻿import { AxiosError } from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { AxiosError } from 'axios';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { searchRoadAddresses } from '../api/addressApi';
 import { cancelMyWasteRequest, createWasteRequest, getMyWasteRequestDetail, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
-import { AddressItem } from '../types/address';
-import { ApiErrorResponse, WasteRequest } from '../types/waste';
+import { loadUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
+import { UserAddress } from '../types/userAddress';
+import { ApiErrorResponse, WasteRequest } from '../types/waste';
 
 type UserHomeSection = 'all' | 'history' | 'request-form';
 
@@ -29,30 +30,33 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
+function toFullAddress(item: UserAddress): string {
+  const detailAddress = item.detailAddress.trim();
+  return detailAddress ? `${item.roadAddress} ${detailAddress}` : item.roadAddress;
+}
+
 export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
   const { me } = useAuth();
 
-  const [address, setAddress] = useState('');
-  const [addressDetail, setAddressDetail] = useState('');
-  const [addressQuery, setAddressQuery] = useState('');
+  const [primaryAddress, setPrimaryAddress] = useState<UserAddress | null>(null);
+  const [isLoadingPrimaryAddress, setIsLoadingPrimaryAddress] = useState(false);
+  const [primaryAddressError, setPrimaryAddressError] = useState<string | null>(null);
+
   const [contactPhone, setContactPhone] = useState('');
   const [note, setNote] = useState('');
 
   const [requests, setRequests] = useState<WasteRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<WasteRequest | null>(null);
-  const [addressSearchResults, setAddressSearchResults] = useState<AddressItem[]>([]);
 
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
 
   const showRequestForm = section === 'all' || section === 'request-form';
   const showHistory = section === 'all' || section === 'history';
@@ -66,6 +70,31 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
     }
     return `요청 #${selectedRequest.id} (${selectedRequest.status})`;
   }, [selectedRequest]);
+
+  const loadPrimaryAddress = useCallback(async () => {
+    if (!me?.id) {
+      setPrimaryAddress(null);
+      setPrimaryAddressError('사용자 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    setIsLoadingPrimaryAddress(true);
+    setPrimaryAddressError(null);
+
+    try {
+      const addresses = await loadUserAddresses(me.id);
+      const selected = addresses.find((item) => item.isPrimary) ?? addresses[0] ?? null;
+      setPrimaryAddress(selected);
+      if (!selected) {
+        setPrimaryAddressError('대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.');
+      }
+    } catch (error) {
+      setPrimaryAddress(null);
+      setPrimaryAddressError(toErrorMessage(error));
+    } finally {
+      setIsLoadingPrimaryAddress(false);
+    }
+  }, [me?.id]);
 
   const refreshRequests = async () => {
     setIsLoadingList(true);
@@ -101,43 +130,14 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
     }
   };
 
-  const handleAddressSearch = async () => {
-    const query = addressQuery.trim();
-    if (!query) {
-      setAddressSearchError('검색어를 입력해 주세요.');
-      setAddressSearchResults([]);
+  const handleCreate = async () => {
+    if (!primaryAddress) {
+      setSubmitError('대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.');
       return;
     }
 
-    setIsSearchingAddress(true);
-    setAddressSearchError(null);
-
-    try {
-      const response = await searchRoadAddresses(query, 7);
-      setAddressSearchResults(response.results);
-      if (response.results.length === 0) {
-        setAddressSearchError('검색 결과가 없습니다.');
-      }
-    } catch (error) {
-      setAddressSearchResults([]);
-      setAddressSearchError(toErrorMessage(error));
-    } finally {
-      setIsSearchingAddress(false);
-    }
-  };
-
-  const handleSelectAddress = (item: AddressItem) => {
-    setAddress(item.roadAddress);
-    setAddressSearchError(null);
-  };
-
-  const handleCreate = async () => {
-    const trimmedAddress = address.trim();
-    const trimmedAddressDetail = addressDetail.trim();
-    const fullAddress = trimmedAddressDetail ? `${trimmedAddress} ${trimmedAddressDetail}` : trimmedAddress;
-
-    if (!trimmedAddress || !contactPhone.trim()) {
-      setSubmitError('주소(검색 후 선택)와 연락처를 입력해 주세요.');
+    if (!contactPhone.trim()) {
+      setSubmitError('연락처를 입력해 주세요.');
       return;
     }
 
@@ -146,16 +146,11 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
 
     try {
       const created = await createWasteRequest({
-        address: fullAddress,
+        address: toFullAddress(primaryAddress),
         contactPhone: contactPhone.trim(),
         note: note.trim() ? note.trim() : undefined,
       });
 
-      setAddress('');
-      setAddressDetail('');
-      setAddressQuery('');
-      setAddressSearchResults([]);
-      setAddressSearchError(null);
       setContactPhone('');
       setNote('');
 
@@ -191,6 +186,12 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
     void refreshRequests();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      void loadPrimaryAddress();
+    }, [loadPrimaryAddress]),
+  );
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>USER 수거 요청</Text>
@@ -200,57 +201,21 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
       {showRequestForm && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>요청 생성</Text>
+          <Text style={styles.meta}>주소는 내정보 주소관리에서 지정한 대표 주소지를 자동 사용합니다.</Text>
 
-          <Text style={styles.label}>주소 검색</Text>
-          <View style={styles.rowGap8}>
-            <TextInput
-              style={[styles.input, styles.flexInput]}
-              value={addressQuery}
-              onChangeText={setAddressQuery}
-              placeholder="도로명 주소 검색어 입력"
-              placeholderTextColor="#94a3b8"
-            />
-            <Pressable
-              style={[styles.ghostButton, styles.searchButton, isSearchingAddress && styles.buttonDisabled]}
-              onPress={handleAddressSearch}
-              disabled={isSearchingAddress}
-            >
-              <Text style={styles.ghostButtonText}>{isSearchingAddress ? '검색 중..' : '주소 검색'}</Text>
-            </Pressable>
-          </View>
-
-          {isSearchingAddress && <Text style={styles.meta}>주소를 검색하고 있습니다.</Text>}
-          {addressSearchError && <Text style={styles.error}>{addressSearchError}</Text>}
-          {addressSearchResults.length > 0 && (
-            <View style={styles.addressResultList}>
-              {addressSearchResults.map((item) => {
-                const key = `${item.roadAddress}-${item.zipCode}`;
-                const isSelected = item.roadAddress === address;
-                return (
-                  <Pressable
-                    key={key}
-                    style={[styles.addressResultItem, isSelected && styles.addressResultItemSelected]}
-                    onPress={() => handleSelectAddress(item)}
-                  >
-                    <Text style={styles.addressRoad}>{item.roadAddress}</Text>
-                    <Text style={styles.addressMeta}>[{item.zipCode}] 지번 {item.jibunAddress || '-'}</Text>
-                  </Pressable>
-                );
-              })}
+          <Text style={styles.label}>대표 주소지</Text>
+          {isLoadingPrimaryAddress && <Text style={styles.meta}>대표 주소지를 불러오는 중입니다.</Text>}
+          {primaryAddress && (
+            <View style={styles.addressBox}>
+              <Text style={styles.addressTitle}>{toFullAddress(primaryAddress)}</Text>
+              <Text style={styles.addressSub}>우편번호: {primaryAddress.zipCode || '-'}</Text>
+              <Text style={styles.addressSub}>지번: {primaryAddress.jibunAddress || '-'}</Text>
             </View>
           )}
-
-          <Text style={styles.label}>선택 주소</Text>
-          <TextInput style={styles.input} value={address} editable={false} placeholder="주소 검색 후 선택해 주세요" placeholderTextColor="#94a3b8" />
-
-          <Text style={styles.label}>상세 주소</Text>
-          <TextInput
-            style={styles.input}
-            value={addressDetail}
-            onChangeText={setAddressDetail}
-            placeholder="동/호수 등 상세 주소"
-            placeholderTextColor="#94a3b8"
-          />
+          {!isLoadingPrimaryAddress && !primaryAddress && (
+            <Text style={styles.error}>대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.</Text>
+          )}
+          {primaryAddressError && <Text style={styles.error}>{primaryAddressError}</Text>}
 
           <Text style={styles.label}>연락처</Text>
           <TextInput
@@ -273,7 +238,11 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
 
           {submitError && <Text style={styles.error}>{submitError}</Text>}
 
-          <Pressable style={[styles.button, isSubmitting && styles.buttonDisabled]} onPress={handleCreate}>
+          <Pressable
+            style={[styles.button, (isSubmitting || !primaryAddress) && styles.buttonDisabled]}
+            onPress={handleCreate}
+            disabled={isSubmitting || !primaryAddress}
+          >
             <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
           </Pressable>
         </View>
@@ -295,9 +264,11 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
             <Pressable
               key={item.id}
               style={[styles.listItem, selectedRequestId === item.id && styles.listItemActive]}
-              onPress={() => loadRequestDetail(item.id)}
+              onPress={() => void loadRequestDetail(item.id)}
             >
-              <Text style={styles.listTitle}>#{item.id} {item.status}</Text>
+              <Text style={styles.listTitle}>
+                #{item.id} {item.status}
+              </Text>
               <Text style={styles.listSub}>{item.address}</Text>
               <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
             </Pressable>
@@ -392,6 +363,23 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  addressBox: {
+    borderWidth: 1,
+    borderColor: ui.colors.cardBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 3,
+  },
+  addressTitle: {
+    color: ui.colors.textStrong,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  addressSub: {
+    color: ui.colors.text,
+    fontSize: 12,
+  },
   error: {
     color: ui.colors.error,
     fontSize: 13,
@@ -417,14 +405,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  rowGap8: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  flexInput: {
-    flex: 1,
-  },
   ghostButton: {
     borderWidth: 1,
     borderColor: '#9fc2b9',
@@ -432,38 +412,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  searchButton: {
-    minWidth: 78,
-    alignItems: 'center',
-  },
   ghostButtonText: {
     color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
-  },
-  addressResultList: {
-    gap: 6,
-  },
-  addressResultItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    gap: 3,
-  },
-  addressResultItemSelected: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
-  addressRoad: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  addressMeta: {
-    color: ui.colors.text,
-    fontSize: 12,
   },
   listItem: {
     borderWidth: 1,

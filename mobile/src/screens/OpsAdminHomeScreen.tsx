@@ -35,7 +35,7 @@ function formatDate(dateTime: string | null): string {
 }
 
 export function OpsAdminHomeScreen() {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
 
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
   const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
@@ -450,9 +450,6 @@ export function OpsAdminHomeScreen() {
         )}
       </View>
 
-      <Pressable style={[styles.button, styles.logoutButton]} onPress={signOut}>
-        <Text style={styles.buttonText}>로그아웃</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -595,8 +592,5 @@ const styles = StyleSheet.create({
   detailText: {
     color: ui.colors.textStrong,
     fontSize: 13,
-  },
-  logoutButton: {
-    marginBottom: 20,
   },
 });

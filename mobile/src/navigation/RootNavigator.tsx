@@ -1,17 +1,19 @@
-﻿import { useEffect, useState } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
+import { ProfileSettingsScreen } from '../screens/ProfileSettingsScreen';
 import { RoleCenterScreen } from '../screens/RoleCenterScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
+import { UserAddressManagementScreen } from '../screens/UserAddressManagementScreen';
 import { UserHomeScreen } from '../screens/UserHomeScreen';
+import { UserPaymentManagementScreen } from '../screens/UserPaymentManagementScreen';
 import { ui } from '../theme/ui';
 
 type AppRole = 'USER' | 'DRIVER' | 'OPS_ADMIN' | 'SYS_ADMIN';
@@ -21,23 +23,19 @@ export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   AppTabs: undefined;
-  UserHome: undefined;
   RoleCenter: { activeRole: AppRole };
   DriverHome: undefined;
   OpsAdminHome: undefined;
   SysAdminHome: undefined;
+  UserAddressManagement: undefined;
+  UserPaymentManagement: undefined;
+  ProfileSettings: undefined;
 };
 
 type AppTabParamList = Record<AppTabName, undefined>;
 
-const ROLE_ORDER: AppRole[] = ['USER', 'DRIVER', 'OPS_ADMIN', 'SYS_ADMIN'];
-
-const ROLE_TO_LABEL: Record<AppRole, string> = {
-  USER: 'USER',
-  DRIVER: 'DRIVER',
-  OPS_ADMIN: 'OPS_ADMIN',
-  SYS_ADMIN: 'SYS_ADMIN',
-};
+const ROLE_DISPLAY_ORDER: AppRole[] = ['USER', 'DRIVER', 'OPS_ADMIN', 'SYS_ADMIN'];
+const ROLE_PRIORITY_ORDER: AppRole[] = ['SYS_ADMIN', 'OPS_ADMIN', 'DRIVER', 'USER'];
 
 const TAB_TO_LABEL: Record<AppTabName, string> = {
   HomeTab: '홈',
@@ -51,11 +49,15 @@ const AppTabs = createBottomTabNavigator<AppTabParamList>();
 
 function toKnownRoles(roles: string[] | undefined): AppRole[] {
   const roleSet = new Set(roles);
-  const known = ROLE_ORDER.filter((role) => roleSet.has(role));
+  const known = ROLE_DISPLAY_ORDER.filter((role) => roleSet.has(role));
   return known.length > 0 ? known : ['USER'];
 }
 
-function renderRoleScreen(role: AppRole) {
+function getHighestRole(roles: AppRole[]): AppRole {
+  return ROLE_PRIORITY_ORDER.find((role) => roles.includes(role)) ?? 'USER';
+}
+
+function renderOperationalScreen(role: AppRole) {
   if (role === 'DRIVER') {
     return <DriverHomeScreen />;
   }
@@ -65,7 +67,7 @@ function renderRoleScreen(role: AppRole) {
   if (role === 'SYS_ADMIN') {
     return <SysAdminHomeScreen />;
   }
-  return <UserHomeScreen />;
+  return <UserHomeScreen section="history" />;
 }
 
 function LoadingScreen() {
@@ -77,55 +79,35 @@ function LoadingScreen() {
   );
 }
 
-function RoleSwitcher({
-  roles,
-  activeRole,
-  onSelectRole,
-}: {
-  roles: AppRole[];
-  activeRole: AppRole;
-  onSelectRole: (role: AppRole) => void;
-}) {
+function UserRoleGuideScreen({ title, description }: { title: string; description: string }) {
   return (
-    <View style={styles.roleSwitchRow}>
-      {roles.map((role) => (
-        <Pressable
-          key={role}
-          style={[styles.roleChip, activeRole === role && styles.roleChipActive]}
-          onPress={() => onSelectRole(role)}
-        >
-          <Text style={[styles.roleChipText, activeRole === role && styles.roleChipTextActive]}>
-            {ROLE_TO_LABEL[role]}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
+    <ScrollView contentContainerStyle={styles.tabContainer}>
+      <Text style={styles.tabTitle}>{title}</Text>
+      <Text style={styles.tabMeta}>{description}</Text>
+    </ScrollView>
   );
 }
 
 function TabHomeScreen({
   email,
   roles,
-  activeRole,
-  onSelectRole,
+  primaryRole,
 }: {
   email: string | null;
   roles: AppRole[];
-  activeRole: AppRole;
-  onSelectRole: (role: AppRole) => void;
+  primaryRole: AppRole;
 }) {
   return (
     <ScrollView contentContainerStyle={styles.tabContainer}>
       <Text style={styles.tabTitle}>공통 홈</Text>
       <Text style={styles.tabMeta}>로그인: {email ?? '-'}</Text>
-      <Text style={styles.tabMeta}>현재 역할 뷰: {activeRole}</Text>
-      <Text style={styles.tabHelp}>멀티 권한 계정은 역할 칩으로 화면 뷰를 전환할 수 있습니다.</Text>
-      <RoleSwitcher roles={roles} activeRole={activeRole} onSelectRole={onSelectRole} />
+      <Text style={styles.tabMeta}>보유 권한: {roles.join(', ')}</Text>
+      <Text style={styles.tabMeta}>적용 권한(최고 권한): {primaryRole}</Text>
       <View style={styles.tabCard}>
         <Text style={styles.tabCardTitle}>탭 정책</Text>
-        <Text style={styles.tabCardText}>신청: 역할별 작업 화면</Text>
-        <Text style={styles.tabCardText}>이용내역: 역할별 목록/상세 조회</Text>
-        <Text style={styles.tabCardText}>내정보: 계정 정보/로그아웃</Text>
+        <Text style={styles.tabCardText}>신청: 수거 신청 생성 전용</Text>
+        <Text style={styles.tabCardText}>이용내역: 신청/처리 이력 확인</Text>
+        <Text style={styles.tabCardText}>내정보: 주소관리/결제수단/설정(로그아웃)</Text>
       </View>
     </ScrollView>
   );
@@ -134,81 +116,58 @@ function TabHomeScreen({
 function TabProfileScreen({
   email,
   roles,
-  activeRole,
-  onSelectRole,
-  onOpenRequestForm,
+  primaryRole,
+  hasUserRole,
+  onOpenAddressManagement,
+  onOpenPaymentManagement,
   onOpenRoleCenter,
-  onSignOut,
+  onOpenSettings,
 }: {
   email: string | null;
   roles: AppRole[];
-  activeRole: AppRole;
-  onSelectRole: (role: AppRole) => void;
-  onOpenRequestForm: () => void;
+  primaryRole: AppRole;
+  hasUserRole: boolean;
+  onOpenAddressManagement: () => void;
+  onOpenPaymentManagement: () => void;
   onOpenRoleCenter: () => void;
-  onSignOut: () => void;
+  onOpenSettings: () => void;
 }) {
-  const isUserRole = activeRole === 'USER';
-
   return (
     <ScrollView contentContainerStyle={styles.tabContainer}>
       <Text style={styles.tabTitle}>내정보</Text>
       <Text style={styles.tabMeta}>로그인: {email ?? '-'}</Text>
-      <Text style={styles.tabMeta}>보유 역할: {roles.join(', ')}</Text>
-      <RoleSwitcher roles={roles} activeRole={activeRole} onSelectRole={onSelectRole} />
-      {isUserRole && (
-        <Pressable style={styles.requestEntryButton} onPress={onOpenRequestForm}>
-          <Text style={styles.requestEntryButtonText}>기사 신청하기</Text>
+      <Text style={styles.tabMeta}>보유 권한: {roles.join(', ')}</Text>
+      <Text style={styles.tabMeta}>적용 권한(최고 권한): {primaryRole}</Text>
+
+      {hasUserRole && (
+        <Pressable style={styles.menuButton} onPress={onOpenAddressManagement}>
+          <Text style={styles.menuButtonText}>주소관리</Text>
         </Pressable>
       )}
-      <Pressable style={styles.requestEntryButton} onPress={onOpenRoleCenter}>
-        <Text style={styles.requestEntryButtonText}>권한 신청/승인</Text>
-      </Pressable>
-      <Pressable style={styles.signOutButton} onPress={onSignOut}>
-        <Text style={styles.signOutButtonText}>로그아웃</Text>
-      </Pressable>
-    </ScrollView>
-  );
-}
+      {hasUserRole && (
+        <Pressable style={styles.menuButton} onPress={onOpenPaymentManagement}>
+          <Text style={styles.menuButtonText}>결제수단 관리</Text>
+        </Pressable>
+      )}
 
-function UserRequestTabGuideScreen() {
-  return (
-    <ScrollView contentContainerStyle={styles.tabContainer}>
-      <Text style={styles.tabTitle}>신청 안내</Text>
-      <Text style={styles.tabMeta}>USER 계정 정책</Text>
-      <View style={styles.tabCard}>
-        <Text style={styles.tabCardTitle}>기사 신청 진입 경로</Text>
-        <Text style={styles.tabCardText}>내정보 탭에서 "기사 신청하기" 메뉴로 진입해 주세요.</Text>
-      </View>
-    </ScrollView>
-  );
-}
+      <Pressable style={styles.menuButton} onPress={onOpenRoleCenter}>
+        <Text style={styles.menuButtonText}>권한 신청/승인</Text>
+      </Pressable>
 
-function SysAdminRoleGuideScreen() {
-  return (
-    <ScrollView contentContainerStyle={styles.tabContainer}>
-      <Text style={styles.tabTitle}>권한 승인 안내</Text>
-      <Text style={styles.tabMeta}>SYS_ADMIN 계정 정책</Text>
-      <View style={styles.tabCard}>
-        <Text style={styles.tabCardTitle}>진입 경로</Text>
-        <Text style={styles.tabCardText}>내정보 탭에서 \"권한 신청/승인\" 메뉴를 통해 접근해 주세요.</Text>
-      </View>
+      <Pressable style={styles.menuButton} onPress={onOpenSettings}>
+        <Text style={styles.menuButtonText}>설정</Text>
+      </Pressable>
     </ScrollView>
   );
 }
 
 function AppTabsScreen() {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const roles = toKnownRoles(me?.roles);
-  const [activeRole, setActiveRole] = useState<AppRole>(roles[0] ?? 'USER');
-  const isUserRole = activeRole === 'USER';
-
-  useEffect(() => {
-    if (!roles.includes(activeRole)) {
-      setActiveRole(roles[0] ?? 'USER');
-    }
-  }, [activeRole, roles]);
+  const primaryRole = getHighestRole(roles);
+  const hasUserRole = roles.includes('USER');
+  const isPrimaryUser = primaryRole === 'USER';
 
   const sharedTabOptions = {
     headerTitleAlign: 'center' as const,
@@ -221,36 +180,45 @@ function AppTabsScreen() {
     <AppTabs.Navigator screenOptions={sharedTabOptions}>
       <AppTabs.Screen
         name="HomeTab"
-        options={{ title: TAB_TO_LABEL.HomeTab }}
-        children={() => (
-          <TabHomeScreen
-            email={me?.email ?? null}
-            roles={roles}
-            activeRole={activeRole}
-            onSelectRole={setActiveRole}
-          />
-        )}
+        options={{ title: TAB_TO_LABEL.HomeTab, headerShown: isPrimaryUser }}
+        children={() =>
+          isPrimaryUser
+            ? (
+              <TabHomeScreen
+                email={me?.email ?? null}
+                roles={roles}
+                primaryRole={primaryRole}
+              />
+              )
+            : renderOperationalScreen(primaryRole)
+        }
       />
       <AppTabs.Screen
         name="RequestTab"
         options={{ title: TAB_TO_LABEL.RequestTab, headerShown: false }}
         children={() =>
-          isUserRole
-            ? <UserRequestTabGuideScreen />
-            : activeRole === 'SYS_ADMIN'
-              ? <SysAdminRoleGuideScreen />
-              : renderRoleScreen(activeRole)
+          hasUserRole
+            ? <UserHomeScreen section="request-form" />
+            : (
+              <UserRoleGuideScreen
+                title="신청 안내"
+                description="신청 탭은 USER 권한 계정에서 수거 신청 생성 용도로만 제공됩니다."
+              />
+              )
         }
       />
       <AppTabs.Screen
         name="HistoryTab"
         options={{ title: TAB_TO_LABEL.HistoryTab, headerShown: false }}
         children={() =>
-          isUserRole
+          hasUserRole
             ? <UserHomeScreen section="history" />
-            : activeRole === 'SYS_ADMIN'
-              ? <SysAdminRoleGuideScreen />
-              : renderRoleScreen(activeRole)
+            : (
+              <UserRoleGuideScreen
+                title="이용내역 안내"
+                description="이용내역은 USER 권한 계정의 신청/처리 이력을 조회하는 메뉴입니다."
+              />
+              )
         }
       />
       <AppTabs.Screen
@@ -260,13 +228,12 @@ function AppTabsScreen() {
           <TabProfileScreen
             email={me?.email ?? null}
             roles={roles}
-            activeRole={activeRole}
-            onSelectRole={setActiveRole}
-            onOpenRequestForm={() => navigation.navigate('UserHome')}
-            onOpenRoleCenter={() => navigation.navigate('RoleCenter', { activeRole })}
-            onSignOut={() => {
-              void signOut();
-            }}
+            primaryRole={primaryRole}
+            hasUserRole={hasUserRole}
+            onOpenAddressManagement={() => navigation.navigate('UserAddressManagement')}
+            onOpenPaymentManagement={() => navigation.navigate('UserPaymentManagement')}
+            onOpenRoleCenter={() => navigation.navigate('RoleCenter', { activeRole: primaryRole })}
+            onOpenSettings={() => navigation.navigate('ProfileSettings')}
           />
         )}
       />
@@ -296,13 +263,6 @@ export function RootNavigator() {
 
       {isAuthenticated && (
         <RootStack.Screen
-          name="UserHome"
-          options={{ title: '기사 신청', headerShown: true }}
-          children={() => <UserHomeScreen section="request-form" />}
-        />
-      )}
-      {isAuthenticated && (
-        <RootStack.Screen
           name="RoleCenter"
           options={{ title: '권한 신청/승인', headerShown: true }}
           children={({ route, navigation: stackNav }) => (
@@ -316,6 +276,27 @@ export function RootNavigator() {
       {isAuthenticated && <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />}
       {isAuthenticated && <RootStack.Screen name="OpsAdminHome" component={OpsAdminHomeScreen} options={{ title: 'OPS_ADMIN' }} />}
       {isAuthenticated && <RootStack.Screen name="SysAdminHome" component={SysAdminHomeScreen} options={{ title: 'SYS_ADMIN' }} />}
+      {isAuthenticated && (
+        <RootStack.Screen
+          name="UserAddressManagement"
+          component={UserAddressManagementScreen}
+          options={{ title: '주소관리' }}
+        />
+      )}
+      {isAuthenticated && (
+        <RootStack.Screen
+          name="UserPaymentManagement"
+          component={UserPaymentManagementScreen}
+          options={{ title: '결제수단 관리' }}
+        />
+      )}
+      {isAuthenticated && (
+        <RootStack.Screen
+          name="ProfileSettings"
+          component={ProfileSettingsScreen}
+          options={{ title: '설정' }}
+        />
+      )}
     </RootStack.Navigator>
   );
 }
@@ -346,10 +327,6 @@ const styles = StyleSheet.create({
     color: ui.colors.text,
     fontSize: 13,
   },
-  tabHelp: {
-    color: ui.colors.textMuted,
-    fontSize: 13,
-  },
   tabCard: {
     backgroundColor: ui.colors.card,
     borderWidth: 1,
@@ -367,33 +344,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: ui.colors.text,
   },
-  roleSwitchRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  roleChip: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#ffffff',
-  },
-  roleChipActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
-  roleChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: ui.colors.text,
-  },
-  roleChipTextActive: {
-    color: ui.colors.primary,
-  },
-  requestEntryButton: {
-    marginTop: 12,
+  menuButton: {
     borderRadius: 10,
     borderWidth: 1,
     borderColor: ui.colors.primary,
@@ -401,22 +352,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#eef8f6',
   },
-  requestEntryButtonText: {
+  menuButtonText: {
     color: ui.colors.primary,
-    fontWeight: '700',
-  },
-  signOutButton: {
-    marginTop: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#64748b',
-    paddingVertical: 11,
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  signOutButtonText: {
-    color: '#334155',
     fontWeight: '700',
   },
 });
-

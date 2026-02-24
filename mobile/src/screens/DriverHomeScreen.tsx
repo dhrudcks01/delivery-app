@@ -30,7 +30,7 @@ function formatDate(dateTime: string | null): string {
 }
 
 export function DriverHomeScreen() {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
 
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -321,9 +321,6 @@ export function DriverHomeScreen() {
         </Pressable>
       </View>
 
-      <Pressable style={[styles.button, styles.logoutButton]} onPress={signOut}>
-        <Text style={styles.buttonText}>로그아웃</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -493,8 +490,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  logoutButton: {
-    marginBottom: 20,
   },
 });
