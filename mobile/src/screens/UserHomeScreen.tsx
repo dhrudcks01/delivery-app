@@ -14,6 +14,7 @@ type UserHomeSection = 'all' | 'history' | 'request-form';
 
 type UserHomeScreenProps = {
   section?: UserHomeSection;
+  includeTopInset?: boolean;
 };
 
 function toErrorMessage(error: unknown): string {
@@ -36,7 +37,7 @@ function toFullAddress(item: UserAddress): string {
   return detailAddress ? `${item.roadAddress} ${detailAddress}` : item.roadAddress;
 }
 
-export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
+export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
   const { me } = useAuth();
 
   const [primaryAddress, setPrimaryAddress] = useState<UserAddress | null>(null);
@@ -194,7 +195,11 @@ export function UserHomeScreen({ section = 'all' }: UserHomeScreenProps) {
   );
 
   return (
-    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollScreen
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      includeTopInset={includeTopInset}
+    >
       <Text style={styles.title}>USER 수거 요청</Text>
       <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>

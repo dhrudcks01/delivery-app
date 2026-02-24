@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -85,6 +87,16 @@ function UserRoleGuideScreen({ title, description }: { title: string; descriptio
       <Text style={styles.tabTitle}>{title}</Text>
       <Text style={styles.tabMeta}>{description}</Text>
     </ScrollView>
+  );
+}
+
+function HeaderlessScreenContainer({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.headerlessScreenContainer, { paddingTop: insets.top }]}>
+      {children}
+    </View>
   );
 }
 
@@ -190,7 +202,11 @@ function AppTabsScreen() {
                 primaryRole={primaryRole}
               />
               )
-            : renderOperationalScreen(primaryRole)
+            : (
+              <HeaderlessScreenContainer>
+                {renderOperationalScreen(primaryRole)}
+              </HeaderlessScreenContainer>
+              )
         }
       />
       <AppTabs.Screen
@@ -198,12 +214,14 @@ function AppTabsScreen() {
         options={{ title: TAB_TO_LABEL.RequestTab, headerShown: false }}
         children={() =>
           hasUserRole
-            ? <UserHomeScreen section="request-form" />
+            ? <UserHomeScreen section="request-form" includeTopInset />
             : (
-              <UserRoleGuideScreen
-                title="신청 안내"
-                description="신청 탭은 USER 권한 계정에서 수거 신청 생성 용도로만 제공됩니다."
-              />
+              <HeaderlessScreenContainer>
+                <UserRoleGuideScreen
+                  title="신청 안내"
+                  description="신청 탭은 USER 권한 계정에서 수거 신청 생성 용도로만 제공됩니다."
+                />
+              </HeaderlessScreenContainer>
               )
         }
       />
@@ -212,12 +230,14 @@ function AppTabsScreen() {
         options={{ title: TAB_TO_LABEL.HistoryTab, headerShown: false }}
         children={() =>
           hasUserRole
-            ? <UserHomeScreen section="history" />
+            ? <UserHomeScreen section="history" includeTopInset />
             : (
-              <UserRoleGuideScreen
-                title="이용내역 안내"
-                description="이용내역은 USER 권한 계정의 신청/처리 이력을 조회하는 메뉴입니다."
-              />
+              <HeaderlessScreenContainer>
+                <UserRoleGuideScreen
+                  title="이용내역 안내"
+                  description="이용내역은 USER 권한 계정의 신청/처리 이력을 조회하는 메뉴입니다."
+                />
+              </HeaderlessScreenContainer>
               )
         }
       />
@@ -312,6 +332,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: '#334155',
+  },
+  headerlessScreenContainer: {
+    flex: 1,
+    backgroundColor: ui.colors.screen,
   },
   tabContainer: {
     padding: 16,

@@ -13,11 +13,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type KeyboardAwareScrollScreenProps = {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  includeTopInset?: boolean;
+  includeBottomInset?: boolean;
 } & Omit<ScrollViewProps, 'contentContainerStyle' | 'children'>;
 
 export function KeyboardAwareScrollScreen({
   children,
   contentContainerStyle,
+  includeTopInset = false,
+  includeBottomInset = true,
   keyboardShouldPersistTaps = 'handled',
   keyboardDismissMode = Platform.OS === 'ios' ? 'interactive' : 'on-drag',
   ...rest
@@ -25,6 +29,8 @@ export function KeyboardAwareScrollScreen({
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const keyboardVerticalOffset = Platform.OS === 'ios' ? headerHeight : 0;
+  const topPadding = includeTopInset ? insets.top : 0;
+  const bottomPadding = includeBottomInset ? Math.max(insets.bottom, 16) + 8 : 8;
 
   return (
     <KeyboardAvoidingView
@@ -33,11 +39,11 @@ export function KeyboardAwareScrollScreen({
       keyboardVerticalOffset={keyboardVerticalOffset}
     >
       <ScrollView
-        contentContainerStyle={[{ paddingBottom: Math.max(insets.bottom, 16) + 8 }, contentContainerStyle]}
+        contentContainerStyle={[{ paddingTop: topPadding, paddingBottom: bottomPadding }, contentContainerStyle]}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
         keyboardDismissMode={keyboardDismissMode}
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-        contentInsetAdjustmentBehavior="always"
+        contentInsetAdjustmentBehavior={includeTopInset ? 'never' : 'automatic'}
         {...rest}
       >
         {children}
