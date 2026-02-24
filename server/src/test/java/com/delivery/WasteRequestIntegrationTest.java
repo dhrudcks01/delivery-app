@@ -113,6 +113,46 @@ class WasteRequestIntegrationTest {
                 .andExpect(jsonPath("$.code").value("WASTE_REQUEST_NOT_FOUND"));
     }
 
+    @Test
+    void userCanCreateWasteRequestWhenAddressLengthIs255() throws Exception {
+        String accessToken = createUserAndLogin("waste-address-255@example.com");
+        String address = "서초구 " + "가".repeat(251);
+        String createBody = """
+                {
+                  "address": "%s",
+                  "contactPhone": "010-2222-3333",
+                  "note": "대표 주소지 자동 적용"
+                }
+                """.formatted(address);
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.address").value(address));
+    }
+
+    @Test
+    void userCannotCreateWasteRequestWhenAddressLengthExceeds255() throws Exception {
+        String accessToken = createUserAndLogin("waste-address-256@example.com");
+        String createBody = """
+                {
+                  "address": "%s",
+                  "contactPhone": "010-2222-4444",
+                  "note": "대표 주소지 길이 초과"
+                }
+                """.formatted("가".repeat(256));
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("address"));
+    }
+
     private Long createWasteRequest(String accessToken) throws Exception {
         String body = """
                 {

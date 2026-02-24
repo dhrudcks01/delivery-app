@@ -8,6 +8,7 @@ import { loadUserAddresses, saveUserAddresses } from '../storage/userAddressStor
 import { ui } from '../theme/ui';
 import { AddressItem } from '../types/address';
 import { UserAddress } from '../types/userAddress';
+import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ApiErrorResponse } from '../types/waste';
 
 function toErrorMessage(error: unknown): string {
@@ -19,8 +20,11 @@ function toErrorMessage(error: unknown): string {
 }
 
 function formatAddress(item: UserAddress): string {
-  const detail = item.detailAddress.trim();
-  return detail ? `${item.roadAddress} ${detail}` : item.roadAddress;
+  const result = buildWasteRequestAddress(item);
+  if (result.ok) {
+    return result.address;
+  }
+  return item.roadAddress || item.jibunAddress || '-';
 }
 
 function createAddressId(): string {
@@ -145,8 +149,13 @@ export function UserAddressManagementScreen() {
       return;
     }
 
-    if (!roadAddress.trim()) {
-      setErrorMessage('도로명 주소를 검색 후 선택해 주세요.');
+    const addressBuildResult = buildWasteRequestAddress({
+      roadAddress,
+      jibunAddress,
+      detailAddress,
+    });
+    if (!addressBuildResult.ok) {
+      setErrorMessage(addressBuildResult.message);
       return;
     }
 

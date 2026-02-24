@@ -8,6 +8,7 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { loadUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { UserAddress } from '../types/userAddress';
+import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
 
 type UserHomeSection = 'all' | 'history' | 'request-form';
@@ -30,11 +31,6 @@ function formatDate(dateTime: string | null): string {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
-}
-
-function toFullAddress(item: UserAddress): string {
-  const detailAddress = item.detailAddress.trim();
-  return detailAddress ? `${item.roadAddress} ${detailAddress}` : item.roadAddress;
 }
 
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
@@ -72,6 +68,13 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     }
     return `요청 #${selectedRequest.id} (${selectedRequest.status})`;
   }, [selectedRequest]);
+  const primaryAddressBuildResult = useMemo(() => {
+    if (!primaryAddress) {
+      return null;
+    }
+    return buildWasteRequestAddress(primaryAddress);
+  }, [primaryAddress]);
+  const canUsePrimaryAddress = primaryAddressBuildResult?.ok ?? false;
 
   const loadPrimaryAddress = useCallback(async () => {
     if (!me?.id) {
@@ -137,6 +140,13 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       setSubmitError('대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.');
       return;
     }
+    if (!primaryAddressBuildResult || !primaryAddressBuildResult.ok) {
+      setSubmitError(
+        primaryAddressBuildResult?.message
+        ?? '대표 주소지 정보가 올바르지 않습니다. 주소관리에서 주소를 다시 저장해 주세요.',
+      );
+      return;
+    }
 
     if (!contactPhone.trim()) {
       setSubmitError('연락처를 입력해 주세요.');
@@ -148,7 +158,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
     try {
       const created = await createWasteRequest({
-        address: toFullAddress(primaryAddress),
+        address: primaryAddressBuildResult.address,
         contactPhone: contactPhone.trim(),
         note: note.trim() ? note.trim() : undefined,
       });
@@ -213,7 +223,11 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           {isLoadingPrimaryAddress && <Text style={styles.meta}>대표 주소지를 불러오는 중입니다.</Text>}
           {primaryAddress && (
             <View style={styles.addressBox}>
-              <Text style={styles.addressTitle}>{toFullAddress(primaryAddress)}</Text>
+              <Text style={styles.addressTitle}>
+                {primaryAddressBuildResult?.ok
+                  ? primaryAddressBuildResult.address
+                  : primaryAddress.roadAddress || primaryAddress.jibunAddress || '-'}
+              </Text>
               <Text style={styles.addressSub}>우편번호: {primaryAddress.zipCode || '-'}</Text>
               <Text style={styles.addressSub}>지번: {primaryAddress.jibunAddress || '-'}</Text>
             </View>
@@ -222,6 +236,9 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
             <Text style={styles.error}>대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.</Text>
           )}
           {primaryAddressError && <Text style={styles.error}>{primaryAddressError}</Text>}
+          {primaryAddress && primaryAddressBuildResult && !primaryAddressBuildResult.ok && (
+            <Text style={styles.error}>{primaryAddressBuildResult.message}</Text>
+          )}
 
           <Text style={styles.label}>연락처</Text>
           <TextInput
@@ -247,9 +264,9 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           {submitError && <Text style={styles.error}>{submitError}</Text>}
 
           <Pressable
-            style={[styles.button, (isSubmitting || !primaryAddress) && styles.buttonDisabled]}
+            style={[styles.button, (isSubmitting || !canUsePrimaryAddress) && styles.buttonDisabled]}
             onPress={handleCreate}
-            disabled={isSubmitting || !primaryAddress}
+            disabled={isSubmitting || !canUsePrimaryAddress}
           >
             <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
           </Pressable>
