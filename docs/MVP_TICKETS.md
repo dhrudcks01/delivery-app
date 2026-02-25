@@ -422,6 +422,62 @@
 
 ---
 
+### [ ] T-0310 주문번호(orderNo) 발급/저장 + API 응답 포함
+**배경**
+- 알림톡/CS/조회에서 사람이 읽을 수 있는 “주문번호”가 필요하다.
+
+**Goal**
+- waste_request 생성 시 사용자에게 노출 가능한 주문번호를 발급하고 저장한다.
+
+**정책(제안)**
+- 형식 예: `WR-{yyyyMMdd}-{id(6자리 패딩)}` 또는 ULID 기반 등 1개로 확정(문서화)
+
+**DoD**
+- DB: `waste_requests`에 `order_no`(UNIQUE) 컬럼 추가 + 기존 데이터 백필(가능한 범위)
+- POST `/waste-requests` 응답에 `orderNo` 포함
+- GET `/waste-requests`(목록) / `/waste-requests/{id}`(상세) 응답에 `orderNo` 포함
+- 용어 통일: 화면/문서에서 “주문번호 = orderNo”
+- 최소 1개 테스트: 주문번호 생성 규칙 및 UNIQUE 보장
+
+---
+
+### [ ] T-0311 수거 신청 데이터 확장: 배출품목 + 수거비닐 수량
+**배경**
+- 신청/알림톡/상세 화면에서 “배출품목”과 “수거비닐 n개 받기” 정보가 필요하다.
+
+**Goal**
+- USER가 수거 신청 시 배출품목 리스트와 수거비닐 수량을 저장/조회할 수 있게 한다.
+
+**DoD**
+- DB: `waste_requests`에 아래 필드 추가(또는 별도 테이블. MVP는 단순안 우선)
+  - `disposal_items` (JSON 또는 TEXT; 문자열 배열 형태)
+  - `bag_count` (INT)
+- POST `/waste-requests` 요청 DTO에 `disposalItems[]`, `bagCount` 추가
+  - `bagCount`: 0 이상 정수
+  - `disposalItems`: 최소 1개 이상 권장(정책 명시)
+- 목록/상세 조회 응답에 동일 필드 포함
+- OpenAPI 문서에 필드 설명/예시 추가
+- 배포 정책: 기존 앱과의 호환성(옵셔널 처리 또는 앱/서버 동시 배포) 명시
+
+---
+
+### [ ] T-0312 상세 조회 응답 확장: 기사 사진/무게/결제(예정)금액을 한 번에 제공
+**Goal**
+- 신청 상세 화면에서 주문번호, 배출품목, 비닐수량, 기사 사진, 무게, 금액을 전부 확인 가능해야 한다.
+
+**DoD**
+- USER: GET `/waste-requests/{id}` 응답에 아래 포함(권한: 본인 요청만)
+  - `orderNo`, `status`, `address`, `contactPhone`, `note`, `disposalItems`, `bagCount`
+  - `photos[]` (DRIVER 업로드 포함)
+  - `measuredWeightKg`, `measuredAt`
+  - `finalAmount`, `currency`
+  - 상태 타임라인(= `waste_status_logs`) 최소 정보(from/to/at)
+- OPS_ADMIN: 요청 상세 응답에도 동일 정보 제공 + 배정 정보(driverId/assignedAt) 포함
+- 사진 URL 노출 정책 정리(공개 URL이 아니면 signed URL 발급 정책 문서화; 운영은 후순위)
+- 최소 1개 테스트: USER의 타인 요청 상세 접근 403, 본인 요청은 사진/무게/금액 포함
+
+---
+
 # EPIC 4) 결제: 저장카드 등록 + 수거 후 자동 결제 (Toss 기반)
 
 > 주의: 공개 레포에 결제 키/시크릿/카드정보 저장 금지.
@@ -804,6 +860,61 @@
 
 ---
 
+### [ ] T-0531 USER 수거 신청 생성 UX: 생성 완료 표시 + 상세 화면으로 자동 이동
+**Goal**
+- 수거 신청 생성 직후 “생성됨” 피드백을 보여주고, 생성한 요청의 상세 화면으로 이동한다.
+
+**DoD**
+- 신청 생성 성공 시 토스트/배너(예: “수거 신청이 완료되었습니다”) 노출(2~3초)
+- 응답으로 받은 `requestId`(및 `orderNo`가 있을 경우)를 이용해 즉시 상세 화면으로 navigate
+- 중복 생성 방지:
+  - 생성 버튼 로딩 상태/비활성화
+  - 네트워크 실패/타임아웃 시 에러 메시지 + 재시도 동선 제공
+- iOS/Android에서 동작 확인(수동 시나리오 문서화)
+
+---
+
+### [ ] T-0532 USER 이용내역(목록) → 상세 진입 구조 변경(하단 상세 제거, 새 화면 오픈)
+**Goal**
+- 목록에서 항목을 선택하면 하단에 상세가 나타나는 방식 대신, 별도 상세 Screen으로 이동한다.
+
+**DoD**
+- 목록 아이템 탭 시 `WasteRequestDetailScreen`으로 push(전체 화면)
+- 기존 하단 상세 패널/오버레이 제거(또는 MVP 범위에서 미노출)
+- 뒤로가기 시 목록 스크롤/필터 상태 유지
+- 상세는 섹션 단위로 명확하게 구분(주문정보/배출정보/수거정보/결제정보)
+
+---
+
+### [ ] T-0533 USER 수거요청 상세 화면 정보 확장(주문번호/배출품목/비닐/사진/무게/금액)
+**Goal**
+- 사용자(및 CS)가 상세 화면에서 필요한 정보를 한 번에 확인할 수 있게 한다.
+
+**DoD**
+- 상단에 주문번호(`orderNo`)를 고정 노출(복사 버튼 optional)
+- 배출품목(`disposalItems`) 리스트 + 수거비닐 `bagCount` 표시
+- 기사 업로드 사진 섹션:
+  - 썸네일 그리드 + 탭 시 확대(모달/뷰어)
+  - 사진이 없을 때 Empty state
+- 무게/금액 섹션:
+  - `measuredWeightKg`, `finalAmount`(결제예정금액) 표시
+  - 측정 전에는 “미측정” 상태로 표기
+- 상태 타임라인(stepper) 표시: REQUESTED → ASSIGNED → MEASURED → PAID/COMPLETED 등
+- 서버 응답 스키마(T-0312)와 필드명/표기 용어 일치
+
+---
+
+### [ ] T-0534 OPS_ADMIN/DRIVER 상세 화면에서도 동일 정보 확인 가능하도록 정렬(필요시)
+**Goal**
+- 운영/기사가 상세 화면에서 주문번호/사진/무게/금액을 쉽게 확인한다.
+
+**DoD**
+- OPS_ADMIN 상세 화면에 `orderNo`, 배출정보, 사진, 무게, 금액 표시
+- DRIVER 상세 화면에도 `orderNo` 표시(현장/CS 대응 목적)
+- 권한별 정보 노출 정책이 다르면 명시(예: 사용자 연락처는 기사에게만)
+
+---
+
 # EPIC 6) 테스트 및 문서(최소)
 
 ### [x] T-0601 Auth + RBAC 통합 테스트
@@ -824,3 +935,37 @@
 ### [ ] T-0704 OPS_ADMIN: 쿠폰 생성/비활성화/발급 관리
 
 ---
+
+# EPIC 8) (추후) 알림/알림톡(카카오 등) 연동 준비
+
+> 목표: 수거 신청/수거 완료 시 사용자에게 주문번호 기반 알림을 보낼 수 있도록 데이터 계약과 발행 지점을 정리한다.
+
+### [ ] T-0801 알림 이벤트 스키마 정의 + 템플릿 변수 문서화
+**Goal**
+- 알림톡/푸시 연동 시 필요한 데이터 필드를 고정하고, 템플릿 변수를 문서화한다.
+
+**DoD**
+- 이벤트 2종 정의:
+  - `WASTE_REQUEST_CREATED`(신청 완료): `orderNo`, `disposalItems`, `bagCount`
+  - `WASTE_REQUEST_MEASURED`(수거 완료/측정 완료): `orderNo`, `measuredWeightKg`, `finalAmount`(예정), `currency`
+- 템플릿 변수명(예: `#{orderNo}`) 및 예시 메시지 문서 작성
+- 개인정보/민감정보 노출 가이드 포함(기본: 주소/연락처는 템플릿에 미포함)
+- `docs/notifications/alimtalk.md` (또는 동등 경로) 문서 추가
+
+---
+
+### [ ] T-0802 서버: 알림 발행 Hook(이벤트) 추가(실제 발송은 후순위)
+**Goal**
+- 실제 카카오 연동 전이라도, 신청/측정 시점에 “알림 이벤트”가 생성되도록 한다.
+
+**DoD**
+- 신청(REQUESTED 생성) 시점에 이벤트 1건 생성
+- 측정 완료(MEASURED 전이 + `final_amount` 계산 완료) 시점에 이벤트 1건 생성
+- 이벤트 저장 방식(택1, MVP는 DB 저장 권장)
+  - DB 테이블(`notification_events`) 저장 (status=PENDING/SENT/FAILED) 또는
+  - 로깅/메시지 큐 publish
+- 재시도/중복 방지(멱등키: `event_type + waste_request_id`) 정책 명시
+- 최소 1개 테스트: 동일 요청에 대해 중복 이벤트 생성 방지
+
+---
+
