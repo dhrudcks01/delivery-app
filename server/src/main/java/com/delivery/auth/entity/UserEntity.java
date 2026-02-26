@@ -2,6 +2,7 @@ package com.delivery.auth.entity;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -96,6 +97,10 @@ public class UserEntity {
 
     public String getStatus() {
         return status;
+    }
+
+    public void changeDisplayName(String displayName) {
+        this.displayName = Objects.requireNonNull(displayName);
     }
 
     public void markPhoneVerified(

@@ -9,6 +9,7 @@ import com.delivery.config.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -54,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/auth/register", "/auth/login", "/auth/refresh").permitAll()
+                .requestMatchers(HttpMethod.PATCH, "/user/profile").hasAnyRole("USER", "DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/uploads/files/**").authenticated()
                 .requestMatchers("/uploads").hasAnyRole("DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/sys-admin/users/ops-admin-grant-candidates").hasAnyRole("OPS_ADMIN", "SYS_ADMIN")

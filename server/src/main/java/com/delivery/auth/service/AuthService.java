@@ -5,6 +5,7 @@ import com.delivery.auth.dto.LoginRequest;
 import com.delivery.auth.dto.MeResponse;
 import com.delivery.auth.dto.RegisterRequest;
 import com.delivery.auth.dto.RefreshTokenRequest;
+import com.delivery.auth.dto.UpdateProfileRequest;
 import com.delivery.auth.entity.AuthIdentityEntity;
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.DuplicateEmailException;
@@ -12,6 +13,7 @@ import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.LoginIdentifierNotFoundException;
 import com.delivery.auth.exception.LoginPasswordMismatchException;
+import com.delivery.auth.exception.PhoneNumberUpdateNotAllowedException;
 import com.delivery.auth.repository.AuthIdentityRepository;
 import com.delivery.auth.repository.UserRepository;
 import com.delivery.auth.security.JwtTokenProvider;
@@ -109,12 +111,24 @@ public class AuthService {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(InvalidCredentialsException::new);
         List<String> roles = userRepository.findRoleCodesByEmail(email);
-        return new MeResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getDisplayName(),
-                roles
-        );
+        return toMeResponse(user, roles);
+    }
+
+    @Transactional
+    public MeResponse updateProfile(String email, UpdateProfileRequest request) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (StringUtils.hasText(request.phoneNumber())) {
+            throw new PhoneNumberUpdateNotAllowedException();
+        }
+
+        if (StringUtils.hasText(request.displayName())) {
+            user.changeDisplayName(request.displayName().trim());
+        }
+
+        List<String> roles = userRepository.findRoleCodesByEmail(email);
+        return toMeResponse(user, roles);
     }
 
     private AuthTokenResponse issueTokens(UserEntity user) {
@@ -130,5 +144,41 @@ public class AuthService {
 
     private boolean isPhoneVerificationRequired(UserEntity user) {
         return user.getPhoneVerifiedAt() == null || !StringUtils.hasText(user.getPhoneE164());
+    }
+
+    private MeResponse toMeResponse(UserEntity user, List<String> roles) {
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                roles,
+                maskPhoneNumber(user.getPhoneE164()),
+                user.getPhoneVerifiedAt(),
+                user.getPhoneVerificationProvider()
+        );
+    }
+
+    private String maskPhoneNumber(String phoneE164) {
+        if (!StringUtils.hasText(phoneE164)) {
+            return null;
+        }
+
+        String digits = phoneE164.replaceAll("[^0-9]", "");
+        if (!StringUtils.hasText(digits)) {
+            return null;
+        }
+
+        String localDigits = digits;
+        if (digits.startsWith("82") && digits.length() > 2) {
+            localDigits = "0" + digits.substring(2);
+        }
+
+        if (localDigits.length() < 7) {
+            return "****";
+        }
+
+        String prefix = localDigits.substring(0, Math.min(3, localDigits.length()));
+        String suffix = localDigits.substring(localDigits.length() - 4);
+        return prefix + "-****-" + suffix;
     }
 }

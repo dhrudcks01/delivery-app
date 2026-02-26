@@ -7,6 +7,7 @@ import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.LoginIdentifierNotFoundException;
 import com.delivery.auth.exception.LoginPasswordMismatchException;
+import com.delivery.auth.exception.PhoneNumberUpdateNotAllowedException;
 import com.delivery.auth.exception.PhoneVerificationException;
 import com.delivery.auth.exception.OpsAdminApplicationConflictException;
 import com.delivery.auth.exception.OpsAdminApplicationNotAllowedException;
@@ -486,6 +487,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(exception.getStatus()).body(response);
+    }
+
+    @ExceptionHandler(PhoneNumberUpdateNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handlePhoneNumberUpdateNotAllowed(
+            PhoneNumberUpdateNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "PHONE_NUMBER_UPDATE_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
