@@ -1,6 +1,7 @@
 package com.delivery.waste.web;
 
 import com.delivery.waste.dto.CreateWasteRequestRequest;
+import com.delivery.waste.dto.WasteRequestDetailResponse;
 import com.delivery.waste.dto.WasteRequestResponse;
 import com.delivery.waste.service.WasteRequestService;
 import jakarta.validation.Valid;
@@ -41,7 +42,7 @@ public class WasteRequestController {
     }
 
     @GetMapping("/{requestId}")
-    public ResponseEntity<WasteRequestResponse> getMyRequest(
+    public ResponseEntity<WasteRequestDetailResponse> getMyRequest(
             Authentication authentication,
             @PathVariable Long requestId
     ) {

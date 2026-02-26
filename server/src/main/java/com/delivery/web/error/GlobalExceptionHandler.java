@@ -29,6 +29,7 @@ import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
 import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
+import com.delivery.waste.exception.WasteRequestAccessDeniedException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
 import com.delivery.waste.exception.WasteStatusTransitionConflictException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -344,6 +345,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(WasteRequestAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleWasteRequestAccessDenied(
+            WasteRequestAccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.FORBIDDEN.value(),
+                "WASTE_REQUEST_ACCESS_DENIED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler(WasteStatusTransitionConflictException.class)

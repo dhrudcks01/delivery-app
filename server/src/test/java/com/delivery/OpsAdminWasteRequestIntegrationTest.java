@@ -4,6 +4,7 @@ import com.delivery.auth.entity.AuthIdentityEntity;
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.repository.AuthIdentityRepository;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.waste.entity.WasteAssignmentEntity;
 import com.delivery.waste.entity.WasteRequestEntity;
 import com.delivery.waste.repository.WasteAssignmentRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
@@ -83,14 +84,34 @@ class OpsAdminWasteRequestIntegrationTest {
     @Test
     void opsAdminCanGetWasteRequestDetail() throws Exception {
         UserEntity requester = createUser("ops-waste-detail-requester@example.com", "USER");
+        UserEntity driver = createUser("ops-waste-detail-driver@example.com", "DRIVER");
         WasteRequestEntity request = createWasteRequest(requester, "REQUESTED", "서울시 중구 10");
+        wasteAssignmentRepository.save(new WasteAssignmentEntity(request, driver));
+        jdbcTemplate.update(
+                "INSERT INTO waste_photos (request_id, url, type, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                request.getId(),
+                "/uploads/files/ops-detail-photo.jpg",
+                "TRASH"
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_status_logs (request_id, from_status, to_status, actor_user_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                request.getId(),
+                "REQUESTED",
+                "ASSIGNED",
+                driver.getId()
+        );
+
         String opsToken = login("ops-waste-detail-admin@example.com", "OPS_ADMIN");
 
         mockMvc.perform(get("/ops-admin/waste-requests/{requestId}", request.getId())
                         .header("Authorization", "Bearer " + opsToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(request.getId()))
-                .andExpect(jsonPath("$.address").value("서울시 중구 10"));
+                .andExpect(jsonPath("$.address").value("서울시 중구 10"))
+                .andExpect(jsonPath("$.photos.length()").value(1))
+                .andExpect(jsonPath("$.statusTimeline.length()").value(1))
+                .andExpect(jsonPath("$.driverId").value(driver.getId()))
+                .andExpect(jsonPath("$.assignedAt").isNotEmpty());
     }
 
     @Test

@@ -47,6 +47,7 @@ class WasteRequestIntegrationTest {
     @BeforeEach
     void setUpRoles() {
         upsertRole("USER", "일반 사용자");
+        upsertRole("DRIVER", "기사");
     }
 
     @Test
@@ -120,8 +121,61 @@ class WasteRequestIntegrationTest {
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
                         .header("Authorization", "Bearer " + otherAccessToken))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("WASTE_REQUEST_NOT_FOUND"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("WASTE_REQUEST_ACCESS_DENIED"));
+    }
+
+    @Test
+    void myDetailIncludesPhotosWeightAmountAndStatusTimeline() throws Exception {
+        String accessToken = createUserAndLogin("waste-detail-owner@example.com");
+        UserEntity driver = createUser("waste-detail-driver@example.com", "DRIVER");
+        Long requestId = createWasteRequest(accessToken);
+
+        jdbcTemplate.update(
+                "UPDATE waste_requests SET status = 'MEASURED', measured_weight_kg = ?, measured_at = CURRENT_TIMESTAMP, measured_by_driver_id = ?, final_amount = ? WHERE id = ?",
+                "4.250",
+                driver.getId(),
+                4250L,
+                requestId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_photos (request_id, url, type, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "/uploads/files/detail-photo-1.jpg",
+                "TRASH"
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_photos (request_id, url, type, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "/uploads/files/detail-photo-2.jpg",
+                "SCALE"
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_status_logs (request_id, from_status, to_status, actor_user_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "REQUESTED",
+                "ASSIGNED",
+                driver.getId()
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_status_logs (request_id, from_status, to_status, actor_user_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "ASSIGNED",
+                "MEASURED",
+                driver.getId()
+        );
+
+        mockMvc.perform(get("/waste-requests/{requestId}", requestId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("MEASURED"))
+                .andExpect(jsonPath("$.photos.length()").value(2))
+                .andExpect(jsonPath("$.photos[0].url").value("/uploads/files/detail-photo-1.jpg"))
+                .andExpect(jsonPath("$.measuredWeightKg").value(4.25))
+                .andExpect(jsonPath("$.finalAmount").value(4250))
+                .andExpect(jsonPath("$.statusTimeline.length()").value(2))
+                .andExpect(jsonPath("$.statusTimeline[0].toStatus").value("ASSIGNED"))
+                .andExpect(jsonPath("$.statusTimeline[1].toStatus").value("MEASURED"));
     }
 
     @Test
@@ -213,6 +267,21 @@ class WasteRequestIntegrationTest {
     }
 
     private String createUserAndLogin(String email) throws Exception {
+        createUser(email, "USER");
+        String password = "password123";
+
+        String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, password));
+        String loginResponse = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(loginResponse).get("accessToken").asText();
+    }
+
+    private UserEntity createUser(String email, String roleCode) {
         String password = "password123";
         UserEntity user = userRepository.save(new UserEntity(
                 email,
@@ -224,20 +293,12 @@ class WasteRequestIntegrationTest {
         jdbcTemplate.update(
                 """
                 INSERT INTO user_roles (user_id, role_id)
-                SELECT ?, id FROM roles WHERE code = 'USER'
+                SELECT ?, id FROM roles WHERE code = ?
                 """,
-                user.getId()
+                user.getId(),
+                roleCode
         );
-
-        String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, password));
-        String loginResponse = mockMvc.perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        return objectMapper.readTree(loginResponse).get("accessToken").asText();
+        return user;
     }
 
     private void upsertRole(String code, String description) {

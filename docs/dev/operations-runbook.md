@@ -130,6 +130,14 @@ curl -i -X POST http://localhost:8080/uploads \
   -F "file=@sample.jpg"
 ```
 
+### 2.5 사진 URL 노출 정책 (T-0312)
+
+- 개발/MVP 단계:
+  - 상세 조회 응답의 `photos[].url`은 로컬 업로드 URL(`/uploads/files/{filename}`)을 그대로 노출합니다.
+- 운영 고도화(후순위):
+  - 공개 URL을 직접 노출하지 않고, 만료시간이 있는 signed URL 발급 방식으로 전환합니다.
+  - 전환 전까지는 업로드 파일 접근 권한 정책(인증/인가)을 서버에서 점검합니다.
+
 ---
 
 ## 3) 결제 실패 대응

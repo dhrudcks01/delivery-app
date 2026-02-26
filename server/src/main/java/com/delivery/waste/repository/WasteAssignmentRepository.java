@@ -14,4 +14,6 @@ public interface WasteAssignmentRepository extends JpaRepository<WasteAssignment
     List<WasteAssignmentEntity> findAllByDriverOrderByAssignedAtDesc(UserEntity driver);
 
     Optional<WasteAssignmentEntity> findByRequestIdAndDriver(Long requestId, UserEntity driver);
+
+    Optional<WasteAssignmentEntity> findByRequestId(Long requestId);
 }

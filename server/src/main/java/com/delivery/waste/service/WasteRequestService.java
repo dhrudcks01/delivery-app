@@ -6,13 +6,19 @@ import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.auth.repository.UserRepository;
 import com.delivery.waste.dto.AssignWasteRequest;
 import com.delivery.waste.dto.CreateWasteRequestRequest;
+import com.delivery.waste.dto.WasteRequestDetailResponse;
 import com.delivery.waste.dto.WasteRequestResponse;
 import com.delivery.waste.entity.WasteAssignmentEntity;
+import com.delivery.waste.entity.WastePhotoEntity;
 import com.delivery.waste.entity.WasteRequestEntity;
+import com.delivery.waste.entity.WasteStatusLogEntity;
 import com.delivery.waste.exception.DriverRoleRequiredException;
+import com.delivery.waste.exception.WasteRequestAccessDeniedException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
 import com.delivery.waste.repository.WasteAssignmentRepository;
+import com.delivery.waste.repository.WastePhotoRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
+import com.delivery.waste.repository.WasteStatusLogRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,17 +37,23 @@ public class WasteRequestService {
 
     private final WasteRequestRepository wasteRequestRepository;
     private final WasteAssignmentRepository wasteAssignmentRepository;
+    private final WastePhotoRepository wastePhotoRepository;
+    private final WasteStatusLogRepository wasteStatusLogRepository;
     private final UserRepository userRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
 
     public WasteRequestService(
             WasteRequestRepository wasteRequestRepository,
             WasteAssignmentRepository wasteAssignmentRepository,
+            WastePhotoRepository wastePhotoRepository,
+            WasteStatusLogRepository wasteStatusLogRepository,
             UserRepository userRepository,
             WasteStatusTransitionService wasteStatusTransitionService
     ) {
         this.wasteRequestRepository = wasteRequestRepository;
         this.wasteAssignmentRepository = wasteAssignmentRepository;
+        this.wastePhotoRepository = wastePhotoRepository;
+        this.wasteStatusLogRepository = wasteStatusLogRepository;
         this.userRepository = userRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
     }
@@ -73,11 +85,14 @@ public class WasteRequestService {
     }
 
     @Transactional
-    public WasteRequestResponse getMyRequest(String email, Long requestId) {
+    public WasteRequestDetailResponse getMyRequest(String email, Long requestId) {
         UserEntity user = findUserByEmail(email);
-        WasteRequestEntity request = wasteRequestRepository.findByIdAndUser(requestId, user)
+        WasteRequestEntity request = wasteRequestRepository.findById(requestId)
                 .orElseThrow(WasteRequestNotFoundException::new);
-        return toResponse(request);
+        if (!request.getUser().getId().equals(user.getId())) {
+            throw new WasteRequestAccessDeniedException();
+        }
+        return toDetailResponse(request, false);
     }
 
     @Transactional
@@ -98,10 +113,10 @@ public class WasteRequestService {
     }
 
     @Transactional
-    public WasteRequestResponse getDetailForOps(Long requestId) {
+    public WasteRequestDetailResponse getDetailForOps(Long requestId) {
         WasteRequestEntity request = wasteRequestRepository.findById(requestId)
                 .orElseThrow(WasteRequestNotFoundException::new);
-        return toResponse(request);
+        return toDetailResponse(request, true);
     }
 
     @Transactional
@@ -140,6 +155,50 @@ public class WasteRequestService {
                 request.getMeasuredByDriver() != null ? request.getMeasuredByDriver().getId() : null,
                 request.getFinalAmount(),
                 request.getCurrency(),
+                request.getCreatedAt(),
+                request.getUpdatedAt()
+        );
+    }
+
+    private WasteRequestDetailResponse toDetailResponse(WasteRequestEntity request, boolean includeAssignment) {
+        List<WastePhotoEntity> photos = wastePhotoRepository.findAllByRequestOrderByCreatedAtAsc(request);
+        List<WasteStatusLogEntity> statusLogs = wasteStatusLogRepository.findByRequestOrderByCreatedAtAsc(request);
+
+        WasteAssignmentEntity assignment = includeAssignment
+                ? wasteAssignmentRepository.findByRequestId(request.getId()).orElse(null)
+                : null;
+
+        return new WasteRequestDetailResponse(
+                request.getId(),
+                WasteOrderNoPolicy.resolve(request.getOrderNo(), request.getId()),
+                request.getUser().getId(),
+                request.getStatus(),
+                request.getAddress(),
+                request.getContactPhone(),
+                request.getNote(),
+                request.getDisposalItems(),
+                request.getBagCount(),
+                photos.stream()
+                        .map(photo -> new WasteRequestDetailResponse.PhotoItem(
+                                photo.getUrl(),
+                                photo.getType(),
+                                photo.getCreatedAt()
+                        ))
+                        .toList(),
+                request.getMeasuredWeightKg(),
+                request.getMeasuredAt(),
+                request.getMeasuredByDriver() != null ? request.getMeasuredByDriver().getId() : null,
+                request.getFinalAmount(),
+                request.getCurrency(),
+                statusLogs.stream()
+                        .map(log -> new WasteRequestDetailResponse.StatusTimelineItem(
+                                log.getFromStatus(),
+                                log.getToStatus(),
+                                log.getCreatedAt()
+                        ))
+                        .toList(),
+                assignment != null ? assignment.getDriver().getId() : null,
+                assignment != null ? assignment.getAssignedAt() : null,
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
