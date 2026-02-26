@@ -1,4 +1,4 @@
-import { WasteRequest } from './waste';
+import { WasteRequest, WasteRequestDetail } from './waste';
 
 export type PageResponse<T> = {
   content: T[];
@@ -33,6 +33,7 @@ export type AssignWasteRequestPayload = {
 };
 
 export type OpsWasteRequest = WasteRequest;
+export type OpsWasteRequestDetail = WasteRequestDetail;
 
 export type OpsAdminGrantCandidate = {
   userId: number;

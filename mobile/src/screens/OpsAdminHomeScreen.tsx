@@ -16,7 +16,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
-import { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
+import { FailedPayment, OpsWasteRequest, OpsWasteRequestDetail } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 function toErrorMessage(error: unknown): string {
@@ -32,6 +32,13 @@ function formatDate(dateTime: string | null): string {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
+}
+
+function formatAmount(amount: number | null): string {
+  if (amount === null) {
+    return '미정';
+  }
+  return `${amount.toLocaleString('ko-KR')}원`;
 }
 
 export function OpsAdminHomeScreen() {
@@ -53,7 +60,7 @@ export function OpsAdminHomeScreen() {
   const [wasteListError, setWasteListError] = useState<string | null>(null);
   const [opsWasteRequests, setOpsWasteRequests] = useState<OpsWasteRequest[]>([]);
   const [selectedWasteRequestId, setSelectedWasteRequestId] = useState<number | null>(null);
-  const [selectedWasteRequest, setSelectedWasteRequest] = useState<OpsWasteRequest | null>(null);
+  const [selectedWasteRequest, setSelectedWasteRequest] = useState<OpsWasteRequestDetail | null>(null);
   const [isLoadingWasteDetail, setIsLoadingWasteDetail] = useState(false);
   const [wasteDetailError, setWasteDetailError] = useState<string | null>(null);
 
@@ -213,9 +220,9 @@ export function OpsAdminHomeScreen() {
 
     try {
       const response = await assignWasteRequestForOps(selectedWasteRequestId, { driverId: parsedDriverId });
-      setSelectedWasteRequest(response);
       setAssignMessage(`요청 #${response.id} 기사 배정 완료`);
       await loadWasteRequests();
+      await loadWasteRequestDetail(response.id);
     } catch (error) {
       setAssignError(toErrorMessage(error));
     } finally {
@@ -392,10 +399,21 @@ export function OpsAdminHomeScreen() {
         {selectedWasteRequest && (
           <View style={styles.resultBox}>
             <Text style={styles.detailText}>요청 ID: {selectedWasteRequest.id}</Text>
+            <Text style={styles.detailText}>주문번호: {selectedWasteRequest.orderNo || '-'}</Text>
             <Text style={styles.detailText}>상태: {selectedWasteRequest.status}</Text>
             <Text style={styles.detailText}>주소: {selectedWasteRequest.address}</Text>
             <Text style={styles.detailText}>연락처: {selectedWasteRequest.contactPhone}</Text>
-            <Text style={styles.detailText}>최종금액: {selectedWasteRequest.finalAmount ?? '-'}</Text>
+            <Text style={styles.detailText}>배출품목: {selectedWasteRequest.disposalItems.join(', ') || '-'}</Text>
+            <Text style={styles.detailText}>수거비닐 수량: {selectedWasteRequest.bagCount}개</Text>
+            <Text style={styles.detailText}>측정무게: {selectedWasteRequest.measuredWeightKg ?? '미측정'}</Text>
+            <Text style={styles.detailText}>측정시각: {formatDate(selectedWasteRequest.measuredAt)}</Text>
+            <Text style={styles.detailText}>결제예정금액: {formatAmount(selectedWasteRequest.finalAmount)}</Text>
+            <Text style={styles.detailText}>기사 사진: {selectedWasteRequest.photos.length}장</Text>
+            {selectedWasteRequest.photos.map((photo, index) => (
+              <Text key={`${photo.url}-${index}`} style={styles.listSub}>
+                {index + 1}. [{photo.type || 'PHOTO'}] {photo.url}
+              </Text>
+            ))}
             <TextInput
               style={styles.input}
               value={driverIdInput}

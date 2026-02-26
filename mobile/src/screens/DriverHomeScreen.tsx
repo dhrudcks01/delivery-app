@@ -29,6 +29,10 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
+function formatOrderNoFromRequestId(requestId: number): string {
+  return `WR-${String(requestId).padStart(6, '0')}`;
+}
+
 export function DriverHomeScreen() {
   const { me } = useAuth();
 
@@ -258,6 +262,7 @@ export function DriverHomeScreen() {
 
         {selectedRequest && (
           <View style={styles.detailBox}>
+            <Text style={styles.detailText}>주문번호: {formatOrderNoFromRequestId(selectedRequest.requestId)}</Text>
             <Text style={styles.detailText}>주소: {selectedRequest.address}</Text>
             <Text style={styles.detailText}>연락처: {selectedRequest.contactPhone}</Text>
             <Text style={styles.detailText}>요청사항: {selectedRequest.note || '-'}</Text>

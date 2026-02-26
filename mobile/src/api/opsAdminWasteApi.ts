@@ -4,6 +4,7 @@ import {
   FailedPayment,
   OpsWasteListFilter,
   OpsWasteRequest,
+  OpsWasteRequestDetail,
   PageResponse,
 } from '../types/opsAdmin';
 
@@ -20,8 +21,8 @@ export async function getOpsWasteRequests(
   return response.data;
 }
 
-export async function getOpsWasteRequestDetail(requestId: number): Promise<OpsWasteRequest> {
-  const response = await httpClient.get<OpsWasteRequest>(`/ops-admin/waste-requests/${requestId}`);
+export async function getOpsWasteRequestDetail(requestId: number): Promise<OpsWasteRequestDetail> {
+  const response = await httpClient.get<OpsWasteRequestDetail>(`/ops-admin/waste-requests/${requestId}`);
   return response.data;
 }
 
