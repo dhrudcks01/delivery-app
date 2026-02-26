@@ -32,7 +32,7 @@ export type RootStackParamList = {
   SysAdminHome: undefined;
   UserAddressManagement: undefined;
   UserPaymentManagement: undefined;
-  WasteRequestDetail: { requestId: number };
+  WasteRequestDetail: { requestId: number; orderNo?: string };
   ProfileSettings: undefined;
 };
 

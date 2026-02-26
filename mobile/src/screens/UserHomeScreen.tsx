@@ -2,7 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
@@ -21,9 +21,17 @@ type UserHomeScreenProps = {
   includeTopInset?: boolean;
 };
 
+const SUCCESS_BANNER_TIMEOUT_MS = 2500;
+
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
     const apiError = error.response?.data as ApiErrorResponse | undefined;
+    if (error.code === 'ECONNABORTED') {
+      return 'Request timed out. Please try again.';
+    }
+    if (!error.response) {
+      return 'Network is unavailable. Please check your connection and try again.';
+    }
     return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
   }
   return '요청 처리 중 오류가 발생했습니다.';
@@ -54,6 +62,8 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   const [listError, setListError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccessMessage, setSubmitSuccessMessage] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showRequestForm = section === 'all' || section === 'request-form';
   const showHistory = section === 'all' || section === 'history';
@@ -65,6 +75,18 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     return buildWasteRequestAddress(primaryAddress);
   }, [primaryAddress]);
   const canUsePrimaryAddress = primaryAddressBuildResult?.ok ?? false;
+
+  const showSubmitSuccessMessage = useCallback((message: string) => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+    }
+
+    setSubmitSuccessMessage(message);
+    successTimerRef.current = setTimeout(() => {
+      setSubmitSuccessMessage(null);
+      successTimerRef.current = null;
+    }, SUCCESS_BANNER_TIMEOUT_MS);
+  }, []);
 
   const loadPrimaryAddress = useCallback(async () => {
     if (!me?.id) {
@@ -135,8 +157,16 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
       setContactPhone('');
       setNote('');
-
-      await refreshRequests();
+      showSubmitSuccessMessage(
+        created.orderNo
+          ? `Request created. OrderNo: ${created.orderNo}`
+          : 'Request created successfully.',
+      );
+      navigation.navigate('WasteRequestDetail', {
+        requestId: created.id,
+        orderNo: created.orderNo || undefined,
+      });
+      void refreshRequests();
     } catch (error) {
       setSubmitError(toErrorMessage(error));
     } finally {
@@ -146,6 +176,13 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   useEffect(() => {
     void refreshRequests();
+  }, []);
+
+  useEffect(() => () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
   }, []);
 
   useFocusEffect(
@@ -211,7 +248,17 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
             returnKeyType="done"
           />
 
+          {submitSuccessMessage && (
+            <View style={styles.successBanner}>
+              <Text style={styles.successBannerText}>{submitSuccessMessage}</Text>
+            </View>
+          )}
           {submitError && <Text style={styles.error}>{submitError}</Text>}
+          {submitError && !isSubmitting && (
+            <Pressable style={styles.retryButton} onPress={handleCreate}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          )}
 
           <Pressable
             style={[styles.button, (isSubmitting || !canUsePrimaryAddress) && styles.buttonDisabled]}
@@ -322,14 +369,36 @@ const styles = StyleSheet.create({
     color: ui.colors.error,
     fontSize: 13,
   },
+  successBanner: {
+    backgroundColor: '#e8f7ee',
+    borderWidth: 1,
+    borderColor: '#6cbf8f',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  successBannerText: {
+    color: '#1f5134',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  retryButton: {
+    borderWidth: 1,
+    borderColor: ui.colors.error,
+    borderRadius: ui.radius.control,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#fff5f5',
+  },
+  retryButtonText: {
+    color: ui.colors.error,
+    fontWeight: '700',
+  },
   button: {
     backgroundColor: ui.colors.primary,
     borderRadius: ui.radius.control,
     paddingVertical: 11,
     alignItems: 'center',
-  },
-  buttonMuted: {
-    backgroundColor: ui.colors.textMuted,
   },
   buttonDisabled: {
     opacity: 0.65,
