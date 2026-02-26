@@ -227,7 +227,7 @@
 
 ---
 
-### [ ] T-0118 PortOne(다날) 본인인증 시작/완료 API(서버)
+### [x] T-0118 PortOne(다날) 본인인증 시작/완료 API(서버)
 **Goal**
 - PortOne V2 본인인증 플로우(`requestIdentityVerification`)와 서버 검증 API를 연동한다.
 

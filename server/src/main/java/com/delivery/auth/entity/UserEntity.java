@@ -1,6 +1,7 @@
 package com.delivery.auth.entity;
 
 import java.time.Instant;
+import java.util.Arrays;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -97,6 +98,22 @@ public class UserEntity {
         return status;
     }
 
+    public void markPhoneVerified(
+            String phoneE164,
+            Instant phoneVerifiedAt,
+            String phoneVerificationProvider,
+            String identityVerificationId,
+            byte[] ci,
+            byte[] di
+    ) {
+        this.phoneE164 = phoneE164;
+        this.phoneVerifiedAt = phoneVerifiedAt;
+        this.phoneVerificationProvider = phoneVerificationProvider;
+        this.identityVerificationId = identityVerificationId;
+        this.ci = ci == null ? null : Arrays.copyOf(ci, ci.length);
+        this.di = di == null ? null : Arrays.copyOf(di, di.length);
+    }
+
     public String getPhoneE164() {
         return phoneE164;
     }
@@ -114,10 +131,10 @@ public class UserEntity {
     }
 
     public byte[] getCi() {
-        return ci;
+        return ci == null ? null : Arrays.copyOf(ci, ci.length);
     }
 
     public byte[] getDi() {
-        return di;
+        return di == null ? null : Arrays.copyOf(di, di.length);
     }
 }

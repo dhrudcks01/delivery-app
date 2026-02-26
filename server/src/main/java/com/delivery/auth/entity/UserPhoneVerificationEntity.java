@@ -16,6 +16,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Objects;
 
 @Entity
@@ -83,10 +84,11 @@ public class UserPhoneVerificationEntity {
         this.status = PhoneVerificationStatus.REQUESTED;
     }
 
-    public void markVerified(byte[] ci, byte[] di, Instant verifiedAt) {
+    public void markVerified(String phoneE164, byte[] ci, byte[] di, Instant verifiedAt) {
         this.status = PhoneVerificationStatus.VERIFIED;
-        this.ci = ci;
-        this.di = di;
+        this.phoneE164 = phoneE164;
+        this.ci = ci == null ? null : Arrays.copyOf(ci, ci.length);
+        this.di = di == null ? null : Arrays.copyOf(di, di.length);
         this.verifiedAt = Objects.requireNonNull(verifiedAt);
         this.failureCode = null;
         this.failureMessage = null;
@@ -156,11 +158,11 @@ public class UserPhoneVerificationEntity {
     }
 
     public byte[] getCi() {
-        return ci;
+        return ci == null ? null : Arrays.copyOf(ci, ci.length);
     }
 
     public byte[] getDi() {
-        return di;
+        return di == null ? null : Arrays.copyOf(di, di.length);
     }
 
     public Instant getRequestedAt() {

@@ -47,3 +47,11 @@ app:
     read-timeout-millis: ${APP_ADDRESS_SEARCH_READ_TIMEOUT_MILLIS:3000}
     default-limit: ${APP_ADDRESS_SEARCH_DEFAULT_LIMIT:10}
     max-limit: ${APP_ADDRESS_SEARCH_MAX_LIMIT:30}
+  phone-verification:
+    provider: ${APP_PHONE_VERIFICATION_PROVIDER:PORTONE_DANAL}
+    base-url: ${APP_PHONE_VERIFICATION_BASE_URL:https://api.portone.io}
+    store-id: ${APP_PHONE_VERIFICATION_STORE_ID:}
+    channel-key: ${APP_PHONE_VERIFICATION_CHANNEL_KEY:}
+    api-secret: ${APP_PHONE_VERIFICATION_API_SECRET:}
+    connect-timeout-millis: ${APP_PHONE_VERIFICATION_CONNECT_TIMEOUT_MILLIS:2000}
+    read-timeout-millis: ${APP_PHONE_VERIFICATION_READ_TIMEOUT_MILLIS:3000}

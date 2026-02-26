@@ -22,3 +22,11 @@ app:
       billing-auth-base-url: https://api.tosspayments.com/v1/billing/authorizations/issue
       success-url: http://localhost:8080/user/payment-methods/registration/success
       fail-url: http://localhost:8080/user/payment-methods/registration/fail
+  phone-verification:
+    provider: PORTONE_DANAL
+    base-url: https://api.portone.io
+    store-id: test-store-id
+    channel-key: test-channel-key
+    api-secret: test-api-secret
+    connect-timeout-millis: 1000
+    read-timeout-millis: 1000

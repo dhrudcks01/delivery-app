@@ -7,6 +7,7 @@ import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.InvalidRefreshTokenException;
 import com.delivery.auth.exception.LoginIdentifierNotFoundException;
 import com.delivery.auth.exception.LoginPasswordMismatchException;
+import com.delivery.auth.exception.PhoneVerificationException;
 import com.delivery.auth.exception.OpsAdminApplicationConflictException;
 import com.delivery.auth.exception.OpsAdminApplicationNotAllowedException;
 import com.delivery.auth.exception.OpsAdminApplicationNotFoundException;
@@ -471,6 +472,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(PhoneVerificationException.class)
+    public ResponseEntity<ApiErrorResponse> handlePhoneVerificationException(
+            PhoneVerificationException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                exception.getStatus().value(),
+                exception.getCode(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(exception.getStatus()).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
