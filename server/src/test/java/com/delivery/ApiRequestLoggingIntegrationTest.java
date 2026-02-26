@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -106,11 +108,17 @@ class ApiRequestLoggingIntegrationTest {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
 
-        String logs = output.getOut();
-        assertThat(logs).contains("userEmail=" + email);
-        assertThat(logs).contains("userId=" + user.getId());
-        assertThat(logs).doesNotContain(password);
-        assertThat(logs).doesNotContain(accessToken);
+        List<String> requestLogs = output.getOut().lines()
+                .filter(line -> line.contains("ApiRequestLoggingFilter"))
+                .toList();
+
+        assertThat(requestLogs).isNotEmpty();
+
+        String joinedRequestLogs = String.join("\n", requestLogs);
+        assertThat(joinedRequestLogs).contains("userEmail=" + email);
+        assertThat(joinedRequestLogs).contains("userId=" + user.getId());
+        assertThat(joinedRequestLogs).doesNotContain(password);
+        assertThat(joinedRequestLogs).doesNotContain(accessToken);
     }
 
     private record LoginPayload(String email, String password) {

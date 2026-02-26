@@ -33,9 +33,13 @@ import com.delivery.waste.exception.WasteRequestNotFoundException;
 import com.delivery.waste.exception.WasteStatusTransitionConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,6 +47,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String REQUEST_ID_MDC_KEY = "requestId";
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ApiErrorResponse> handleDuplicateEmail(
@@ -494,16 +502,40 @@ public class GlobalExceptionHandler {
             Exception exception,
             HttpServletRequest request
     ) {
+        String requestId = resolveRequestId(request);
+        log.error(
+                "Unhandled exception requestId={} uri={} exceptionType={} message={}",
+                requestId,
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                exception.getMessage(),
+                exception
+        );
+
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_SERVER_ERROR",
                 "서버 내부 오류가 발생했습니다.",
-                request.getRequestURI()
+                request.getRequestURI(),
+                requestId
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     private ApiErrorResponse.FieldViolation toViolation(FieldError error) {
         return new ApiErrorResponse.FieldViolation(error.getField(), error.getDefaultMessage());
+    }
+
+    private String resolveRequestId(HttpServletRequest request) {
+        String requestId = MDC.get(REQUEST_ID_MDC_KEY);
+        if (StringUtils.hasText(requestId)) {
+            return requestId;
+        }
+
+        String requestIdHeader = request.getHeader(REQUEST_ID_HEADER);
+        if (StringUtils.hasText(requestIdHeader)) {
+            return requestIdHeader.trim();
+        }
+        return "";
     }
 }

@@ -194,3 +194,48 @@ LIMIT 50;
 - 시크릿/토큰/비밀번호를 코드/문서에 실제값으로 기록하지 않습니다.
 - `authKey`, 결제 토큰 등 민감 정보는 로그에 출력하지 않습니다.
 - 운영 DB 접속 정보와 개발 DB 접속 정보를 분리합니다.
+
+---
+
+## 6) 예외 로깅/요청 추적 운영 가이드 (T-0116)
+
+### 6.1 500 예외 추적 규칙
+
+- 전역 예외 처리(`GlobalExceptionHandler`)는 500 발생 시 아래 값을 `ERROR` 레벨로 기록합니다.
+  - `requestId`
+  - `uri`
+  - `exceptionType`
+  - `message`
+  - stack trace
+- API 공통 요청 로그(`ApiRequestLoggingFilter`)와 동일한 `requestId`를 사용하므로, 요청-예외 로그를 한 번에 연계할 수 있습니다.
+- 500 응답 본문에도 `requestId`가 포함되어 CS/운영 이슈 접수 시 추적 키로 사용할 수 있습니다.
+
+### 6.2 민감정보 로그 비노출/마스킹 정책
+
+- 절대 로그 금지
+  - 비밀번호 원문
+  - JWT Access/Refresh 토큰 원문
+  - 결제수단 식별값(`authKey`, billing key/token 등) 원문
+- 요청/응답 공통 로그에는 메서드/URI/상태/처리시간/클라이언트IP/사용자 식별자만 남깁니다.
+- 디버깅 시에도 민감정보 포함 가능성이 있는 객체 전체(`request body`, `headers`)를 그대로 로깅하지 않습니다.
+
+### 6.3 로컬 SQL/파라미터 로그 가이드
+
+- `server/src/main/resources/application-local.yml`에서 로컬 기본값은 `INFO`로 유지합니다.
+  - `logging.level.org.hibernate.SQL=INFO`
+  - `logging.level.org.hibernate.orm.jdbc.bind=INFO`
+- 상세 추적이 필요할 때만 임시로 다음 레벨로 상향합니다.
+  - `org.hibernate.SQL=DEBUG`
+  - `org.hibernate.orm.jdbc.bind=TRACE`
+
+### 6.4 재현 가능한 500 로그 확인 절차 (테스트 시나리오)
+
+1. 서버 디렉터리에서 에러 응답 통합 테스트를 실행합니다.
+   - `cd server`
+   - `./gradlew test --tests com.delivery.ErrorResponseIntegrationTest`
+2. `internalServerErrorReturnsStandardErrorResponseWithRequestIdAndErrorLog` 테스트가 `GET /test/errors/runtime`로 강제 500을 재현합니다.
+3. 로그에서 아래 키워드를 확인합니다.
+   - `Unhandled exception requestId=...`
+   - `uri=/test/errors/runtime`
+   - `exceptionType=java.lang.IllegalStateException`
+4. 응답 JSON의 `requestId`와 로그의 `requestId`가 동일한지 확인합니다.

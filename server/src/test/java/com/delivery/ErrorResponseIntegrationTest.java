@@ -1,14 +1,18 @@
 package com.delivery;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -17,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@ExtendWith(OutputCaptureExtension.class)
 class ErrorResponseIntegrationTest {
 
     @Autowired
@@ -55,11 +60,21 @@ class ErrorResponseIntegrationTest {
 
     @Test
     @WithMockUser(roles = "SYS_ADMIN")
-    void internalServerErrorReturnsStandardErrorResponse() throws Exception {
-        mockMvc.perform(get("/test/errors/runtime"))
+    void internalServerErrorReturnsStandardErrorResponseWithRequestIdAndErrorLog(CapturedOutput output) throws Exception {
+        String requestId = "error-test-request-id-001";
+
+        mockMvc.perform(get("/test/errors/runtime")
+                        .header("X-Request-Id", requestId))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.path").value("/test/errors/runtime"));
+                .andExpect(jsonPath("$.path").value("/test/errors/runtime"))
+                .andExpect(jsonPath("$.requestId").value(requestId));
+
+        String logs = output.getOut();
+        assertThat(logs).contains("Unhandled exception requestId=" + requestId);
+        assertThat(logs).contains("uri=/test/errors/runtime");
+        assertThat(logs).contains("exceptionType=java.lang.IllegalStateException");
+        assertThat(logs).contains("forced error");
     }
 }
