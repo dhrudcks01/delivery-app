@@ -46,8 +46,13 @@ class WasteRequestIntegrationTest {
 
     @BeforeEach
     void setUpRoles() {
-        upsertRole("USER", "일반 사용자");
-        upsertRole("DRIVER", "기사");
+        upsertRole("USER", "General User");
+        upsertRole("DRIVER", "Driver");
+
+        jdbcTemplate.update("DELETE FROM service_areas");
+        registerServiceArea("Seoul", "Mapo-gu", "Seogyo-dong");
+        registerServiceArea("Seoul", "Gangdong-gu", "Cheonho-dong");
+        registerServiceArea("Seoul", "Seocho-gu", "Bangbae-dong");
     }
 
     @Test
@@ -55,10 +60,10 @@ class WasteRequestIntegrationTest {
         String accessToken = createUserAndLogin("waste-user@example.com");
         String createBody = """
                 {
-                  "address": "서울시 중구 세종대로 1",
+                  "address": "Seoul Mapo-gu Seogyo-dong Worldcup-ro 1",
                   "contactPhone": "010-1234-0000",
-                  "note": "경비실에 맡겨주세요.",
-                  "disposalItems": ["일반쓰레기", "재활용"],
+                  "note": "Leave at the security office",
+                  "disposalItems": ["GENERAL", "RECYCLE"],
                   "bagCount": 2
                 }
                 """;
@@ -81,8 +86,8 @@ class WasteRequestIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(requestId))
                 .andExpect(jsonPath("$[0].orderNo").value(expectedOrderNo))
-                .andExpect(jsonPath("$[0].disposalItems[0]").value("일반쓰레기"))
-                .andExpect(jsonPath("$[0].disposalItems[1]").value("재활용"))
+                .andExpect(jsonPath("$[0].disposalItems[0]").value("GENERAL"))
+                .andExpect(jsonPath("$[0].disposalItems[1]").value("RECYCLE"))
                 .andExpect(jsonPath("$[0].bagCount").value(2));
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
@@ -90,8 +95,8 @@ class WasteRequestIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(requestId))
                 .andExpect(jsonPath("$.orderNo").value(expectedOrderNo))
-                .andExpect(jsonPath("$.disposalItems[0]").value("일반쓰레기"))
-                .andExpect(jsonPath("$.disposalItems[1]").value("재활용"))
+                .andExpect(jsonPath("$.disposalItems[0]").value("GENERAL"))
+                .andExpect(jsonPath("$.disposalItems[1]").value("RECYCLE"))
                 .andExpect(jsonPath("$.bagCount").value(2));
 
         mockMvc.perform(post("/waste-requests/{requestId}/cancel", requestId)
@@ -210,12 +215,13 @@ class WasteRequestIntegrationTest {
     @Test
     void userCanCreateWasteRequestWhenAddressLengthIs255() throws Exception {
         String accessToken = createUserAndLogin("waste-address-255@example.com");
-        String address = "서초구 " + "가".repeat(251);
+        String prefix = "Seoul Seocho-gu Bangbae-dong ";
+        String address = prefix + "a".repeat(255 - prefix.length());
         String createBody = """
                 {
                   "address": "%s",
                   "contactPhone": "010-2222-3333",
-                  "note": "대표 주소지 자동 적용"
+                  "note": "max length"
                 }
                 """.formatted(address);
 
@@ -230,13 +236,15 @@ class WasteRequestIntegrationTest {
     @Test
     void userCannotCreateWasteRequestWhenAddressLengthExceeds255() throws Exception {
         String accessToken = createUserAndLogin("waste-address-256@example.com");
+        String prefix = "Seoul Seocho-gu Bangbae-dong ";
+        String longAddress = prefix + "a".repeat(256 - prefix.length());
         String createBody = """
                 {
                   "address": "%s",
                   "contactPhone": "010-2222-4444",
-                  "note": "대표 주소지 길이 초과"
+                  "note": "too long"
                 }
-                """.formatted("가".repeat(256));
+                """.formatted(longAddress);
 
         mockMvc.perform(post("/waste-requests")
                         .header("Authorization", "Bearer " + accessToken)
@@ -247,10 +255,48 @@ class WasteRequestIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].field").value("address"));
     }
 
+    @Test
+    void userCannotCreateWasteRequestWhenAddressNotInServiceAreaWhitelist() throws Exception {
+        String accessToken = createUserAndLogin("waste-service-area-deny@example.com");
+        String createBody = """
+                {
+                  "address": "Seoul Jongno-gu Gahoe-dong 10",
+                  "contactPhone": "010-2222-5555",
+                  "note": null
+                }
+                """;
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SERVICE_AREA_UNAVAILABLE"));
+    }
+
+    @Test
+    void userCannotCreateWasteRequestWhenDongCannotBeResolved() throws Exception {
+        String accessToken = createUserAndLogin("waste-service-area-parse-fail@example.com");
+        String createBody = """
+                {
+                  "address": "Seoul Mapo-gu Worldcup-ro 12",
+                  "contactPhone": "010-2222-6666",
+                  "note": null
+                }
+                """;
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SERVICE_AREA_UNAVAILABLE"));
+    }
+
     private Long createWasteRequest(String accessToken) throws Exception {
         String body = """
                 {
-                  "address": "서울시 강동구 올림픽로 123",
+                  "address": "Seoul Gangdong-gu Cheonho-dong Olympic-ro 123",
                   "contactPhone": "010-7777-8888",
                   "note": null
                 }
@@ -286,7 +332,7 @@ class WasteRequestIntegrationTest {
         UserEntity user = userRepository.save(new UserEntity(
                 email,
                 passwordEncoder.encode(password),
-                "수거요청테스터",
+                "Waste Request Tester",
                 "ACTIVE"
         ));
         authIdentityRepository.save(new AuthIdentityEntity(user, "LOCAL", email));
@@ -303,6 +349,18 @@ class WasteRequestIntegrationTest {
 
     private void upsertRole(String code, String description) {
         jdbcTemplate.update("MERGE INTO roles (code, description) KEY(code) VALUES (?, ?)", code, description);
+    }
+
+    private void registerServiceArea(String city, String district, String dong) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO service_areas (city, district, dong, is_active)
+                VALUES (?, ?, ?, true)
+                """,
+                city,
+                district,
+                dong
+        );
     }
 
     private String expectedOrderNo(Long requestId) {

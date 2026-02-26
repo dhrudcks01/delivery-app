@@ -14,6 +14,20 @@ public interface ServiceAreaRepository extends JpaRepository<ServiceAreaEntity, 
     Optional<ServiceAreaEntity> findByCityAndDistrictAndDong(String city, String district, String dong);
 
     @Query("""
+            SELECT (COUNT(s) > 0)
+            FROM ServiceAreaEntity s
+            WHERE s.active = true
+              AND LOWER(s.city) = LOWER(:city)
+              AND LOWER(s.district) = LOWER(:district)
+              AND LOWER(s.dong) = LOWER(:dong)
+            """)
+    boolean existsActiveByRegion(
+            @Param("city") String city,
+            @Param("district") String district,
+            @Param("dong") String dong
+    );
+
+    @Query("""
             SELECT s
             FROM ServiceAreaEntity s
             WHERE (:active IS NULL OR s.active = :active)
@@ -37,4 +51,3 @@ public interface ServiceAreaRepository extends JpaRepository<ServiceAreaEntity, 
             """)
     Page<ServiceAreaEntity> searchForUser(@Param("keyword") String keyword, Pageable pageable);
 }
-

@@ -4,6 +4,7 @@ import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.servicearea.service.ServiceAreaService;
 import com.delivery.waste.dto.AssignWasteRequest;
 import com.delivery.waste.dto.CreateWasteRequestRequest;
 import com.delivery.waste.dto.WasteRequestDetailResponse;
@@ -40,6 +41,7 @@ public class WasteRequestService {
     private final WastePhotoRepository wastePhotoRepository;
     private final WasteStatusLogRepository wasteStatusLogRepository;
     private final UserRepository userRepository;
+    private final ServiceAreaService serviceAreaService;
     private final WasteStatusTransitionService wasteStatusTransitionService;
 
     public WasteRequestService(
@@ -48,6 +50,7 @@ public class WasteRequestService {
             WastePhotoRepository wastePhotoRepository,
             WasteStatusLogRepository wasteStatusLogRepository,
             UserRepository userRepository,
+            ServiceAreaService serviceAreaService,
             WasteStatusTransitionService wasteStatusTransitionService
     ) {
         this.wasteRequestRepository = wasteRequestRepository;
@@ -55,12 +58,14 @@ public class WasteRequestService {
         this.wastePhotoRepository = wastePhotoRepository;
         this.wasteStatusLogRepository = wasteStatusLogRepository;
         this.userRepository = userRepository;
+        this.serviceAreaService = serviceAreaService;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
     }
 
     @Transactional
     public WasteRequestResponse create(String email, CreateWasteRequestRequest request) {
         UserEntity user = findUserByEmail(email);
+        serviceAreaService.validateAvailableAddress(request.address());
         WasteRequestEntity saved = wasteRequestRepository.save(new WasteRequestEntity(
                 user,
                 request.address(),

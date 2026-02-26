@@ -30,6 +30,7 @@ import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
+import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
 import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestAccessDeniedException;
@@ -362,6 +363,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ServiceAreaUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleServiceAreaUnavailable(
+            ServiceAreaUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "SERVICE_AREA_UNAVAILABLE",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(WasteRequestAccessDeniedException.class)
