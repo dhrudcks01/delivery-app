@@ -23,7 +23,7 @@ class FlywayMigrationTest {
     @Test
     void flywayAppliesInitialMigrationAndCreatesTable() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("14");
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM bootstrap_metadata WHERE 1 = 0"))
                 .doesNotThrowAnyException();
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM auth_identities WHERE 1 = 0"))
@@ -43,6 +43,18 @@ class FlywayMigrationTest {
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM payments WHERE 1 = 0"))
                 .doesNotThrowAnyException();
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT order_no, disposal_items, bag_count FROM waste_requests WHERE 1 = 0"))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> jdbcTemplate.queryForList("""
+                SELECT phone_e164, phone_verified_at, phone_verification_provider, identity_verification_id, ci, di
+                FROM users
+                WHERE 1 = 0
+                """))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> jdbcTemplate.queryForList("""
+                SELECT user_id, identity_verification_id, provider, status, failure_code, failure_message, requested_at, verified_at
+                FROM user_phone_verifications
+                WHERE 1 = 0
+                """))
                 .doesNotThrowAnyException();
     }
 }

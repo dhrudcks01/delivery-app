@@ -31,6 +31,24 @@ public class UserEntity {
     @Column(nullable = false, length = 30)
     private String status;
 
+    @Column(name = "phone_e164", length = 20)
+    private String phoneE164;
+
+    @Column(name = "phone_verified_at")
+    private Instant phoneVerifiedAt;
+
+    @Column(name = "phone_verification_provider", length = 30)
+    private String phoneVerificationProvider;
+
+    @Column(name = "identity_verification_id", length = 120)
+    private String identityVerificationId;
+
+    @Column(name = "ci")
+    private byte[] ci;
+
+    @Column(name = "di")
+    private byte[] di;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -77,5 +95,29 @@ public class UserEntity {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getPhoneE164() {
+        return phoneE164;
+    }
+
+    public Instant getPhoneVerifiedAt() {
+        return phoneVerifiedAt;
+    }
+
+    public String getPhoneVerificationProvider() {
+        return phoneVerificationProvider;
+    }
+
+    public String getIdentityVerificationId() {
+        return identityVerificationId;
+    }
+
+    public byte[] getCi() {
+        return ci;
+    }
+
+    public byte[] getDi() {
+        return di;
     }
 }
