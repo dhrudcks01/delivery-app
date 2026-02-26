@@ -106,6 +106,7 @@ public class DriverWasteRequestService {
     private WasteRequestResponse toWasteRequestResponse(WasteRequestEntity request) {
         return new WasteRequestResponse(
                 request.getId(),
+                WasteOrderNoPolicy.resolve(request.getOrderNo(), request.getId()),
                 request.getUser().getId(),
                 request.getAddress(),
                 request.getContactPhone(),

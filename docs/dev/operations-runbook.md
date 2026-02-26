@@ -67,6 +67,14 @@ ORDER BY id DESC
 LIMIT 20;
 ```
 
+### 1.4 주문번호(orderNo) 규칙
+
+- 용어 통일: `주문번호 = orderNo`
+- 생성 규칙:
+  - 기본: `WR-{id 6자리 0패딩}` (예: `WR-000123`)
+  - id가 6자리를 초과하면: `WR-{id}` (예: `WR-1000001`)
+- 저장 위치: `waste_requests.order_no` (UNIQUE)
+
 ---
 
 ## 2) 업로드 파일 운영

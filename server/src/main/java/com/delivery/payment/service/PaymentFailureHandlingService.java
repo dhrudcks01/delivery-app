@@ -16,6 +16,7 @@ import com.delivery.waste.dto.WasteRequestResponse;
 import com.delivery.waste.entity.WasteRequestEntity;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
 import com.delivery.waste.repository.WasteRequestRepository;
+import com.delivery.waste.service.WasteOrderNoPolicy;
 import com.delivery.waste.service.WasteStatusTransitionService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -142,6 +143,7 @@ public class PaymentFailureHandlingService {
     private WasteRequestResponse toResponse(WasteRequestEntity request) {
         return new WasteRequestResponse(
                 request.getId(),
+                WasteOrderNoPolicy.resolve(request.getOrderNo(), request.getId()),
                 request.getUser().getId(),
                 request.getAddress(),
                 request.getContactPhone(),

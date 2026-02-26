@@ -57,6 +57,7 @@ public class WasteRequestService {
                 REQUESTED,
                 KRW
         ));
+        saved.assignOrderNo(WasteOrderNoPolicy.generate(saved.getId()));
         return toResponse(saved);
     }
 
@@ -124,6 +125,7 @@ public class WasteRequestService {
     private WasteRequestResponse toResponse(WasteRequestEntity request) {
         return new WasteRequestResponse(
                 request.getId(),
+                WasteOrderNoPolicy.resolve(request.getOrderNo(), request.getId()),
                 request.getUser().getId(),
                 request.getAddress(),
                 request.getContactPhone(),

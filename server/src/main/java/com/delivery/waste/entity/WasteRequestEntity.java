@@ -35,6 +35,9 @@ public class WasteRequestEntity {
     @Column(name = "contact_phone", nullable = false, length = 30)
     private String contactPhone;
 
+    @Column(name = "order_no", length = 32)
+    private String orderNo;
+
     @Column(length = 1000)
     private String note;
 
@@ -86,6 +89,10 @@ public class WasteRequestEntity {
         this.status = Objects.requireNonNull(nextStatus);
     }
 
+    public void assignOrderNo(String orderNo) {
+        this.orderNo = Objects.requireNonNull(orderNo);
+    }
+
     public void markMeasured(BigDecimal measuredWeightKg, UserEntity driver, Instant measuredAt) {
         this.measuredWeightKg = Objects.requireNonNull(measuredWeightKg);
         this.measuredByDriver = Objects.requireNonNull(driver);
@@ -126,6 +133,10 @@ public class WasteRequestEntity {
 
     public String getNote() {
         return note;
+    }
+
+    public String getOrderNo() {
+        return orderNo;
     }
 
     public String getStatus() {

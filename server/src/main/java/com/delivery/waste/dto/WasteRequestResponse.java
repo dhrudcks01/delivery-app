@@ -5,6 +5,7 @@ import java.time.Instant;
 
 public record WasteRequestResponse(
         Long id,
+        String orderNo,
         Long userId,
         String address,
         String contactPhone,

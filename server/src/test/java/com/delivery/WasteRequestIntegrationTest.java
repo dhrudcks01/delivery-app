@@ -71,16 +71,19 @@ class WasteRequestIntegrationTest {
                 .getResponse()
                 .getContentAsString();
         Long requestId = objectMapper.readTree(createResponse).get("id").asLong();
+        String expectedOrderNo = expectedOrderNo(requestId);
 
         mockMvc.perform(get("/waste-requests")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(requestId));
+                .andExpect(jsonPath("$[0].id").value(requestId))
+                .andExpect(jsonPath("$[0].orderNo").value(expectedOrderNo));
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(requestId));
+                .andExpect(jsonPath("$.id").value(requestId))
+                .andExpect(jsonPath("$.orderNo").value(expectedOrderNo));
 
         mockMvc.perform(post("/waste-requests/{requestId}/cancel", requestId)
                         .header("Authorization", "Bearer " + accessToken))
@@ -111,6 +114,23 @@ class WasteRequestIntegrationTest {
                         .header("Authorization", "Bearer " + otherAccessToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("WASTE_REQUEST_NOT_FOUND"));
+    }
+
+    @Test
+    void orderNoIsGeneratedWithPolicyAndIsUniqueAcrossRequests() throws Exception {
+        String accessToken = createUserAndLogin("waste-order-no@example.com");
+        Long firstId = createWasteRequest(accessToken);
+        Long secondId = createWasteRequest(accessToken);
+
+        mockMvc.perform(get("/waste-requests/{requestId}", firstId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderNo").value(expectedOrderNo(firstId)));
+
+        mockMvc.perform(get("/waste-requests/{requestId}", secondId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderNo").value(expectedOrderNo(secondId)));
     }
 
     @Test
@@ -202,6 +222,13 @@ class WasteRequestIntegrationTest {
 
     private void upsertRole(String code, String description) {
         jdbcTemplate.update("MERGE INTO roles (code, description) KEY(code) VALUES (?, ?)", code, description);
+    }
+
+    private String expectedOrderNo(Long requestId) {
+        if (requestId < 1_000_000L) {
+            return "WR-%06d".formatted(requestId);
+        }
+        return "WR-" + requestId;
     }
 
     private record LoginPayload(String email, String password) {
