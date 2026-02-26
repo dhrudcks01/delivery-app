@@ -29,6 +29,7 @@ import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
+import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestAccessDeniedException;
@@ -343,6 +344,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(),
                 "WASTE_REQUEST_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ServiceAreaNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleServiceAreaNotFound(
+            ServiceAreaNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "SERVICE_AREA_NOT_FOUND",
                 exception.getMessage(),
                 request.getRequestURI()
         );
