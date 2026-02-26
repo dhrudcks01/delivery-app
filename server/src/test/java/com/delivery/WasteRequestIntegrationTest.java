@@ -16,6 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,7 +48,7 @@ class WasteRequestIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void setUpRoles() {
+    void setUp() {
         upsertRole("USER", "General User");
         upsertRole("DRIVER", "Driver");
 
@@ -57,11 +60,11 @@ class WasteRequestIntegrationTest {
 
     @Test
     void userCanCreateListDetailAndCancelOwnWasteRequest() throws Exception {
-        String accessToken = createUserAndLogin("waste-user@example.com");
+        TestUser user = createUserAndLogin("waste-user@example.com", "USER", true);
+
         String createBody = """
                 {
                   "address": "Seoul Mapo-gu Seogyo-dong Worldcup-ro 1",
-                  "contactPhone": "010-1234-0000",
                   "note": "Leave at the security office",
                   "disposalItems": ["GENERAL", "RECYCLE"],
                   "bagCount": 2
@@ -69,12 +72,13 @@ class WasteRequestIntegrationTest {
                 """;
 
         String createResponse = mockMvc.perform(post("/waste-requests")
-                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Authorization", "Bearer " + user.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("REQUESTED"))
                 .andExpect(jsonPath("$.currency").value("KRW"))
+                .andExpect(jsonPath("$.contactPhone").value(user.phoneE164()))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -82,59 +86,98 @@ class WasteRequestIntegrationTest {
         String expectedOrderNo = expectedOrderNo(requestId);
 
         mockMvc.perform(get("/waste-requests")
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(requestId))
                 .andExpect(jsonPath("$[0].orderNo").value(expectedOrderNo))
+                .andExpect(jsonPath("$[0].contactPhone").value(user.phoneE164()))
                 .andExpect(jsonPath("$[0].disposalItems[0]").value("GENERAL"))
                 .andExpect(jsonPath("$[0].disposalItems[1]").value("RECYCLE"))
                 .andExpect(jsonPath("$[0].bagCount").value(2));
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(requestId))
                 .andExpect(jsonPath("$.orderNo").value(expectedOrderNo))
+                .andExpect(jsonPath("$.contactPhone").value(user.phoneE164()))
                 .andExpect(jsonPath("$.disposalItems[0]").value("GENERAL"))
                 .andExpect(jsonPath("$.disposalItems[1]").value("RECYCLE"))
                 .andExpect(jsonPath("$.bagCount").value(2));
 
         mockMvc.perform(post("/waste-requests/{requestId}/cancel", requestId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELED"));
     }
 
     @Test
+    void userProvidedContactPhoneIsIgnoredAndVerifiedPhoneIsSaved() throws Exception {
+        TestUser user = createUserAndLogin("waste-contact-source@example.com", "USER", true);
+        String createBody = """
+                {
+                  "address": "Seoul Mapo-gu Seogyo-dong Worldcup-ro 1",
+                  "contactPhone": "010-9999-9999",
+                  "note": "ignore input contact"
+                }
+                """;
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.contactPhone").value(user.phoneE164()));
+    }
+
+    @Test
+    void userCannotCreateWasteRequestWhenPhoneNotVerified() throws Exception {
+        TestUser user = createUserAndLogin("waste-phone-unverified@example.com", "USER", false);
+        String createBody = """
+                {
+                  "address": "Seoul Mapo-gu Seogyo-dong Worldcup-ro 1",
+                  "note": null
+                }
+                """;
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PHONE_VERIFICATION_REQUIRED"));
+    }
+
+    @Test
     void userCannotCancelWhenStatusIsNotRequested() throws Exception {
-        String accessToken = createUserAndLogin("waste-cancel-conflict@example.com");
-        Long requestId = createWasteRequest(accessToken);
+        TestUser user = createUserAndLogin("waste-cancel-conflict@example.com", "USER", true);
+        Long requestId = createWasteRequest(user.accessToken());
 
         jdbcTemplate.update("UPDATE waste_requests SET status = 'ASSIGNED' WHERE id = ?", requestId);
 
         mockMvc.perform(post("/waste-requests/{requestId}/cancel", requestId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WASTE_STATUS_TRANSITION_CONFLICT"));
     }
 
     @Test
     void userCannotAccessOtherUsersWasteRequest() throws Exception {
-        String ownerAccessToken = createUserAndLogin("waste-owner@example.com");
-        String otherAccessToken = createUserAndLogin("waste-other@example.com");
-        Long requestId = createWasteRequest(ownerAccessToken);
+        TestUser owner = createUserAndLogin("waste-owner@example.com", "USER", true);
+        TestUser other = createUserAndLogin("waste-other@example.com", "USER", true);
+        Long requestId = createWasteRequest(owner.accessToken());
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
-                        .header("Authorization", "Bearer " + otherAccessToken))
+                        .header("Authorization", "Bearer " + other.accessToken()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("WASTE_REQUEST_ACCESS_DENIED"));
     }
 
     @Test
     void myDetailIncludesPhotosWeightAmountAndStatusTimeline() throws Exception {
-        String accessToken = createUserAndLogin("waste-detail-owner@example.com");
-        UserEntity driver = createUser("waste-detail-driver@example.com", "DRIVER");
-        Long requestId = createWasteRequest(accessToken);
+        TestUser owner = createUserAndLogin("waste-detail-owner@example.com", "USER", true);
+        UserEntity driver = createUser("waste-detail-driver@example.com", "DRIVER", true).user();
+        Long requestId = createWasteRequest(owner.accessToken());
 
         jdbcTemplate.update(
                 "UPDATE waste_requests SET status = 'MEASURED', measured_weight_kg = ?, measured_at = CURRENT_TIMESTAMP, measured_by_driver_id = ?, final_amount = ? WHERE id = ?",
@@ -171,7 +214,7 @@ class WasteRequestIntegrationTest {
         );
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + owner.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("MEASURED"))
                 .andExpect(jsonPath("$.photos.length()").value(2))
@@ -185,11 +228,11 @@ class WasteRequestIntegrationTest {
 
     @Test
     void disposalItemsAndBagCountAreOptionalForBackwardCompatibility() throws Exception {
-        String accessToken = createUserAndLogin("waste-backward-compatible@example.com");
-        Long requestId = createWasteRequest(accessToken);
+        TestUser user = createUserAndLogin("waste-backward-compatible@example.com", "USER", true);
+        Long requestId = createWasteRequest(user.accessToken());
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.disposalItems.length()").value(0))
                 .andExpect(jsonPath("$.bagCount").value(0));
@@ -197,36 +240,35 @@ class WasteRequestIntegrationTest {
 
     @Test
     void orderNoIsGeneratedWithPolicyAndIsUniqueAcrossRequests() throws Exception {
-        String accessToken = createUserAndLogin("waste-order-no@example.com");
-        Long firstId = createWasteRequest(accessToken);
-        Long secondId = createWasteRequest(accessToken);
+        TestUser user = createUserAndLogin("waste-order-no@example.com", "USER", true);
+        Long firstId = createWasteRequest(user.accessToken());
+        Long secondId = createWasteRequest(user.accessToken());
 
         mockMvc.perform(get("/waste-requests/{requestId}", firstId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderNo").value(expectedOrderNo(firstId)));
 
         mockMvc.perform(get("/waste-requests/{requestId}", secondId)
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + user.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderNo").value(expectedOrderNo(secondId)));
     }
 
     @Test
     void userCanCreateWasteRequestWhenAddressLengthIs255() throws Exception {
-        String accessToken = createUserAndLogin("waste-address-255@example.com");
+        TestUser user = createUserAndLogin("waste-address-255@example.com", "USER", true);
         String prefix = "Seoul Seocho-gu Bangbae-dong ";
         String address = prefix + "a".repeat(255 - prefix.length());
         String createBody = """
                 {
                   "address": "%s",
-                  "contactPhone": "010-2222-3333",
                   "note": "max length"
                 }
                 """.formatted(address);
 
         mockMvc.perform(post("/waste-requests")
-                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Authorization", "Bearer " + user.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isCreated())
@@ -235,19 +277,18 @@ class WasteRequestIntegrationTest {
 
     @Test
     void userCannotCreateWasteRequestWhenAddressLengthExceeds255() throws Exception {
-        String accessToken = createUserAndLogin("waste-address-256@example.com");
+        TestUser user = createUserAndLogin("waste-address-256@example.com", "USER", true);
         String prefix = "Seoul Seocho-gu Bangbae-dong ";
         String longAddress = prefix + "a".repeat(256 - prefix.length());
         String createBody = """
                 {
                   "address": "%s",
-                  "contactPhone": "010-2222-4444",
                   "note": "too long"
                 }
                 """.formatted(longAddress);
 
         mockMvc.perform(post("/waste-requests")
-                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Authorization", "Bearer " + user.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isBadRequest())
@@ -257,17 +298,16 @@ class WasteRequestIntegrationTest {
 
     @Test
     void userCannotCreateWasteRequestWhenAddressNotInServiceAreaWhitelist() throws Exception {
-        String accessToken = createUserAndLogin("waste-service-area-deny@example.com");
+        TestUser user = createUserAndLogin("waste-service-area-deny@example.com", "USER", true);
         String createBody = """
                 {
                   "address": "Seoul Jongno-gu Gahoe-dong 10",
-                  "contactPhone": "010-2222-5555",
                   "note": null
                 }
                 """;
 
         mockMvc.perform(post("/waste-requests")
-                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Authorization", "Bearer " + user.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isBadRequest())
@@ -276,17 +316,16 @@ class WasteRequestIntegrationTest {
 
     @Test
     void userCannotCreateWasteRequestWhenDongCannotBeResolved() throws Exception {
-        String accessToken = createUserAndLogin("waste-service-area-parse-fail@example.com");
+        TestUser user = createUserAndLogin("waste-service-area-parse-fail@example.com", "USER", true);
         String createBody = """
                 {
                   "address": "Seoul Mapo-gu Worldcup-ro 12",
-                  "contactPhone": "010-2222-6666",
                   "note": null
                 }
                 """;
 
         mockMvc.perform(post("/waste-requests")
-                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Authorization", "Bearer " + user.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isBadRequest())
@@ -297,10 +336,10 @@ class WasteRequestIntegrationTest {
         String body = """
                 {
                   "address": "Seoul Gangdong-gu Cheonho-dong Olympic-ro 123",
-                  "contactPhone": "010-7777-8888",
                   "note": null
                 }
                 """;
+
         String response = mockMvc.perform(post("/waste-requests")
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -312,10 +351,41 @@ class WasteRequestIntegrationTest {
         return objectMapper.readTree(response).get("id").asLong();
     }
 
-    private String createUserAndLogin(String email) throws Exception {
-        createUser(email, "USER");
-        String password = "password123";
+    private TestUser createUserAndLogin(String email, String roleCode, boolean verifiedPhone) throws Exception {
+        UserSetup userSetup = createUser(email, roleCode, verifiedPhone);
+        String accessToken = login(email, "password123");
+        return new TestUser(userSetup.user().getId(), accessToken, userSetup.phoneE164());
+    }
 
+    private UserSetup createUser(String email, String roleCode, boolean verifiedPhone) {
+        String password = "password123";
+        UserEntity user = userRepository.save(new UserEntity(
+                email,
+                passwordEncoder.encode(password),
+                "Waste Request Tester",
+                "ACTIVE"
+        ));
+        authIdentityRepository.save(new AuthIdentityEntity(user, "LOCAL", email));
+        assignRole(user.getId(), roleCode);
+
+        String phoneE164 = null;
+        if (verifiedPhone) {
+            phoneE164 = generatePhoneE164(user.getId());
+            user.markPhoneVerified(
+                    phoneE164,
+                    Instant.now(),
+                    "PORTONE_DANAL",
+                    "iv-" + user.getId() + "-" + UUID.randomUUID(),
+                    null,
+                    null
+            );
+            userRepository.save(user);
+        }
+
+        return new UserSetup(user, phoneE164);
+    }
+
+    private String login(String email, String password) throws Exception {
         String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, password));
         String loginResponse = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -327,28 +397,21 @@ class WasteRequestIntegrationTest {
         return objectMapper.readTree(loginResponse).get("accessToken").asText();
     }
 
-    private UserEntity createUser(String email, String roleCode) {
-        String password = "password123";
-        UserEntity user = userRepository.save(new UserEntity(
-                email,
-                passwordEncoder.encode(password),
-                "Waste Request Tester",
-                "ACTIVE"
-        ));
-        authIdentityRepository.save(new AuthIdentityEntity(user, "LOCAL", email));
+    private void upsertRole(String code, String description) {
+        jdbcTemplate.update("MERGE INTO roles (code, description) KEY(code) VALUES (?, ?)", code, description);
+    }
+
+    private void assignRole(Long userId, String roleCode) {
         jdbcTemplate.update(
                 """
                 INSERT INTO user_roles (user_id, role_id)
-                SELECT ?, id FROM roles WHERE code = ?
+                SELECT ?, id
+                FROM roles
+                WHERE code = ?
                 """,
-                user.getId(),
+                userId,
                 roleCode
         );
-        return user;
-    }
-
-    private void upsertRole(String code, String description) {
-        jdbcTemplate.update("MERGE INTO roles (code, description) KEY(code) VALUES (?, ?)", code, description);
     }
 
     private void registerServiceArea(String city, String district, String dong) {
@@ -363,6 +426,11 @@ class WasteRequestIntegrationTest {
         );
     }
 
+    private String generatePhoneE164(Long userId) {
+        long suffix = userId % 100000000L;
+        return "+8210" + String.format("%08d", suffix);
+    }
+
     private String expectedOrderNo(Long requestId) {
         if (requestId < 1_000_000L) {
             return "WR-%06d".formatted(requestId);
@@ -372,4 +440,11 @@ class WasteRequestIntegrationTest {
 
     private record LoginPayload(String email, String password) {
     }
+
+    private record TestUser(Long userId, String accessToken, String phoneE164) {
+    }
+
+    private record UserSetup(UserEntity user, String phoneE164) {
+    }
 }
+

@@ -2,6 +2,7 @@ package com.delivery.waste.service;
 
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.InvalidCredentialsException;
+import com.delivery.auth.exception.PhoneVerificationException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.auth.repository.UserRepository;
 import com.delivery.servicearea.service.ServiceAreaService;
@@ -23,7 +24,9 @@ import com.delivery.waste.repository.WasteStatusLogRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -35,6 +38,7 @@ public class WasteRequestService {
     private static final String KRW = "KRW";
     private static final String ASSIGNED = "ASSIGNED";
     private static final String DRIVER = "DRIVER";
+    private static final String PHONE_VERIFICATION_REQUIRED = "PHONE_VERIFICATION_REQUIRED";
 
     private final WasteRequestRepository wasteRequestRepository;
     private final WasteAssignmentRepository wasteAssignmentRepository;
@@ -65,11 +69,12 @@ public class WasteRequestService {
     @Transactional
     public WasteRequestResponse create(String email, CreateWasteRequestRequest request) {
         UserEntity user = findUserByEmail(email);
+        String verifiedPhone = resolveVerifiedPhone(user);
         serviceAreaService.validateAvailableAddress(request.address());
         WasteRequestEntity saved = wasteRequestRepository.save(new WasteRequestEntity(
                 user,
                 request.address(),
-                request.contactPhone(),
+                verifiedPhone,
                 request.note(),
                 REQUESTED,
                 KRW,
@@ -142,6 +147,17 @@ public class WasteRequestService {
     private UserEntity findUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(InvalidCredentialsException::new);
+    }
+
+    private String resolveVerifiedPhone(UserEntity user) {
+        if (user.getPhoneVerifiedAt() == null || !StringUtils.hasText(user.getPhoneE164())) {
+            throw new PhoneVerificationException(
+                    HttpStatus.FORBIDDEN,
+                    PHONE_VERIFICATION_REQUIRED,
+                    "휴대폰 본인인증이 필요합니다."
+            );
+        }
+        return user.getPhoneE164().trim();
     }
 
     private WasteRequestResponse toResponse(WasteRequestEntity request) {
