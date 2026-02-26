@@ -56,7 +56,9 @@ class WasteRequestIntegrationTest {
                 {
                   "address": "서울시 중구 세종대로 1",
                   "contactPhone": "010-1234-0000",
-                  "note": "경비실에 맡겨주세요."
+                  "note": "경비실에 맡겨주세요.",
+                  "disposalItems": ["일반쓰레기", "재활용"],
+                  "bagCount": 2
                 }
                 """;
 
@@ -77,13 +79,19 @@ class WasteRequestIntegrationTest {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(requestId))
-                .andExpect(jsonPath("$[0].orderNo").value(expectedOrderNo));
+                .andExpect(jsonPath("$[0].orderNo").value(expectedOrderNo))
+                .andExpect(jsonPath("$[0].disposalItems[0]").value("일반쓰레기"))
+                .andExpect(jsonPath("$[0].disposalItems[1]").value("재활용"))
+                .andExpect(jsonPath("$[0].bagCount").value(2));
 
         mockMvc.perform(get("/waste-requests/{requestId}", requestId)
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(requestId))
-                .andExpect(jsonPath("$.orderNo").value(expectedOrderNo));
+                .andExpect(jsonPath("$.orderNo").value(expectedOrderNo))
+                .andExpect(jsonPath("$.disposalItems[0]").value("일반쓰레기"))
+                .andExpect(jsonPath("$.disposalItems[1]").value("재활용"))
+                .andExpect(jsonPath("$.bagCount").value(2));
 
         mockMvc.perform(post("/waste-requests/{requestId}/cancel", requestId)
                         .header("Authorization", "Bearer " + accessToken))
@@ -114,6 +122,18 @@ class WasteRequestIntegrationTest {
                         .header("Authorization", "Bearer " + otherAccessToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("WASTE_REQUEST_NOT_FOUND"));
+    }
+
+    @Test
+    void disposalItemsAndBagCountAreOptionalForBackwardCompatibility() throws Exception {
+        String accessToken = createUserAndLogin("waste-backward-compatible@example.com");
+        Long requestId = createWasteRequest(accessToken);
+
+        mockMvc.perform(get("/waste-requests/{requestId}", requestId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.disposalItems.length()").value(0))
+                .andExpect(jsonPath("$.bagCount").value(0));
     }
 
     @Test

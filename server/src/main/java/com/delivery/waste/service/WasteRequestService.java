@@ -55,7 +55,9 @@ public class WasteRequestService {
                 request.contactPhone(),
                 request.note(),
                 REQUESTED,
-                KRW
+                KRW,
+                request.normalizedDisposalItems(),
+                request.normalizedBagCount()
         ));
         saved.assignOrderNo(WasteOrderNoPolicy.generate(saved.getId()));
         return toResponse(saved);
@@ -130,6 +132,8 @@ public class WasteRequestService {
                 request.getAddress(),
                 request.getContactPhone(),
                 request.getNote(),
+                request.getDisposalItems(),
+                request.getBagCount(),
                 request.getStatus(),
                 request.getMeasuredWeightKg(),
                 request.getMeasuredAt(),

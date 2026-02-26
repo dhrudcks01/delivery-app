@@ -148,6 +148,8 @@ public class PaymentFailureHandlingService {
                 request.getAddress(),
                 request.getContactPhone(),
                 request.getNote(),
+                request.getDisposalItems(),
+                request.getBagCount(),
                 request.getStatus(),
                 request.getMeasuredWeightKg(),
                 request.getMeasuredAt(),

@@ -2,6 +2,7 @@ package com.delivery.waste.entity;
 
 import com.delivery.auth.entity.UserEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -15,6 +16,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -40,6 +42,13 @@ public class WasteRequestEntity {
 
     @Column(length = 1000)
     private String note;
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "disposal_items", nullable = false, columnDefinition = "TEXT")
+    private List<String> disposalItems;
+
+    @Column(name = "bag_count", nullable = false)
+    private int bagCount;
 
     @Column(nullable = false, length = 30)
     private String status;
@@ -77,10 +86,25 @@ public class WasteRequestEntity {
             String status,
             String currency
     ) {
+        this(user, address, contactPhone, note, status, currency, List.of(), 0);
+    }
+
+    public WasteRequestEntity(
+            UserEntity user,
+            String address,
+            String contactPhone,
+            String note,
+            String status,
+            String currency,
+            List<String> disposalItems,
+            int bagCount
+    ) {
         this.user = user;
         this.address = address;
         this.contactPhone = contactPhone;
         this.note = note;
+        this.disposalItems = normalizeDisposalItems(disposalItems);
+        this.bagCount = normalizeBagCount(bagCount);
         this.status = status;
         this.currency = currency;
     }
@@ -108,6 +132,9 @@ public class WasteRequestEntity {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.disposalItems == null) {
+            this.disposalItems = List.of();
+        }
     }
 
     @PreUpdate
@@ -143,6 +170,14 @@ public class WasteRequestEntity {
         return status;
     }
 
+    public List<String> getDisposalItems() {
+        return disposalItems;
+    }
+
+    public int getBagCount() {
+        return bagCount;
+    }
+
     public BigDecimal getMeasuredWeightKg() {
         return measuredWeightKg;
     }
@@ -169,5 +204,23 @@ public class WasteRequestEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    private List<String> normalizeDisposalItems(List<String> items) {
+        if (items == null) {
+            return List.of();
+        }
+        return items.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toList();
+    }
+
+    private int normalizeBagCount(int bagCount) {
+        if (bagCount < 0) {
+            throw new IllegalArgumentException("bagCount는 0 이상이어야 합니다.");
+        }
+        return bagCount;
     }
 }

@@ -75,6 +75,19 @@ LIMIT 20;
   - id가 6자리를 초과하면: `WR-{id}` (예: `WR-1000001`)
 - 저장 위치: `waste_requests.order_no` (UNIQUE)
 
+### 1.5 수거 신청 데이터 확장(disposalItems, bagCount)
+
+- 저장 필드:
+  - `waste_requests.disposal_items` (JSON 문자열 배열)
+  - `waste_requests.bag_count` (0 이상 정수)
+- API 요청:
+  - `POST /waste-requests`에 `disposalItems[]`, `bagCount`를 전달할 수 있습니다.
+  - `bagCount`는 0 이상만 허용합니다.
+  - `disposalItems`는 최소 1개 이상 입력을 권장합니다.
+- 호환성 정책:
+  - 기존 클라이언트 호환을 위해 두 필드는 옵셔널입니다.
+  - 미전송 시 서버 기본값은 `disposalItems=[]`, `bagCount=0`입니다.
+
 ---
 
 ## 2) 업로드 파일 운영
