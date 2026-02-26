@@ -6,10 +6,13 @@ export type CreateWasteRequestPayload = {
 
 export type WasteRequest = {
   id: number;
+  orderNo: string;
   userId: number;
   address: string;
   contactPhone: string;
   note: string | null;
+  disposalItems: string[];
+  bagCount: number;
   status: string;
   measuredWeightKg: number | null;
   measuredAt: string | null;
@@ -18,6 +21,25 @@ export type WasteRequest = {
   currency: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type WasteRequestPhoto = {
+  url: string;
+  type: string;
+  createdAt: string | null;
+};
+
+export type WasteRequestStatusTimelineItem = {
+  fromStatus: string | null;
+  toStatus: string;
+  at: string;
+};
+
+export type WasteRequestDetail = WasteRequest & {
+  photos: WasteRequestPhoto[];
+  statusTimeline: WasteRequestStatusTimelineItem[];
+  driverId: number | null;
+  assignedAt: string | null;
 };
 
 export type ApiErrorResponse = {

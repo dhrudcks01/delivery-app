@@ -1,10 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { cancelMyWasteRequest, createWasteRequest, getMyWasteRequestDetail, getMyWasteRequests } from '../api/wasteApi';
+import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { loadUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { UserAddress } from '../types/userAddress';
@@ -35,6 +38,7 @@ function formatDate(dateTime: string | null): string {
 
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
   const { me } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [primaryAddress, setPrimaryAddress] = useState<UserAddress | null>(null);
   const [isLoadingPrimaryAddress, setIsLoadingPrimaryAddress] = useState(false);
@@ -44,30 +48,16 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
   const [note, setNote] = useState('');
 
   const [requests, setRequests] = useState<WasteRequest[]>([]);
-  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<WasteRequest | null>(null);
 
   const [isLoadingList, setIsLoadingList] = useState(false);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const showRequestForm = section === 'all' || section === 'request-form';
   const showHistory = section === 'all' || section === 'history';
 
-  const selectedStatus = selectedRequest?.status;
-  const canCancelSelected = selectedStatus === 'REQUESTED';
-
-  const selectedTitle = useMemo(() => {
-    if (!selectedRequest) {
-      return '상세 요청을 선택해 주세요.';
-    }
-    return `요청 #${selectedRequest.id} (${selectedRequest.status})`;
-  }, [selectedRequest]);
   const primaryAddressBuildResult = useMemo(() => {
     if (!primaryAddress) {
       return null;
@@ -108,30 +98,10 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     try {
       const data = await getMyWasteRequests();
       setRequests(data);
-      if (data.length === 0) {
-        setSelectedRequestId(null);
-        setSelectedRequest(null);
-      }
     } catch (error) {
       setListError(toErrorMessage(error));
     } finally {
       setIsLoadingList(false);
-    }
-  };
-
-  const loadRequestDetail = async (requestId: number) => {
-    setIsLoadingDetail(true);
-    setDetailError(null);
-    setSelectedRequestId(requestId);
-
-    try {
-      const detail = await getMyWasteRequestDetail(requestId);
-      setSelectedRequest(detail);
-    } catch (error) {
-      setDetailError(toErrorMessage(error));
-      setSelectedRequest(null);
-    } finally {
-      setIsLoadingDetail(false);
     }
   };
 
@@ -167,30 +137,10 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       setNote('');
 
       await refreshRequests();
-      await loadRequestDetail(created.id);
     } catch (error) {
       setSubmitError(toErrorMessage(error));
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleCancel = async () => {
-    if (!selectedRequestId || !canCancelSelected) {
-      return;
-    }
-
-    setIsCancelling(true);
-    setDetailError(null);
-
-    try {
-      const cancelled = await cancelMyWasteRequest(selectedRequestId);
-      setSelectedRequest(cancelled);
-      await refreshRequests();
-    } catch (error) {
-      setDetailError(toErrorMessage(error));
-    } finally {
-      setIsCancelling(false);
     }
   };
 
@@ -288,8 +238,8 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           {requests.map((item) => (
             <Pressable
               key={item.id}
-              style={[styles.listItem, selectedRequestId === item.id && styles.listItemActive]}
-              onPress={() => void loadRequestDetail(item.id)}
+              style={styles.listItem}
+              onPress={() => navigation.navigate('WasteRequestDetail', { requestId: item.id })}
             >
               <Text style={styles.listTitle}>
                 #{item.id} {item.status}
@@ -300,43 +250,6 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           ))}
 
           {!isLoadingList && requests.length === 0 && <Text style={styles.meta}>생성된 요청이 없습니다.</Text>}
-        </View>
-      )}
-
-      {showHistory && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>요청 상세</Text>
-          <Text style={styles.detailTitle}>{selectedTitle}</Text>
-
-          {isLoadingDetail && <Text style={styles.meta}>상세를 불러오는 중..</Text>}
-          {detailError && <Text style={styles.error}>{detailError}</Text>}
-
-          {selectedRequest && (
-            <View style={styles.detailBox}>
-              <Text style={styles.detailText}>주소: {selectedRequest.address}</Text>
-              <Text style={styles.detailText}>연락처: {selectedRequest.contactPhone}</Text>
-              <Text style={styles.detailText}>요청사항: {selectedRequest.note || '-'}</Text>
-              <Text style={styles.detailText}>상태: {selectedRequest.status}</Text>
-              <Text style={styles.detailText}>측정무게: {selectedRequest.measuredWeightKg ?? '-'}</Text>
-              <Text style={styles.detailText}>최종금액: {selectedRequest.finalAmount ?? '-'}</Text>
-              <Text style={styles.detailText}>생성일: {formatDate(selectedRequest.createdAt)}</Text>
-              <Text style={styles.detailText}>수정일: {formatDate(selectedRequest.updatedAt)}</Text>
-
-              <Pressable
-                style={[
-                  styles.button,
-                  (!canCancelSelected || isCancelling) && styles.buttonDisabled,
-                  !canCancelSelected && styles.buttonMuted,
-                ]}
-                onPress={handleCancel}
-                disabled={!canCancelSelected || isCancelling}
-              >
-                <Text style={styles.buttonText}>
-                  {isCancelling ? '취소 처리 중..' : canCancelSelected ? '요청 취소' : '취소 불가 상태'}
-                </Text>
-              </Pressable>
-            </View>
-          )}
         </View>
       )}
     </KeyboardAwareScrollScreen>
@@ -449,10 +362,6 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 2,
   },
-  listItemActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
   listTitle: {
     color: ui.colors.textStrong,
     fontWeight: '700',
@@ -460,16 +369,5 @@ const styles = StyleSheet.create({
   listSub: {
     color: ui.colors.text,
     fontSize: 12,
-  },
-  detailTitle: {
-    color: ui.colors.text,
-    fontSize: 13,
-  },
-  detailBox: {
-    gap: 4,
-  },
-  detailText: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
   },
 });

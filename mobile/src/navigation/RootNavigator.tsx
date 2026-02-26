@@ -16,6 +16,7 @@ import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
 import { UserAddressManagementScreen } from '../screens/UserAddressManagementScreen';
 import { UserHomeScreen } from '../screens/UserHomeScreen';
 import { UserPaymentManagementScreen } from '../screens/UserPaymentManagementScreen';
+import { UserWasteRequestDetailScreen } from '../screens/UserWasteRequestDetailScreen';
 import { ui } from '../theme/ui';
 
 type AppRole = 'USER' | 'DRIVER' | 'OPS_ADMIN' | 'SYS_ADMIN';
@@ -31,6 +32,7 @@ export type RootStackParamList = {
   SysAdminHome: undefined;
   UserAddressManagement: undefined;
   UserPaymentManagement: undefined;
+  WasteRequestDetail: { requestId: number };
   ProfileSettings: undefined;
 };
 
@@ -308,6 +310,13 @@ export function RootNavigator() {
           name="UserPaymentManagement"
           component={UserPaymentManagementScreen}
           options={{ title: '결제수단 관리' }}
+        />
+      )}
+      {isAuthenticated && (
+        <RootStack.Screen
+          name="WasteRequestDetail"
+          component={UserWasteRequestDetailScreen}
+          options={{ title: '수거요청 상세' }}
         />
       )}
       {isAuthenticated && (
