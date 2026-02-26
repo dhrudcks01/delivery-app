@@ -5,6 +5,7 @@ public record AuthTokenResponse(
         String accessToken,
         long accessTokenExpiresIn,
         String refreshToken,
-        long refreshTokenExpiresIn
+        long refreshTokenExpiresIn,
+        boolean phoneVerificationRequired
 ) {
 }

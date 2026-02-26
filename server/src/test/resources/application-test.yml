@@ -28,5 +28,6 @@ app:
     store-id: test-store-id
     channel-key: test-channel-key
     api-secret: test-api-secret
+    enforcement-enabled: false
     connect-timeout-millis: 1000
     read-timeout-millis: 1000

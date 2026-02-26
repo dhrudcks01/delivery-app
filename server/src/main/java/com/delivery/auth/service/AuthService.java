@@ -20,6 +20,7 @@ import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -122,7 +123,12 @@ public class AuthService {
                 jwtTokenProvider.generateAccessToken(user),
                 jwtTokenProvider.accessTokenExpirationSeconds(),
                 jwtTokenProvider.generateRefreshToken(user),
-                jwtTokenProvider.refreshTokenExpirationSeconds()
+                jwtTokenProvider.refreshTokenExpirationSeconds(),
+                isPhoneVerificationRequired(user)
         );
+    }
+
+    private boolean isPhoneVerificationRequired(UserEntity user) {
+        return user.getPhoneVerifiedAt() == null || !StringUtils.hasText(user.getPhoneE164());
     }
 }

@@ -12,6 +12,7 @@ public class PhoneVerificationProperties {
     private String storeId = "";
     private String channelKey = "";
     private String apiSecret = "";
+    private boolean enforcementEnabled = true;
     private int connectTimeoutMillis = 2000;
     private int readTimeoutMillis = 3000;
 
@@ -53,6 +54,14 @@ public class PhoneVerificationProperties {
 
     public void setApiSecret(String apiSecret) {
         this.apiSecret = apiSecret;
+    }
+
+    public boolean isEnforcementEnabled() {
+        return enforcementEnabled;
+    }
+
+    public void setEnforcementEnabled(boolean enforcementEnabled) {
+        this.enforcementEnabled = enforcementEnabled;
     }
 
     public int getConnectTimeoutMillis() {

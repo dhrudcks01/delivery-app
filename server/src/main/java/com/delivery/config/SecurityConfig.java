@@ -2,6 +2,7 @@ package com.delivery.config;
 
 import com.delivery.auth.config.JwtProperties;
 import com.delivery.config.logging.ApiRequestLoggingFilter;
+import com.delivery.config.security.PhoneVerificationGuardFilter;
 import com.delivery.config.security.RestAccessDeniedHandler;
 import com.delivery.config.security.RestAuthenticationEntryPoint;
 import com.delivery.config.security.JwtAuthenticationFilter;
@@ -23,17 +24,20 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final PhoneVerificationGuardFilter phoneVerificationGuardFilter;
     private final ApiRequestLoggingFilter apiRequestLoggingFilter;
 
     public SecurityConfig(
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            PhoneVerificationGuardFilter phoneVerificationGuardFilter,
             ApiRequestLoggingFilter apiRequestLoggingFilter
     ) {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.phoneVerificationGuardFilter = phoneVerificationGuardFilter;
         this.apiRequestLoggingFilter = apiRequestLoggingFilter;
     }
 
@@ -61,7 +65,8 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").hasRole("SYS_ADMIN")
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(apiRequestLoggingFilter, JwtAuthenticationFilter.class);
+            .addFilterAfter(phoneVerificationGuardFilter, JwtAuthenticationFilter.class)
+            .addFilterAfter(apiRequestLoggingFilter, PhoneVerificationGuardFilter.class);
         return http.build();
     }
 
