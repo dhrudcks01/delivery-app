@@ -30,6 +30,7 @@ export async function loadTokens(): Promise<AuthTokens | null> {
     accessTokenExpiresIn: 0,
     refreshToken,
     refreshTokenExpiresIn: 0,
+    phoneVerificationRequired: false,
   };
 }
 

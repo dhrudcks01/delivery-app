@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
+import { PhoneVerificationScreen } from '../screens/PhoneVerificationScreen';
 import { ProfileSettingsScreen } from '../screens/ProfileSettingsScreen';
 import { RoleCenterScreen } from '../screens/RoleCenterScreen';
 import { SignupScreen } from '../screens/SignupScreen';
@@ -25,6 +26,7 @@ type AppTabName = 'HomeTab' | 'RequestTab' | 'HistoryTab' | 'ProfileTab';
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
+  PhoneVerification: undefined;
   AppTabs: undefined;
   RoleCenter: { activeRole: AppRole };
   DriverHome: undefined;
@@ -264,7 +266,8 @@ function AppTabsScreen() {
 }
 
 export function RootNavigator() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, phoneVerificationRequired } = useAuth();
+  const isPhoneVerificationPending = isAuthenticated && phoneVerificationRequired;
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -272,18 +275,26 @@ export function RootNavigator() {
 
   return (
     <RootStack.Navigator
-      key={isAuthenticated ? 'auth' : 'guest'}
-      initialRouteName={!isAuthenticated ? 'Login' : 'AppTabs'}
+      key={!isAuthenticated ? 'guest' : isPhoneVerificationPending ? 'phone-verification' : 'auth'}
+      initialRouteName={!isAuthenticated ? 'Login' : isPhoneVerificationPending ? 'PhoneVerification' : 'AppTabs'}
       screenOptions={{ headerTitleAlign: 'center' }}
     >
       {!isAuthenticated && <RootStack.Screen name="Login" component={LoginScreen} options={{ title: '로그인' }} />}
       {!isAuthenticated && <RootStack.Screen name="Signup" component={SignupScreen} options={{ title: '회원가입' }} />}
 
-      {isAuthenticated && (
+      {isPhoneVerificationPending && (
+        <RootStack.Screen
+          name="PhoneVerification"
+          component={PhoneVerificationScreen}
+          options={{ title: '휴대폰 본인인증', headerShown: false }}
+        />
+      )}
+
+      {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen name="AppTabs" component={AppTabsScreen} options={{ headerShown: false }} />
       )}
 
-      {isAuthenticated && (
+      {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen
           name="RoleCenter"
           options={{ title: '권한 신청/승인', headerShown: true }}
@@ -295,31 +306,31 @@ export function RootNavigator() {
           )}
         />
       )}
-      {isAuthenticated && <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />}
-      {isAuthenticated && <RootStack.Screen name="OpsAdminHome" component={OpsAdminHomeScreen} options={{ title: 'OPS_ADMIN' }} />}
-      {isAuthenticated && <RootStack.Screen name="SysAdminHome" component={SysAdminHomeScreen} options={{ title: 'SYS_ADMIN' }} />}
-      {isAuthenticated && (
+      {isAuthenticated && !isPhoneVerificationPending && <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />}
+      {isAuthenticated && !isPhoneVerificationPending && <RootStack.Screen name="OpsAdminHome" component={OpsAdminHomeScreen} options={{ title: 'OPS_ADMIN' }} />}
+      {isAuthenticated && !isPhoneVerificationPending && <RootStack.Screen name="SysAdminHome" component={SysAdminHomeScreen} options={{ title: 'SYS_ADMIN' }} />}
+      {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen
           name="UserAddressManagement"
           component={UserAddressManagementScreen}
           options={{ title: '주소관리' }}
         />
       )}
-      {isAuthenticated && (
+      {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen
           name="UserPaymentManagement"
           component={UserPaymentManagementScreen}
           options={{ title: '결제수단 관리' }}
         />
       )}
-      {isAuthenticated && (
+      {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen
           name="WasteRequestDetail"
           component={UserWasteRequestDetailScreen}
           options={{ title: '수거요청 상세' }}
         />
       )}
-      {isAuthenticated && (
+      {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen
           name="ProfileSettings"
           component={ProfileSettingsScreen}

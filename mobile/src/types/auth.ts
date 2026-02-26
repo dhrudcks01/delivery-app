@@ -4,6 +4,7 @@ export type AuthTokens = {
   accessTokenExpiresIn: number;
   refreshToken: string;
   refreshTokenExpiresIn: number;
+  phoneVerificationRequired: boolean;
 };
 
 export type LoginRequest = {
@@ -26,4 +27,27 @@ export type MeResponse = {
   email: string;
   displayName: string;
   roles: string[];
+  phoneNumber: string | null;
+  phoneVerifiedAt: string | null;
+  phoneVerificationProvider: string | null;
+};
+
+export type PhoneVerificationStartResponse = {
+  provider: string;
+  storeId: string;
+  channelKey: string;
+  identityVerificationId: string;
+};
+
+export type PhoneVerificationCompleteRequest = {
+  identityVerificationId: string;
+};
+
+export type PhoneVerificationCompleteResponse = {
+  identityVerificationId: string;
+  status: string;
+  phoneNumber: string | null;
+  provider: string;
+  phoneVerifiedAt: string;
+  idempotent: boolean;
 };
