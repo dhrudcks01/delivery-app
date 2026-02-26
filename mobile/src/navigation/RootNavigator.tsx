@@ -63,6 +63,13 @@ function getHighestRole(roles: AppRole[]): AppRole {
   return ROLE_PRIORITY_ORDER.find((role) => roles.includes(role)) ?? 'USER';
 }
 
+function formatDateTime(dateTime: string | null): string {
+  if (!dateTime) {
+    return '-';
+  }
+  return new Date(dateTime).toLocaleString();
+}
+
 function renderOperationalScreen(role: AppRole) {
   if (role === 'DRIVER') {
     return <DriverHomeScreen />;
@@ -133,6 +140,9 @@ function TabProfileScreen({
   email,
   roles,
   primaryRole,
+  phoneNumber,
+  phoneVerifiedAt,
+  phoneVerificationProvider,
   hasUserRole,
   onOpenAddressManagement,
   onOpenPaymentManagement,
@@ -142,6 +152,9 @@ function TabProfileScreen({
   email: string | null;
   roles: AppRole[];
   primaryRole: AppRole;
+  phoneNumber: string | null;
+  phoneVerifiedAt: string | null;
+  phoneVerificationProvider: string | null;
   hasUserRole: boolean;
   onOpenAddressManagement: () => void;
   onOpenPaymentManagement: () => void;
@@ -154,6 +167,13 @@ function TabProfileScreen({
       <Text style={styles.tabMeta}>로그인: {email ?? '-'}</Text>
       <Text style={styles.tabMeta}>보유 권한: {roles.join(', ')}</Text>
       <Text style={styles.tabMeta}>적용 권한(최고 권한): {primaryRole}</Text>
+
+      <View style={styles.tabCard}>
+        <Text style={styles.tabCardTitle}>휴대폰 인증정보</Text>
+        <Text style={styles.tabCardText}>휴대폰 번호: {phoneNumber ?? '-'}</Text>
+        <Text style={styles.tabCardText}>인증 일시: {formatDateTime(phoneVerifiedAt)}</Text>
+        <Text style={styles.tabCardText}>인증 수단: {phoneVerificationProvider ?? '-'}</Text>
+      </View>
 
       {hasUserRole && (
         <Pressable style={styles.menuButton} onPress={onOpenAddressManagement}>
@@ -253,6 +273,9 @@ function AppTabsScreen() {
             email={me?.email ?? null}
             roles={roles}
             primaryRole={primaryRole}
+            phoneNumber={me?.phoneNumber ?? null}
+            phoneVerifiedAt={me?.phoneVerifiedAt ?? null}
+            phoneVerificationProvider={me?.phoneVerificationProvider ?? null}
             hasUserRole={hasUserRole}
             onOpenAddressManagement={() => navigation.navigate('UserAddressManagement')}
             onOpenPaymentManagement={() => navigation.navigate('UserPaymentManagement')}

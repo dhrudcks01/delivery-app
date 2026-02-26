@@ -1,6 +1,5 @@
 export type CreateWasteRequestPayload = {
   address: string;
-  contactPhone: string;
   note?: string;
 };
 

@@ -52,7 +52,6 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
   const [isLoadingPrimaryAddress, setIsLoadingPrimaryAddress] = useState(false);
   const [primaryAddressError, setPrimaryAddressError] = useState<string | null>(null);
 
-  const [contactPhone, setContactPhone] = useState('');
   const [note, setNote] = useState('');
 
   const [requests, setRequests] = useState<WasteRequest[]>([]);
@@ -67,6 +66,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   const showRequestForm = section === 'all' || section === 'request-form';
   const showHistory = section === 'all' || section === 'history';
+  const isPhoneVerified = Boolean(me?.phoneNumber && me?.phoneVerifiedAt);
 
   const primaryAddressBuildResult = useMemo(() => {
     if (!primaryAddress) {
@@ -140,8 +140,8 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       return;
     }
 
-    if (!contactPhone.trim()) {
-      setSubmitError('연락처를 입력해 주세요.');
+    if (!isPhoneVerified) {
+      setSubmitError('휴대폰 본인인증 완료 후 신청할 수 있습니다.');
       return;
     }
 
@@ -151,11 +151,9 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     try {
       const created = await createWasteRequest({
         address: primaryAddressBuildResult.address,
-        contactPhone: contactPhone.trim(),
         note: note.trim() ? note.trim() : undefined,
       });
 
-      setContactPhone('');
       setNote('');
       showSubmitSuccessMessage(
         created.orderNo
@@ -227,15 +225,12 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
             <Text style={styles.error}>{primaryAddressBuildResult.message}</Text>
           )}
 
-          <Text style={styles.label}>연락처</Text>
-          <TextInput
-            style={styles.input}
-            value={contactPhone}
-            onChangeText={setContactPhone}
-            placeholder="010-1234-5678"
-            placeholderTextColor="#94a3b8"
-            returnKeyType="next"
-          />
+          <Text style={styles.meta}>
+            연락처는 인증된 휴대폰 번호가 자동 적용됩니다: {me?.phoneNumber ?? '-'}
+          </Text>
+          {!isPhoneVerified && (
+            <Text style={styles.error}>휴대폰 본인인증 완료 후 신청할 수 있습니다.</Text>
+          )}
 
           <Text style={styles.label}>요청사항(선택)</Text>
           <TextInput
@@ -261,9 +256,9 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           )}
 
           <Pressable
-            style={[styles.button, (isSubmitting || !canUsePrimaryAddress) && styles.buttonDisabled]}
+            style={[styles.button, (isSubmitting || !canUsePrimaryAddress || !isPhoneVerified) && styles.buttonDisabled]}
             onPress={handleCreate}
-            disabled={isSubmitting || !canUsePrimaryAddress}
+            disabled={isSubmitting || !canUsePrimaryAddress || !isPhoneVerified}
           >
             <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
           </Pressable>
