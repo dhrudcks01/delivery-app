@@ -3,7 +3,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { getUserServiceAreas } from '../api/serviceAreaApi';
 import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
@@ -11,8 +12,8 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { loadUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { UserAddress } from '../types/userAddress';
-import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
+import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 
 type UserHomeSection = 'all' | 'history' | 'request-form';
 
@@ -21,7 +22,16 @@ type UserHomeScreenProps = {
   includeTopInset?: boolean;
 };
 
+type AddressRegion = {
+  city: string;
+  district: string;
+  dong: string;
+};
+
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
+const CITY_SUFFIXES = ['특별시', '광역시', '자치시', '자치도', '-si', '-do', '시', '도'];
+const DISTRICT_SUFFIXES = ['자치구', '-gu', '-gun', '구', '군'];
+const DONG_SUFFIXES = ['-dong', '-eup', '-myeon', '동', '읍', '면', '가'];
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -44,6 +54,58 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
+function tokenizeAddress(address: string): string[] {
+  return address
+    .trim()
+    .split(/\s+/)
+    .map((token) => token.replace(/[(),]/g, '').trim())
+    .filter((token) => token.length > 0);
+}
+
+function hasAnySuffix(token: string, suffixes: string[]): boolean {
+  const lower = token.toLowerCase();
+  return suffixes.some((suffix) => lower.endsWith(suffix.toLowerCase()));
+}
+
+function extractAddressRegion(address: string): AddressRegion | null {
+  if (!address.trim()) {
+    return null;
+  }
+
+  const tokens = tokenizeAddress(address);
+  let city: string | null = null;
+  let district: string | null = null;
+  let dong: string | null = null;
+
+  for (const token of tokens) {
+    if (!city && hasAnySuffix(token, CITY_SUFFIXES)) {
+      city = token;
+      continue;
+    }
+    if (!district && hasAnySuffix(token, DISTRICT_SUFFIXES)) {
+      district = token;
+      continue;
+    }
+    if (!dong && hasAnySuffix(token, DONG_SUFFIXES)) {
+      dong = token;
+    }
+  }
+
+  if (!city && district && dong && tokens.length >= 3) {
+    city = tokens[0];
+  }
+
+  if (!city || !district || !dong) {
+    return null;
+  }
+
+  return { city, district, dong };
+}
+
+function normalizeRegionToken(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
   const { me } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -53,16 +115,20 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
   const [primaryAddressError, setPrimaryAddressError] = useState<string | null>(null);
 
   const [note, setNote] = useState('');
-
   const [requests, setRequests] = useState<WasteRequest[]>([]);
 
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingServiceArea, setIsCheckingServiceArea] = useState(false);
 
   const [listError, setListError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccessMessage, setSubmitSuccessMessage] = useState<string | null>(null);
+  const [serviceAreaCheckError, setServiceAreaCheckError] = useState<string | null>(null);
+  const [isServiceAreaAvailable, setIsServiceAreaAvailable] = useState<boolean | null>(null);
+
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unavailableAlertAddressRef = useRef<string | null>(null);
 
   const showRequestForm = section === 'all' || section === 'request-form';
   const showHistory = section === 'all' || section === 'history';
@@ -74,7 +140,16 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     }
     return buildWasteRequestAddress(primaryAddress);
   }, [primaryAddress]);
+
   const canUsePrimaryAddress = primaryAddressBuildResult?.ok ?? false;
+  const primaryRequestAddress = primaryAddressBuildResult?.ok ? primaryAddressBuildResult.address : null;
+  const isServiceAreaBlocked = isServiceAreaAvailable === false;
+  const canSubmitRequest =
+    canUsePrimaryAddress
+    && isPhoneVerified
+    && isServiceAreaAvailable === true
+    && !isCheckingServiceArea
+    && !serviceAreaCheckError;
 
   const showSubmitSuccessMessage = useCallback((message: string) => {
     if (successTimerRef.current) {
@@ -127,6 +202,44 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     }
   };
 
+  const checkServiceAreaAvailability = useCallback(async (address: string) => {
+    const region = extractAddressRegion(address);
+    if (!region) {
+      setIsServiceAreaAvailable(false);
+      setServiceAreaCheckError('대표 주소지의 시/구/동 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    setIsCheckingServiceArea(true);
+    setServiceAreaCheckError(null);
+
+    try {
+      const response = await getUserServiceAreas({
+        query: `${region.city} ${region.district} ${region.dong}`,
+        page: 0,
+        size: 100,
+      });
+
+      const available = response.content.some(
+        (item) =>
+          normalizeRegionToken(item.city) === normalizeRegionToken(region.city)
+          && normalizeRegionToken(item.district) === normalizeRegionToken(region.district)
+          && normalizeRegionToken(item.dong) === normalizeRegionToken(region.dong),
+      );
+
+      setIsServiceAreaAvailable(available);
+      if (!available && unavailableAlertAddressRef.current !== address) {
+        Alert.alert('서비스 지역이 아니예요!');
+        unavailableAlertAddressRef.current = address;
+      }
+    } catch {
+      setIsServiceAreaAvailable(null);
+      setServiceAreaCheckError('서비스 가능 지역 확인에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setIsCheckingServiceArea(false);
+    }
+  }, []);
+
   const handleCreate = async () => {
     if (!primaryAddress) {
       setSubmitError('대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.');
@@ -135,13 +248,16 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     if (!primaryAddressBuildResult || !primaryAddressBuildResult.ok) {
       setSubmitError(
         primaryAddressBuildResult?.message
-        ?? '대표 주소지 정보가 올바르지 않습니다. 주소관리에서 주소를 다시 저장해 주세요.',
+          ?? '대표 주소지 정보가 올바르지 않습니다. 주소관리에서 주소를 다시 저장해 주세요.',
       );
       return;
     }
-
     if (!isPhoneVerified) {
       setSubmitError('휴대폰 본인인증 완료 후 신청할 수 있습니다.');
+      return;
+    }
+    if (isServiceAreaAvailable !== true) {
+      setSubmitError('서비스 지역이 아니예요!');
       return;
     }
 
@@ -189,6 +305,18 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     }, [loadPrimaryAddress]),
   );
 
+  useEffect(() => {
+    if (!showRequestForm) {
+      return;
+    }
+    if (!primaryRequestAddress) {
+      setIsServiceAreaAvailable(null);
+      setServiceAreaCheckError(null);
+      return;
+    }
+    void checkServiceAreaAvailability(primaryRequestAddress);
+  }, [showRequestForm, primaryRequestAddress, checkServiceAreaAvailability]);
+
   return (
     <KeyboardAwareScrollScreen
       contentContainerStyle={styles.container}
@@ -231,50 +359,83 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           {!isPhoneVerified && (
             <Text style={styles.error}>휴대폰 본인인증 완료 후 신청할 수 있습니다.</Text>
           )}
-          <Pressable
-            style={styles.ghostButton}
-            onPress={() => navigation.navigate('ServiceAreaBrowse')}
-          >
-            <Text style={styles.ghostButtonText}>서비스 지역 살펴보기</Text>
-          </Pressable>
 
-          <Text style={styles.label}>요청사항(선택)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={note}
-            onChangeText={setNote}
-            multiline
-            placeholder="요청사항"
-            placeholderTextColor="#94a3b8"
-            returnKeyType="done"
-          />
+          {isCheckingServiceArea && (
+            <Text style={styles.meta}>서비스 가능 여부를 확인 중입니다.</Text>
+          )}
+          {serviceAreaCheckError && (
+            <>
+              <Text style={styles.error}>{serviceAreaCheckError}</Text>
+              <Pressable
+                style={styles.retryButton}
+                onPress={() => {
+                  if (primaryRequestAddress) {
+                    void checkServiceAreaAvailability(primaryRequestAddress);
+                  }
+                }}
+              >
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </>
+          )}
 
-          {submitSuccessMessage && (
-            <View style={styles.successBanner}>
-              <Text style={styles.successBannerText}>{submitSuccessMessage}</Text>
+          {isServiceAreaBlocked && !isCheckingServiceArea && !serviceAreaCheckError && (
+            <View style={styles.guardBox}>
+              <Text style={styles.guardTitle}>서비스 지역이 아니예요!</Text>
+              <Text style={styles.guardDescription}>현재 대표 주소지는 신청 가능한 지역이 아닙니다.</Text>
             </View>
           )}
-          {submitError && <Text style={styles.error}>{submitError}</Text>}
-          {submitError && !isSubmitting && (
-            <Pressable style={styles.retryButton} onPress={handleCreate}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+
+          {(isServiceAreaBlocked || !isPhoneVerified) && (
+            <Pressable
+              style={styles.ghostButton}
+              onPress={() => navigation.navigate('ServiceAreaBrowse')}
+            >
+              <Text style={styles.ghostButtonText}>서비스 지역 살펴보기</Text>
             </Pressable>
           )}
 
-          <Pressable
-            style={[styles.button, (isSubmitting || !canUsePrimaryAddress || !isPhoneVerified) && styles.buttonDisabled]}
-            onPress={handleCreate}
-            disabled={isSubmitting || !canUsePrimaryAddress || !isPhoneVerified}
-          >
-            <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
-          </Pressable>
+          {canSubmitRequest && (
+            <>
+              <Text style={styles.label}>요청사항(선택)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={note}
+                onChangeText={setNote}
+                multiline
+                placeholder="요청사항"
+                placeholderTextColor="#94a3b8"
+                returnKeyType="done"
+              />
+
+              {submitSuccessMessage && (
+                <View style={styles.successBanner}>
+                  <Text style={styles.successBannerText}>{submitSuccessMessage}</Text>
+                </View>
+              )}
+              {submitError && <Text style={styles.error}>{submitError}</Text>}
+              {submitError && !isSubmitting && (
+                <Pressable style={styles.retryButton} onPress={handleCreate}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </Pressable>
+              )}
+
+              <Pressable
+                style={[styles.button, (isSubmitting || !canSubmitRequest) && styles.buttonDisabled]}
+                onPress={handleCreate}
+                disabled={isSubmitting || !canSubmitRequest}
+              >
+                <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       )}
 
       {showHistory && (
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>신청/이용 내역</Text>
+            <Text style={styles.cardTitle}>요청/이용 내역</Text>
             <Pressable style={styles.ghostButton} onPress={refreshRequests}>
               <Text style={styles.ghostButtonText}>새로고침</Text>
             </Pressable>
@@ -369,6 +530,24 @@ const styles = StyleSheet.create({
   error: {
     color: ui.colors.error,
     fontSize: 13,
+  },
+  guardBox: {
+    borderWidth: 1,
+    borderColor: '#f5c2c7',
+    backgroundColor: '#fff5f5',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 4,
+  },
+  guardTitle: {
+    color: '#b91c1c',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  guardDescription: {
+    color: '#7f1d1d',
+    fontSize: 12,
   },
   successBanner: {
     backgroundColor: '#e8f7ee',
