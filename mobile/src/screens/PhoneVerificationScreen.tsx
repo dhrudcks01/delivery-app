@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../auth/AuthContext';
 import { PhoneVerificationStartResponse } from '../types/auth';
@@ -71,8 +72,8 @@ function buildPhoneVerificationHtml(session: VerificationSession): string {
   </head>
   <body>
     <div class="box">
-      <p class="title">Phone verification in progress.</p>
-      <p class="desc">If the verification window does not open, go back and retry.</p>
+      <p class="title">휴대폰 본인인증을 진행하고 있어요.</p>
+      <p class="desc">인증 창이 열리지 않으면 이전 화면으로 돌아가 다시 시도해 주세요.</p>
     </div>
 
     <script>
@@ -110,27 +111,27 @@ function buildPhoneVerificationHtml(session: VerificationSession): string {
 
 function resolvePhoneVerificationErrorMessage(error: unknown): string {
   if (!(error instanceof AxiosError)) {
-    return 'Failed to verify phone. Please retry.';
+    return '휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.';
   }
 
   const code = (error.response?.data as ApiErrorResponse | undefined)?.code;
   if (code === 'PHONE_VERIFICATION_NOT_COMPLETED') {
-    return 'Verification is not completed yet. Please retry after finishing.';
+    return '본인인증이 아직 완료되지 않았습니다. 인증 완료 후 다시 시도해 주세요.';
   }
   if (code === 'PHONE_VERIFICATION_CANCELED') {
-    return 'Verification was canceled. Please try again.';
+    return '본인인증이 취소되었습니다. 다시 시도해 주세요.';
   }
   if (code === 'PHONE_VERIFICATION_FAILED') {
-    return 'Verification failed. Please try again.';
+    return '본인인증에 실패했습니다. 다시 시도해 주세요.';
   }
   if (code === 'PHONE_VERIFICATION_TIMEOUT') {
-    return 'Verification timeout. Please try again later.';
+    return '본인인증 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.';
   }
   if (code === 'PHONE_VERIFICATION_UNAVAILABLE') {
-    return 'Verification service is unavailable. Please try again later.';
+    return '본인인증 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.';
   }
 
-  return 'Failed to verify phone. Please retry.';
+  return '휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.';
 }
 
 export function PhoneVerificationScreen() {
@@ -160,7 +161,7 @@ export function PhoneVerificationScreen() {
         redirectUrl: PORTONE_REDIRECT_URL,
       });
     } catch {
-      setErrorMessage('Failed to start verification. Please retry.');
+      setErrorMessage('본인인증을 시작하지 못했습니다. 다시 시도해 주세요.');
     } finally {
       setIsStarting(false);
     }
@@ -190,12 +191,12 @@ export function PhoneVerificationScreen() {
       try {
         message = JSON.parse(rawData) as VerificationWebMessage;
       } catch {
-        setErrorMessage('Cannot read verification response. Please retry.');
+        setErrorMessage('본인인증 응답을 확인하지 못했습니다. 다시 시도해 주세요.');
         return;
       }
 
       if (message.type === 'PORTONE_ERROR') {
-        setErrorMessage('Verification was canceled or failed. Please try again.');
+        setErrorMessage('본인인증이 취소되었거나 실패했습니다. 다시 시도해 주세요.');
         return;
       }
 
@@ -222,79 +223,85 @@ export function PhoneVerificationScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Phone verification required</Text>
-      <Text style={styles.description}>
-        App usage is blocked until phone verification is completed.
-      </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <View style={styles.container}>
+        <Text style={styles.title}>휴대폰 본인인증이 필요해요</Text>
+        <Text style={styles.description}>
+          본인인증이 완료되기 전까지 앱 기능을 사용할 수 없습니다.
+        </Text>
 
-      {!session && (
+        {!session && (
+          <Pressable
+            style={[styles.primaryButton, isStarting && styles.buttonDisabled]}
+            onPress={() => {
+              void handleStartVerification();
+            }}
+            disabled={isStarting}
+          >
+            <Text style={styles.primaryButtonText}>{isStarting ? '인증 준비 중...' : '휴대폰 인증 시작'}</Text>
+          </Pressable>
+        )}
+
+        {session && (
+          <View style={styles.webViewCard}>
+            <View style={styles.webViewHeader}>
+              <Text style={styles.webViewTitle}>포트원(다날) 본인인증</Text>
+              {(isStarting || isCompleting) && <ActivityIndicator size="small" color={ui.colors.primary} />}
+            </View>
+
+            <WebView
+              source={{ html: webViewHtml }}
+              originWhitelist={['*']}
+              javaScriptEnabled
+              domStorageEnabled
+              setSupportMultipleWindows={false}
+              onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
+              onNavigationStateChange={(event) => handleNavigationStateChange(event.url)}
+              style={styles.webView}
+            />
+
+            <View style={styles.actionRow}>
+              <Pressable
+                style={[styles.secondaryButton, isCompleting && styles.buttonDisabled]}
+                onPress={() => {
+                  void handleCompleteVerification();
+                }}
+                disabled={isCompleting}
+              >
+                <Text style={styles.secondaryButtonText}>인증 완료 확인</Text>
+              </Pressable>
+
+              <Pressable style={styles.retryTextButton} onPress={handleRetry}>
+                <Text style={styles.retryText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
         <Pressable
-          style={[styles.primaryButton, isStarting && styles.buttonDisabled]}
+          style={styles.logoutButton}
           onPress={() => {
-            void handleStartVerification();
+            void signOut();
           }}
-          disabled={isStarting}
         >
-          <Text style={styles.primaryButtonText}>{isStarting ? 'Preparing...' : 'Start verification'}</Text>
+          <Text style={styles.logoutButtonText}>로그아웃</Text>
         </Pressable>
-      )}
-
-      {session && (
-        <View style={styles.webViewCard}>
-          <View style={styles.webViewHeader}>
-            <Text style={styles.webViewTitle}>PortOne Danal verification</Text>
-            {(isStarting || isCompleting) && <ActivityIndicator size="small" color={ui.colors.primary} />}
-          </View>
-
-          <WebView
-            source={{ html: webViewHtml }}
-            originWhitelist={['*']}
-            javaScriptEnabled
-            domStorageEnabled
-            setSupportMultipleWindows={false}
-            onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
-            onNavigationStateChange={(event) => handleNavigationStateChange(event.url)}
-            style={styles.webView}
-          />
-
-          <View style={styles.actionRow}>
-            <Pressable
-              style={[styles.secondaryButton, isCompleting && styles.buttonDisabled]}
-              onPress={() => {
-                void handleCompleteVerification();
-              }}
-              disabled={isCompleting}
-            >
-              <Text style={styles.secondaryButtonText}>Confirm completion</Text>
-            </Pressable>
-
-            <Pressable style={styles.retryTextButton} onPress={handleRetry}>
-              <Text style={styles.retryText}>Retry</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-
-      <Pressable
-        style={styles.logoutButton}
-        onPress={() => {
-          void signOut();
-        }}
-      >
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </Pressable>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: ui.colors.screen,
+  },
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingVertical: 16,
     backgroundColor: ui.colors.screen,
     gap: 12,
   },
