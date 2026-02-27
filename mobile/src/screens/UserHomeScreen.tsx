@@ -231,6 +231,12 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           {!isPhoneVerified && (
             <Text style={styles.error}>휴대폰 본인인증 완료 후 신청할 수 있습니다.</Text>
           )}
+          <Pressable
+            style={styles.ghostButton}
+            onPress={() => navigation.navigate('ServiceAreaBrowse')}
+          >
+            <Text style={styles.ghostButtonText}>서비스 지역 살펴보기</Text>
+          </Pressable>
 
           <Text style={styles.label}>요청사항(선택)</Text>
           <TextInput

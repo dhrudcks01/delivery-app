@@ -12,6 +12,7 @@ import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
 import { PhoneVerificationScreen } from '../screens/PhoneVerificationScreen';
 import { ProfileSettingsScreen } from '../screens/ProfileSettingsScreen';
 import { RoleCenterScreen } from '../screens/RoleCenterScreen';
+import { ServiceAreaBrowseScreen } from '../screens/ServiceAreaBrowseScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
 import { UserAddressManagementScreen } from '../screens/UserAddressManagementScreen';
@@ -33,6 +34,7 @@ export type RootStackParamList = {
   OpsAdminHome: undefined;
   SysAdminHome: undefined;
   UserAddressManagement: undefined;
+  ServiceAreaBrowse: undefined;
   UserPaymentManagement: undefined;
   WasteRequestDetail: { requestId: number; orderNo?: string };
   ProfileSettings: undefined;
@@ -103,7 +105,6 @@ function UserRoleGuideScreen({ title, description }: { title: string; descriptio
 
 function HeaderlessScreenContainer({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
-
   return (
     <View style={[styles.headerlessScreenContainer, { paddingTop: insets.top }]}>
       {children}
@@ -337,6 +338,13 @@ export function RootNavigator() {
           name="UserAddressManagement"
           component={UserAddressManagementScreen}
           options={{ title: '주소관리' }}
+        />
+      )}
+      {isAuthenticated && !isPhoneVerificationPending && (
+        <RootStack.Screen
+          name="ServiceAreaBrowse"
+          component={ServiceAreaBrowseScreen}
+          options={{ title: '서비스 가능 지역' }}
         />
       )}
       {isAuthenticated && !isPhoneVerificationPending && (
