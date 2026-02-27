@@ -3,6 +3,8 @@ package com.delivery.auth.service;
 import com.delivery.auth.config.PhoneVerificationProperties;
 import com.delivery.auth.exception.PhoneVerificationException;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -24,6 +26,8 @@ import java.time.Instant;
 @Component
 public class PortOneIdentityVerificationClient {
 
+    private static final Logger log = LoggerFactory.getLogger(PortOneIdentityVerificationClient.class);
+
     private final RestTemplate restTemplate;
     private final PhoneVerificationProperties phoneVerificationProperties;
 
@@ -37,6 +41,12 @@ public class PortOneIdentityVerificationClient {
 
     public PortOneIdentityVerificationResult getIdentityVerification(String identityVerificationId) {
         if (!StringUtils.hasText(phoneVerificationProperties.getApiSecret())) {
+            log.error(
+                    "phoneVerification.provider config missing apiSecret provider={} baseUrl={} storeIdPresent={}",
+                    phoneVerificationProperties.getProvider(),
+                    phoneVerificationProperties.getBaseUrl(),
+                    StringUtils.hasText(phoneVerificationProperties.getStoreId())
+            );
             throw new PhoneVerificationException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "PHONE_VERIFICATION_CONFIGURATION_ERROR",
@@ -51,6 +61,12 @@ public class PortOneIdentityVerificationClient {
                 .build()
                 .encode()
                 .toUri();
+        log.info(
+                "phoneVerification.provider request identityVerificationId={} uri={} storeIdPresent={}",
+                identityVerificationId,
+                uri,
+                StringUtils.hasText(phoneVerificationProperties.getStoreId())
+        );
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.AUTHORIZATION, "PortOne " + phoneVerificationProperties.getApiSecret());
@@ -62,8 +78,21 @@ public class PortOneIdentityVerificationClient {
                     new HttpEntity<>(headers),
                     JsonNode.class
             );
-            return parse(response.getBody());
+            PortOneIdentityVerificationResult parsed = parse(response.getBody());
+            log.info(
+                    "phoneVerification.provider response identityVerificationId={} status={} failureCode={}",
+                    identityVerificationId,
+                    parsed.status(),
+                    parsed.failureCode()
+            );
+            return parsed;
         } catch (ResourceAccessException exception) {
+            log.warn(
+                    "phoneVerification.provider resource-access identityVerificationId={} timeout={} message={}",
+                    identityVerificationId,
+                    isTimeoutException(exception),
+                    exception.getMessage()
+            );
             if (isTimeoutException(exception)) {
                 throw new PhoneVerificationException(
                         HttpStatus.GATEWAY_TIMEOUT,
@@ -77,6 +106,12 @@ public class PortOneIdentityVerificationClient {
                     "본인인증 제공자와 통신할 수 없습니다."
             );
         } catch (HttpStatusCodeException exception) {
+            log.warn(
+                    "phoneVerification.provider http-error identityVerificationId={} status={} body={}",
+                    identityVerificationId,
+                    exception.getStatusCode(),
+                    truncate(exception.getResponseBodyAsString())
+            );
             if (exception.getStatusCode().is4xxClientError()) {
                 throw new PhoneVerificationException(
                         HttpStatus.BAD_REQUEST,
@@ -90,6 +125,12 @@ public class PortOneIdentityVerificationClient {
                     "본인인증 결과 조회에 실패했습니다."
             );
         } catch (RestClientException exception) {
+            log.error(
+                    "phoneVerification.provider rest-client-error identityVerificationId={} message={}",
+                    identityVerificationId,
+                    exception.getMessage(),
+                    exception
+            );
             throw new PhoneVerificationException(
                     HttpStatus.BAD_GATEWAY,
                     "PHONE_VERIFICATION_UNAVAILABLE",
@@ -144,6 +185,17 @@ public class PortOneIdentityVerificationClient {
             cause = cause.getCause();
         }
         return false;
+    }
+
+    private String truncate(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        String normalized = raw.replace('\n', ' ').replace('\r', ' ').trim();
+        if (normalized.length() <= 300) {
+            return normalized;
+        }
+        return normalized.substring(0, 300) + "...";
     }
 
     public record PortOneIdentityVerificationResult(

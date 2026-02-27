@@ -11,6 +11,8 @@ import com.delivery.auth.model.PhoneVerificationStatus;
 import com.delivery.auth.repository.UserPhoneVerificationRepository;
 import com.delivery.auth.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -22,6 +24,8 @@ import java.util.UUID;
 
 @Service
 public class PhoneVerificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(PhoneVerificationService.class);
 
     private final UserRepository userRepository;
     private final UserPhoneVerificationRepository userPhoneVerificationRepository;
@@ -43,6 +47,12 @@ public class PhoneVerificationService {
     @Transactional
     public PhoneVerificationStartResponse start(String email) {
         UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        log.info(
+                "phoneVerification.start requested userId={} email={} provider={}",
+                user.getId(),
+                user.getEmail(),
+                phoneVerificationProperties.getProvider()
+        );
         validateStartConfiguration();
 
         String identityVerificationId = generateIdentityVerificationId(user.getId());
@@ -52,6 +62,11 @@ public class PhoneVerificationService {
                 phoneVerificationProperties.getProvider(),
                 null
         ));
+        log.info(
+                "phoneVerification.start created userId={} identityVerificationId={}",
+                user.getId(),
+                identityVerificationId
+        );
 
         return new PhoneVerificationStartResponse(
                 phoneVerificationProperties.getProvider(),
@@ -64,6 +79,12 @@ public class PhoneVerificationService {
     @Transactional(rollbackOn = Exception.class, dontRollbackOn = PhoneVerificationException.class)
     public PhoneVerificationCompleteResponse complete(String email, String identityVerificationId) {
         UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        log.info(
+                "phoneVerification.complete requested userId={} email={} identityVerificationId={}",
+                user.getId(),
+                user.getEmail(),
+                identityVerificationId
+        );
         UserPhoneVerificationEntity verification = userPhoneVerificationRepository.findByIdentityVerificationId(identityVerificationId)
                 .orElseThrow(() -> new PhoneVerificationException(
                         HttpStatus.NOT_FOUND,
@@ -80,6 +101,12 @@ public class PhoneVerificationService {
         }
 
         if (verification.getStatus() == PhoneVerificationStatus.VERIFIED) {
+            log.info(
+                    "phoneVerification.complete idempotent userId={} identityVerificationId={} phoneNumber={}",
+                    user.getId(),
+                    identityVerificationId,
+                    maskPhoneNumber(user.getPhoneE164())
+            );
             return new PhoneVerificationCompleteResponse(
                     identityVerificationId,
                     PhoneVerificationStatus.VERIFIED.name(),
@@ -92,6 +119,13 @@ public class PhoneVerificationService {
 
         PortOneIdentityVerificationClient.PortOneIdentityVerificationResult result =
                 portOneIdentityVerificationClient.getIdentityVerification(identityVerificationId);
+        log.info(
+                "phoneVerification.complete providerResult userId={} identityVerificationId={} status={} failureCode={}",
+                user.getId(),
+                identityVerificationId,
+                result.status(),
+                result.failureCode()
+        );
 
         return switch (result.status()) {
             case "VERIFIED" -> completeVerified(user, verification, identityVerificationId, result);
@@ -129,6 +163,13 @@ public class PhoneVerificationService {
                 ciBytes,
                 diBytes
         );
+        log.info(
+                "phoneVerification.complete verified userId={} identityVerificationId={} phoneNumber={} verifiedAt={}",
+                user.getId(),
+                identityVerificationId,
+                maskPhoneNumber(normalizedPhone),
+                verifiedAt
+        );
 
         return new PhoneVerificationCompleteResponse(
                 identityVerificationId,
@@ -153,6 +194,12 @@ public class PhoneVerificationService {
 
         if (isCanceledCode(failureCode)) {
             verification.cancel();
+            log.warn(
+                    "phoneVerification.complete canceled identityVerificationId={} failureCode={} failureMessage={}",
+                    verification.getIdentityVerificationId(),
+                    failureCode,
+                    failureMessage
+            );
             throw new PhoneVerificationException(
                     HttpStatus.CONFLICT,
                     "PHONE_VERIFICATION_CANCELED",
@@ -161,6 +208,12 @@ public class PhoneVerificationService {
         }
 
         verification.markFailed(failureCode, failureMessage);
+        log.warn(
+                "phoneVerification.complete failed identityVerificationId={} failureCode={} failureMessage={}",
+                verification.getIdentityVerificationId(),
+                failureCode,
+                failureMessage
+        );
         throw new PhoneVerificationException(
                 HttpStatus.CONFLICT,
                 "PHONE_VERIFICATION_FAILED",
@@ -171,6 +224,12 @@ public class PhoneVerificationService {
     private void validateStartConfiguration() {
         if (!StringUtils.hasText(phoneVerificationProperties.getStoreId())
                 || !StringUtils.hasText(phoneVerificationProperties.getChannelKey())) {
+            log.error(
+                    "phoneVerification.start configuration missing provider={} storeIdPresent={} channelKeyPresent={}",
+                    phoneVerificationProperties.getProvider(),
+                    StringUtils.hasText(phoneVerificationProperties.getStoreId()),
+                    StringUtils.hasText(phoneVerificationProperties.getChannelKey())
+            );
             throw new PhoneVerificationException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "PHONE_VERIFICATION_CONFIGURATION_ERROR",
@@ -214,5 +273,16 @@ public class PhoneVerificationService {
     private boolean isCanceledCode(String code) {
         String normalized = code.toUpperCase(Locale.ROOT);
         return normalized.contains("CANCEL");
+    }
+
+    private String maskPhoneNumber(String phone) {
+        if (!StringUtils.hasText(phone)) {
+            return "";
+        }
+        String normalized = phone.trim();
+        if (normalized.length() <= 7) {
+            return "***";
+        }
+        return normalized.substring(0, 4) + "***" + normalized.substring(normalized.length() - 3);
     }
 }

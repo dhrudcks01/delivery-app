@@ -175,7 +175,8 @@ class PhoneVerificationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(completeBody))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("PHONE_VERIFICATION_CANCELED"));
+                .andExpect(jsonPath("$.code").value("PHONE_VERIFICATION_CANCELED"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
 
         assertThat(userPhoneVerificationRepository.findByIdentityVerificationId(identityVerificationId))
                 .isPresent()
@@ -211,7 +212,8 @@ class PhoneVerificationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(completeBody))
                 .andExpect(status().isGatewayTimeout())
-                .andExpect(jsonPath("$.code").value("PHONE_VERIFICATION_TIMEOUT"));
+                .andExpect(jsonPath("$.code").value("PHONE_VERIFICATION_TIMEOUT"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 
     private void createUserWithUserRole(String email, String password) {

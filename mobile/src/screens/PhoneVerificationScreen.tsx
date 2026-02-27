@@ -22,12 +22,69 @@ type VerificationSession = PhoneVerificationStartResponse & {
 
 type ApiErrorResponse = {
   code?: string;
+  message?: string;
+  requestId?: string;
 };
 
 type VerificationWebMessage = {
   type: 'PORTONE_RESULT' | 'PORTONE_ERROR';
   message?: string;
+  payload?: unknown;
 };
+
+type ParsedVerificationError = {
+  code?: string;
+  message?: string;
+  requestId?: string;
+  status?: number;
+};
+
+function debugPhoneVerificationLog(stage: string, details?: Record<string, unknown>) {
+  if (!__DEV__) {
+    return;
+  }
+  if (details) {
+    console.info(`[PhoneVerification] ${stage}`, details);
+    return;
+  }
+  console.info(`[PhoneVerification] ${stage}`);
+}
+
+function maskToken(value: string | null | undefined): string {
+  if (!value) {
+    return '-';
+  }
+  if (value.length <= 8) {
+    return `${value.slice(0, 2)}***`;
+  }
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
+
+function parseVerificationError(error: unknown): ParsedVerificationError {
+  if (!(error instanceof AxiosError)) {
+    return {};
+  }
+
+  const data = (error.response?.data as ApiErrorResponse | undefined) ?? undefined;
+  const requestIdHeader = error.response?.headers?.['x-request-id'];
+  const requestId = typeof requestIdHeader === 'string'
+    ? requestIdHeader
+    : data?.requestId;
+
+  return {
+    code: data?.code,
+    message: data?.message,
+    requestId,
+    status: error.response?.status,
+  };
+}
+
+function withRequestIdMessage(message: string, requestId?: string): string {
+  if (!requestId) {
+    return message;
+  }
+  return `${message} (요청 ID: ${requestId})`;
+}
 
 function buildPhoneVerificationHtml(session: VerificationSession): string {
   const payloadJson = JSON.stringify({
@@ -110,28 +167,36 @@ function buildPhoneVerificationHtml(session: VerificationSession): string {
 }
 
 function resolvePhoneVerificationErrorMessage(error: unknown): string {
+  const parsed = parseVerificationError(error);
+
   if (!(error instanceof AxiosError)) {
-    return '휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.';
+    return withRequestIdMessage('휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
   }
 
-  const code = (error.response?.data as ApiErrorResponse | undefined)?.code;
+  const code = parsed.code;
   if (code === 'PHONE_VERIFICATION_NOT_COMPLETED') {
-    return '본인인증이 아직 완료되지 않았습니다. 인증 완료 후 다시 시도해 주세요.';
+    return withRequestIdMessage(
+      '본인인증이 아직 완료되지 않았습니다. 인증 완료 후 다시 시도해 주세요.',
+      parsed.requestId,
+    );
   }
   if (code === 'PHONE_VERIFICATION_CANCELED') {
-    return '본인인증이 취소되었습니다. 다시 시도해 주세요.';
+    return withRequestIdMessage('본인인증이 취소되었습니다. 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_FAILED') {
-    return '본인인증에 실패했습니다. 다시 시도해 주세요.';
+    return withRequestIdMessage('본인인증에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_TIMEOUT') {
-    return '본인인증 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.';
+    return withRequestIdMessage('본인인증 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_UNAVAILABLE') {
-    return '본인인증 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+    return withRequestIdMessage(
+      '본인인증 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+      parsed.requestId,
+    );
   }
 
-  return '휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.';
+  return withRequestIdMessage('휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
 }
 
 export function PhoneVerificationScreen() {
@@ -150,18 +215,32 @@ export function PhoneVerificationScreen() {
   }, [session]);
 
   const handleStartVerification = useCallback(async () => {
+    debugPhoneVerificationLog('start-requested');
     setIsStarting(true);
     setErrorMessage(null);
     completeRequestedRef.current = false;
 
     try {
       const response = await startPhoneVerification();
+      debugPhoneVerificationLog('start-success', {
+        provider: response.provider,
+        storeId: maskToken(response.storeId),
+        channelKey: maskToken(response.channelKey),
+        identityVerificationId: maskToken(response.identityVerificationId),
+        redirectUrl: PORTONE_REDIRECT_URL,
+      });
       setSession({
         ...response,
         redirectUrl: PORTONE_REDIRECT_URL,
       });
-    } catch {
-      setErrorMessage('본인인증을 시작하지 못했습니다. 다시 시도해 주세요.');
+    } catch (error) {
+      const parsed = parseVerificationError(error);
+      debugPhoneVerificationLog('start-failed', {
+        code: parsed.code,
+        requestId: parsed.requestId,
+        status: parsed.status,
+      });
+      setErrorMessage(withRequestIdMessage('본인인증을 시작하지 못했습니다. 다시 시도해 주세요.', parsed.requestId));
     } finally {
       setIsStarting(false);
     }
@@ -175,27 +254,51 @@ export function PhoneVerificationScreen() {
     completeRequestedRef.current = true;
     setIsCompleting(true);
     setErrorMessage(null);
+    debugPhoneVerificationLog('complete-requested', {
+      identityVerificationId: maskToken(session.identityVerificationId),
+    });
 
     try {
       await completePhoneVerification(session.identityVerificationId);
+      debugPhoneVerificationLog('complete-success', {
+        identityVerificationId: maskToken(session.identityVerificationId),
+      });
     } catch (error) {
       completeRequestedRef.current = false;
       setIsCompleting(false);
+      const parsed = parseVerificationError(error);
+      debugPhoneVerificationLog('complete-failed', {
+        code: parsed.code,
+        requestId: parsed.requestId,
+        status: parsed.status,
+      });
       setErrorMessage(resolvePhoneVerificationErrorMessage(error));
     }
   }, [session, isCompleting, completePhoneVerification]);
 
   const handleWebViewMessage = useCallback(
     (rawData: string) => {
+      debugPhoneVerificationLog('webview-message-raw', {
+        rawData,
+      });
       let message: VerificationWebMessage | null = null;
       try {
         message = JSON.parse(rawData) as VerificationWebMessage;
       } catch {
+        debugPhoneVerificationLog('webview-message-parse-failed', { rawData });
         setErrorMessage('본인인증 응답을 확인하지 못했습니다. 다시 시도해 주세요.');
         return;
       }
 
+      debugPhoneVerificationLog('webview-message-parsed', {
+        type: message.type,
+        message: message.message ?? null,
+      });
+
       if (message.type === 'PORTONE_ERROR') {
+        debugPhoneVerificationLog('webview-portone-error', {
+          reason: message.message ?? 'UNKNOWN',
+        });
         setErrorMessage('본인인증이 취소되었거나 실패했습니다. 다시 시도해 주세요.');
         return;
       }
@@ -207,7 +310,13 @@ export function PhoneVerificationScreen() {
 
   const handleNavigationStateChange = useCallback(
     (url: string) => {
-      if (!session || !url.startsWith(PORTONE_REDIRECT_URL)) {
+      const isRedirectMatched = Boolean(session) && url.startsWith(PORTONE_REDIRECT_URL);
+      debugPhoneVerificationLog('webview-navigation', {
+        url,
+        expectedRedirectUrl: PORTONE_REDIRECT_URL,
+        matched: isRedirectMatched,
+      });
+      if (!isRedirectMatched) {
         return;
       }
       void handleCompleteVerification();
@@ -216,10 +325,27 @@ export function PhoneVerificationScreen() {
   );
 
   const handleRetry = useCallback(() => {
+    debugPhoneVerificationLog('retry-clicked');
     setSession(null);
     setIsCompleting(false);
     setErrorMessage(null);
     completeRequestedRef.current = false;
+  }, []);
+
+  const handleWebViewError = useCallback((event: { nativeEvent: { description?: string; url?: string } }) => {
+    debugPhoneVerificationLog('webview-error', {
+      description: event.nativeEvent.description ?? null,
+      url: event.nativeEvent.url ?? null,
+    });
+    setErrorMessage('본인인증 페이지를 불러오지 못했습니다. 다시 시도해 주세요.');
+  }, []);
+
+  const handleWebViewHttpError = useCallback((event: { nativeEvent: { statusCode?: number; description?: string; url?: string } }) => {
+    debugPhoneVerificationLog('webview-http-error', {
+      statusCode: event.nativeEvent.statusCode ?? null,
+      description: event.nativeEvent.description ?? null,
+      url: event.nativeEvent.url ?? null,
+    });
   }, []);
 
   return (
@@ -257,6 +383,8 @@ export function PhoneVerificationScreen() {
               setSupportMultipleWindows={false}
               onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
               onNavigationStateChange={(event) => handleNavigationStateChange(event.url)}
+              onError={handleWebViewError}
+              onHttpError={handleWebViewHttpError}
               style={styles.webView}
             />
 

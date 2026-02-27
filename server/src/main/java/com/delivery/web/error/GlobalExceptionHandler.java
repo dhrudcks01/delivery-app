@@ -510,11 +510,21 @@ public class GlobalExceptionHandler {
             PhoneVerificationException exception,
             HttpServletRequest request
     ) {
+        String requestId = resolveRequestId(request);
+        log.warn(
+                "Phone verification exception requestId={} uri={} code={} status={} message={}",
+                requestId,
+                request.getRequestURI(),
+                exception.getCode(),
+                exception.getStatus().value(),
+                exception.getMessage()
+        );
         ApiErrorResponse response = ApiErrorResponse.of(
                 exception.getStatus().value(),
                 exception.getCode(),
                 exception.getMessage(),
-                request.getRequestURI()
+                request.getRequestURI(),
+                requestId
         );
         return ResponseEntity.status(exception.getStatus()).body(response);
     }
