@@ -1,6 +1,8 @@
 package com.delivery.servicearea.web;
 
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
+import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
+import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
 import com.delivery.servicearea.dto.ServiceAreaResponse;
 import com.delivery.servicearea.service.ServiceAreaService;
 import jakarta.validation.Valid;
@@ -34,6 +36,13 @@ public class OpsAdminServiceAreaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(serviceAreaService.register(request));
     }
 
+    @PostMapping("/by-code")
+    public ResponseEntity<ServiceAreaResponse> registerByCode(
+            @Valid @RequestBody RegisterServiceAreaByCodeRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(serviceAreaService.registerByMasterCode(request));
+    }
+
     @PatchMapping("/{serviceAreaId}/deactivate")
     public ResponseEntity<ServiceAreaResponse> deactivate(@PathVariable Long serviceAreaId) {
         return ResponseEntity.ok(serviceAreaService.deactivate(serviceAreaId));
@@ -47,5 +56,13 @@ public class OpsAdminServiceAreaController {
     ) {
         return ResponseEntity.ok(serviceAreaService.getForOps(query, active, pageable));
     }
-}
 
+    @GetMapping("/master-dongs")
+    public ResponseEntity<Page<ServiceAreaMasterDongResponse>> getMasterDongsForOps(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Boolean active,
+            @PageableDefault(size = 50, sort = "code", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(serviceAreaService.getMasterDongsForOps(query, active, pageable));
+    }
+}

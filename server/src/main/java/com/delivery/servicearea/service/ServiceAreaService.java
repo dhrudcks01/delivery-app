@@ -1,10 +1,15 @@
 package com.delivery.servicearea.service;
 
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
+import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
+import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
 import com.delivery.servicearea.dto.ServiceAreaResponse;
+import com.delivery.servicearea.entity.ServiceAreaMasterDongEntity;
 import com.delivery.servicearea.entity.ServiceAreaEntity;
+import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
+import com.delivery.servicearea.repository.ServiceAreaMasterDongRepository;
 import com.delivery.servicearea.repository.ServiceAreaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -47,9 +52,14 @@ public class ServiceAreaService {
     );
 
     private final ServiceAreaRepository serviceAreaRepository;
+    private final ServiceAreaMasterDongRepository serviceAreaMasterDongRepository;
 
-    public ServiceAreaService(ServiceAreaRepository serviceAreaRepository) {
+    public ServiceAreaService(
+            ServiceAreaRepository serviceAreaRepository,
+            ServiceAreaMasterDongRepository serviceAreaMasterDongRepository
+    ) {
         this.serviceAreaRepository = serviceAreaRepository;
+        this.serviceAreaMasterDongRepository = serviceAreaMasterDongRepository;
     }
 
     @Transactional
@@ -57,15 +67,20 @@ public class ServiceAreaService {
         String city = request.normalizedCity();
         String district = request.normalizedDistrict();
         String dong = request.normalizedDong();
+        return toResponse(upsertAndActivateServiceArea(city, district, dong));
+    }
 
-        ServiceAreaEntity entity = serviceAreaRepository.findByCityAndDistrictAndDong(city, district, dong)
-                .map(existing -> {
-                    existing.activate();
-                    return existing;
-                })
-                .orElseGet(() -> new ServiceAreaEntity(city, district, dong, true));
+    @Transactional
+    public ServiceAreaResponse registerByMasterCode(RegisterServiceAreaByCodeRequest request) {
+        ServiceAreaMasterDongEntity masterDong = serviceAreaMasterDongRepository.findById(request.normalizedCode())
+                .filter(ServiceAreaMasterDongEntity::isActive)
+                .orElseThrow(ServiceAreaMasterDongNotFoundException::new);
 
-        return toResponse(serviceAreaRepository.save(entity));
+        return toResponse(upsertAndActivateServiceArea(
+                masterDong.getCity(),
+                masterDong.getDistrict(),
+                masterDong.getDong()
+        ));
     }
 
     @Transactional
@@ -80,6 +95,12 @@ public class ServiceAreaService {
     public Page<ServiceAreaResponse> getForOps(String query, Boolean active, Pageable pageable) {
         String keyword = normalizeKeyword(query);
         return serviceAreaRepository.searchForOps(keyword, active, pageable).map(this::toResponse);
+    }
+
+    @Transactional
+    public Page<ServiceAreaMasterDongResponse> getMasterDongsForOps(String query, Boolean active, Pageable pageable) {
+        String keyword = normalizeKeyword(query);
+        return serviceAreaMasterDongRepository.searchForOps(keyword, active, pageable).map(this::toMasterResponse);
     }
 
     @Transactional
@@ -171,9 +192,31 @@ public class ServiceAreaService {
         return false;
     }
 
+    private ServiceAreaEntity upsertAndActivateServiceArea(String city, String district, String dong) {
+        ServiceAreaEntity entity = serviceAreaRepository.findByCityAndDistrictAndDong(city, district, dong)
+                .map(existing -> {
+                    existing.activate();
+                    return existing;
+                })
+                .orElseGet(() -> new ServiceAreaEntity(city, district, dong, true));
+        return serviceAreaRepository.save(entity);
+    }
+
     private ServiceAreaResponse toResponse(ServiceAreaEntity entity) {
         return new ServiceAreaResponse(
                 entity.getId(),
+                entity.getCity(),
+                entity.getDistrict(),
+                entity.getDong(),
+                entity.isActive(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
+    }
+
+    private ServiceAreaMasterDongResponse toMasterResponse(ServiceAreaMasterDongEntity entity) {
+        return new ServiceAreaMasterDongResponse(
+                entity.getCode(),
                 entity.getCity(),
                 entity.getDistrict(),
                 entity.getDong(),

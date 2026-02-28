@@ -51,6 +51,7 @@ class ServiceAreaIntegrationTest {
         upsertRole("OPS_ADMIN", "Ops Admin");
         upsertRole("SYS_ADMIN", "System Admin");
         jdbcTemplate.update("DELETE FROM service_areas");
+        jdbcTemplate.update("DELETE FROM service_area_master_dongs");
     }
 
     @Test
@@ -154,6 +155,39 @@ class ServiceAreaIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void opsAdminCanSearchMasterDongsAndRegisterServiceAreaByCode() throws Exception {
+        TestUser opsAdmin = createUser("service-area-master-ops@example.com", "OPS_ADMIN");
+        insertMasterDong("1144012000", "서울특별시", "마포구", "서교동", true);
+        insertMasterDong("1168010100", "서울특별시", "강남구", "역삼동", true);
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("query", "서교")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].code").value("1144012000"))
+                .andExpect(jsonPath("$.content[0].city").value("서울특별시"))
+                .andExpect(jsonPath("$.content[0].district").value("마포구"))
+                .andExpect(jsonPath("$.content[0].dong").value("서교동"));
+
+        mockMvc.perform(post("/ops-admin/service-areas/by-code")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "1144012000"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.city").value("서울특별시"))
+                .andExpect(jsonPath("$.district").value("마포구"))
+                .andExpect(jsonPath("$.dong").value("서교동"))
+                .andExpect(jsonPath("$.active").value(true));
+    }
+
     private Long createServiceArea(String accessToken, String city, String district, String dong) throws Exception {
         String response = mockMvc.perform(post("/ops-admin/service-areas")
                         .header("Authorization", "Bearer " + accessToken)
@@ -213,10 +247,23 @@ class ServiceAreaIntegrationTest {
         jdbcTemplate.update("MERGE INTO roles (code, description) KEY(code) VALUES (?, ?)", code, description);
     }
 
+    private void insertMasterDong(String code, String city, String district, String dong, boolean active) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO service_area_master_dongs (code, city, district, dong, is_active)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                code,
+                city,
+                district,
+                dong,
+                active
+        );
+    }
+
     private record LoginPayload(String email, String password) {
     }
 
     private record TestUser(Long id, String accessToken) {
     }
 }
-

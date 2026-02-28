@@ -29,6 +29,7 @@ import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
+import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
 import com.delivery.upload.exception.InvalidUploadFileException;
@@ -359,6 +360,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(),
                 "SERVICE_AREA_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ServiceAreaMasterDongNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleServiceAreaMasterDongNotFound(
+            ServiceAreaMasterDongNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "SERVICE_AREA_MASTER_DONG_NOT_FOUND",
                 exception.getMessage(),
                 request.getRequestURI()
         );
