@@ -10,6 +10,8 @@ import com.delivery.auth.exception.SysAdminSelfRoleChangeNotAllowedException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.auth.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +23,7 @@ import java.util.List;
 @Service
 public class RoleManagementService {
 
+    private static final Logger log = LoggerFactory.getLogger(RoleManagementService.class);
     private static final String OPS_ADMIN = "OPS_ADMIN";
     private static final String SYS_ADMIN = "SYS_ADMIN";
     private static final String DRIVER = "DRIVER";
@@ -121,7 +124,7 @@ public class RoleManagementService {
 
         List<OpsAdminGrantCandidateResponse> content = jdbcTemplate.query(
                 """
-                SELECT u.id, u.login_id AS email, u.display_name
+                SELECT u.id, u.login_id, u.display_name
                 FROM users u
                 WHERE EXISTS (
                     SELECT 1
@@ -145,7 +148,7 @@ public class RoleManagementService {
                 """,
                 (rs, rowNum) -> new OpsAdminGrantCandidateResponse(
                         rs.getLong("id"),
-                        rs.getString("email"),
+                        rs.getString("login_id"),
                         rs.getString("display_name")
                 ),
                 DRIVER,
@@ -237,7 +240,7 @@ public class RoleManagementService {
 
         List<SysAdminGrantCandidateResponse> content = jdbcTemplate.query(
                 """
-                SELECT u.id, u.login_id AS email, u.display_name
+                SELECT u.id, u.login_id, u.display_name
                 FROM users u
                 WHERE NOT EXISTS (
                     SELECT 1
@@ -255,7 +258,7 @@ public class RoleManagementService {
                 """,
                 (rs, rowNum) -> new SysAdminGrantCandidateResponse(
                         rs.getLong("id"),
-                        rs.getString("email"),
+                        rs.getString("login_id"),
                         rs.getString("display_name")
                 ),
                 SYS_ADMIN,
@@ -313,6 +316,23 @@ public class RoleManagementService {
                 roleCode,
                 action
         );
+        String actorLoginId = resolveLoginId(actorUserId);
+        String targetLoginId = resolveLoginId(targetUserId);
+        log.info(
+                "roleChangeAudit actorUserId={} actorLoginId={} targetUserId={} targetLoginId={} roleCode={} action={}",
+                actorUserId,
+                actorLoginId,
+                targetUserId,
+                targetLoginId,
+                roleCode,
+                action
+        );
+    }
+
+    private String resolveLoginId(Long userId) {
+        return userRepository.findById(userId)
+                .map(UserEntity::getLoginId)
+                .orElse("unknown");
     }
 
     private Long ensureRole(String code, String description) {

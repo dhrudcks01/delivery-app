@@ -231,7 +231,7 @@ export function SysAdminHomeScreen() {
     try {
       await grantOpsAdminRole(selectedGrantCandidate.userId);
       setRoleResultMessage(
-        `사용자 #${selectedGrantCandidate.userId} (${selectedGrantCandidate.userEmail}) 에게 OPS_ADMIN 권한을 부여했습니다.`,
+        `사용자 #${selectedGrantCandidate.userId} (${selectedGrantCandidate.loginId}) 에게 OPS_ADMIN 권한을 부여했습니다.`,
       );
       await loadOpsAdminGrantCandidates();
     } catch (error) {
@@ -254,7 +254,7 @@ export function SysAdminHomeScreen() {
     try {
       await grantSysAdminRole(selectedSysAdminGrantCandidate.userId);
       setRoleResultMessage(
-        `사용자 #${selectedSysAdminGrantCandidate.userId} (${selectedSysAdminGrantCandidate.userEmail}) 에게 SYS_ADMIN 권한을 부여했습니다.`,
+        `사용자 #${selectedSysAdminGrantCandidate.userId} (${selectedSysAdminGrantCandidate.loginId}) 에게 SYS_ADMIN 권한을 부여했습니다.`,
       );
       await loadSysAdminGrantCandidates();
     } catch (error) {
@@ -531,7 +531,7 @@ export function SysAdminHomeScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>SYS_ADMIN 권한 부여 대상 검색 (비 SYS_ADMIN)</Text>
         <Text style={styles.meta}>SYS_ADMIN 미보유 계정만 검색됩니다. 자기 자신의 권한은 변경할 수 없습니다.</Text>
-        <Text style={styles.label}>검색어 (이메일/이름)</Text>
+        <Text style={styles.label}>검색어 (아이디/이름)</Text>
         <View style={styles.buttonRow}>
           <TextInput
             style={[styles.input, styles.flexInput]}
@@ -554,8 +554,8 @@ export function SysAdminHomeScreen() {
             onPress={() => setSelectedSysAdminGrantCandidateId(item.userId)}
           >
             <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
-            <Text style={styles.listSub}>{item.userDisplayName}</Text>
-            <Text style={styles.listSub}>{item.userEmail}</Text>
+            <Text style={styles.listSub}>{item.name}</Text>
+            <Text style={styles.listSub}>아이디: {item.loginId}</Text>
           </Pressable>
         ))}
         {!isLoadingSysAdminGrantCandidates && sysAdminGrantCandidates.length === 0 && (
@@ -565,8 +565,8 @@ export function SysAdminHomeScreen() {
         {selectedSysAdminGrantCandidate && (
           <View style={styles.resultBox}>
             <Text style={styles.detailText}>선택 사용자 ID: {selectedSysAdminGrantCandidate.userId}</Text>
-            <Text style={styles.detailText}>이름: {selectedSysAdminGrantCandidate.userDisplayName}</Text>
-            <Text style={styles.detailText}>이메일: {selectedSysAdminGrantCandidate.userEmail}</Text>
+            <Text style={styles.detailText}>이름: {selectedSysAdminGrantCandidate.name}</Text>
+            <Text style={styles.detailText}>아이디: {selectedSysAdminGrantCandidate.loginId}</Text>
           </View>
         )}
 
@@ -584,7 +584,7 @@ export function SysAdminHomeScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>OPS_ADMIN 권한 부여 대상 검색 (DRIVER)</Text>
         <Text style={styles.meta}>DRIVER 권한 보유 + OPS_ADMIN 미보유 계정만 검색됩니다.</Text>
-        <Text style={styles.label}>검색어 (이메일/이름)</Text>
+        <Text style={styles.label}>검색어 (아이디/이름)</Text>
         <View style={styles.buttonRow}>
           <TextInput
             style={[styles.input, styles.flexInput]}
@@ -607,8 +607,8 @@ export function SysAdminHomeScreen() {
             onPress={() => setSelectedGrantCandidateId(item.userId)}
           >
             <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
-            <Text style={styles.listSub}>{item.userDisplayName}</Text>
-            <Text style={styles.listSub}>{item.userEmail}</Text>
+            <Text style={styles.listSub}>{item.name}</Text>
+            <Text style={styles.listSub}>아이디: {item.loginId}</Text>
           </Pressable>
         ))}
         {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (
@@ -618,8 +618,8 @@ export function SysAdminHomeScreen() {
         {selectedGrantCandidate && (
           <View style={styles.resultBox}>
             <Text style={styles.detailText}>선택 사용자 ID: {selectedGrantCandidate.userId}</Text>
-            <Text style={styles.detailText}>이름: {selectedGrantCandidate.userDisplayName}</Text>
-            <Text style={styles.detailText}>이메일: {selectedGrantCandidate.userEmail}</Text>
+            <Text style={styles.detailText}>이름: {selectedGrantCandidate.name}</Text>
+            <Text style={styles.detailText}>아이디: {selectedGrantCandidate.loginId}</Text>
           </View>
         )}
 

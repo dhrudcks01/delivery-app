@@ -120,7 +120,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
 
     try {
       await grantOpsAdminRole(candidate.userId);
-      setOpsAdminGrantResult(`사용자 #${candidate.userId} (${candidate.userEmail}) 에게 OPS_ADMIN 권한을 부여했습니다.`);
+      setOpsAdminGrantResult(`사용자 #${candidate.userId} (${candidate.loginId}) 에게 OPS_ADMIN 권한을 부여했습니다.`);
       await loadOpsAdminGrantCandidates();
     } catch (error) {
       setOpsAdminGrantError(toErrorMessage(error));
@@ -198,7 +198,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
               style={[styles.input, styles.queryInput]}
               value={opsAdminGrantQuery}
               onChangeText={setOpsAdminGrantQuery}
-              placeholder="검색어(이메일/이름)"
+              placeholder="검색어(아이디/이름)"
               placeholderTextColor="#94a3b8"
               editable={!isLoadingGrantCandidates}
             />
@@ -218,8 +218,8 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
               onPress={() => setSelectedGrantCandidateId(item.userId)}
             >
               <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
-              <Text style={styles.listSub}>{item.userDisplayName}</Text>
-              <Text style={styles.listSub}>{item.userEmail}</Text>
+              <Text style={styles.listSub}>{item.name}</Text>
+              <Text style={styles.listSub}>아이디: {item.loginId}</Text>
             </Pressable>
           ))}
           {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (

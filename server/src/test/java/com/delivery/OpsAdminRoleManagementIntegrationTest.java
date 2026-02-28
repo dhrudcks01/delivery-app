@@ -129,7 +129,8 @@ class OpsAdminRoleManagementIntegrationTest {
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].userId").value(driverOnly.id()))
-                .andExpect(jsonPath("$.content[0].userEmail").value("driver-only@example.com"));
+                .andExpect(jsonPath("$.content[0].loginId").value("driver-only@example.com"))
+                .andExpect(jsonPath("$.content[0].name").value("권한테스터"));
     }
 
     @Test
@@ -145,7 +146,8 @@ class OpsAdminRoleManagementIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].userId").value(target.id()))
-                .andExpect(jsonPath("$.content[0].userEmail").value("sys-target@example.com"));
+                .andExpect(jsonPath("$.content[0].loginId").value("sys-target@example.com"))
+                .andExpect(jsonPath("$.content[0].name").value("권한테스터"));
 
         mockMvc.perform(post("/sys-admin/users/{userId}/roles/sys-admin", target.id())
                         .header("Authorization", "Bearer " + sysAdmin.accessToken()))

@@ -37,12 +37,12 @@ export type OpsWasteRequestDetail = WasteRequestDetail;
 
 export type OpsAdminGrantCandidate = {
   userId: number;
-  userEmail: string;
-  userDisplayName: string;
+  loginId: string;
+  name: string;
 };
 
 export type SysAdminGrantCandidate = {
   userId: number;
-  userEmail: string;
-  userDisplayName: string;
+  loginId: string;
+  name: string;
 };
