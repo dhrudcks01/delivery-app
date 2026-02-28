@@ -12,8 +12,15 @@ export type ServiceArea = {
 
 export type ServiceAreaSearchParams = {
   query?: string;
+  active?: boolean;
   page?: number;
   size?: number;
+};
+
+export type CreateServiceAreaRequest = {
+  city: string;
+  district: string;
+  dong: string;
 };
 
 export type ServiceAreaPage = PageResponse<ServiceArea>;

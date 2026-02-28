@@ -13,6 +13,7 @@ import { PhoneVerificationScreen } from '../screens/PhoneVerificationScreen';
 import { ProfileSettingsScreen } from '../screens/ProfileSettingsScreen';
 import { RoleCenterScreen } from '../screens/RoleCenterScreen';
 import { ServiceAreaBrowseScreen } from '../screens/ServiceAreaBrowseScreen';
+import { ServiceAreaManagementScreen } from '../screens/ServiceAreaManagementScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
 import { UserAddressManagementScreen } from '../screens/UserAddressManagementScreen';
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   SysAdminHome: undefined;
   UserAddressManagement: undefined;
   ServiceAreaBrowse: undefined;
+  ServiceAreaManagement: undefined;
   UserPaymentManagement: undefined;
   WasteRequestDetail: { requestId: number; orderNo?: string };
   ProfileSettings: undefined;
@@ -345,6 +347,13 @@ export function RootNavigator() {
           name="ServiceAreaBrowse"
           component={ServiceAreaBrowseScreen}
           options={{ title: '서비스 가능 지역' }}
+        />
+      )}
+      {isAuthenticated && !isPhoneVerificationPending && (
+        <RootStack.Screen
+          name="ServiceAreaManagement"
+          component={ServiceAreaManagementScreen}
+          options={{ title: '서비스 신청지역' }}
         />
       )}
       {isAuthenticated && !isPhoneVerificationPending && (
