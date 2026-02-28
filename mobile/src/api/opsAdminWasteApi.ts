@@ -1,6 +1,7 @@
 import { httpClient } from './httpClient';
 import {
   AssignWasteRequestPayload,
+  DriverAssignmentCandidate,
   FailedPayment,
   OpsWasteListFilter,
   OpsWasteRequest,
@@ -33,6 +34,24 @@ export async function assignWasteRequestForOps(
   const response = await httpClient.post<OpsWasteRequest>(
     `/ops-admin/waste-requests/${requestId}/assign`,
     payload,
+  );
+  return response.data;
+}
+
+export async function getDriverAssignmentCandidatesForOps(params: {
+  query?: string;
+  page?: number;
+  size?: number;
+} = {}): Promise<PageResponse<DriverAssignmentCandidate>> {
+  const response = await httpClient.get<PageResponse<DriverAssignmentCandidate>>(
+    '/ops-admin/waste-requests/driver-candidates',
+    {
+      params: {
+        query: params.query,
+        page: params.page,
+        size: params.size,
+      },
+    },
   );
   return response.data;
 }

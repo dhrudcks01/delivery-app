@@ -35,6 +35,12 @@ export type AssignWasteRequestPayload = {
 export type OpsWasteRequest = WasteRequest;
 export type OpsWasteRequestDetail = WasteRequestDetail;
 
+export type DriverAssignmentCandidate = {
+  driverId: number;
+  loginId: string;
+  name: string;
+};
+
 export type OpsAdminGrantCandidate = {
   userId: number;
   loginId: string;

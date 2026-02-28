@@ -1,5 +1,5 @@
 ﻿import { AxiosError } from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveDriverApplication,
@@ -8,6 +8,7 @@ import {
 } from '../api/opsAdminDriverApplicationApi';
 import {
   assignWasteRequestForOps,
+  getDriverAssignmentCandidatesForOps,
   getFailedPaymentsForOps,
   getOpsWasteRequestDetail,
   getOpsWasteRequests,
@@ -16,11 +17,19 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
-import { FailedPayment, OpsWasteRequest, OpsWasteRequestDetail } from '../types/opsAdmin';
+import {
+  DriverAssignmentCandidate,
+  FailedPayment,
+  OpsWasteRequest,
+  OpsWasteRequestDetail,
+} from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
+    if (error.response?.status === 403) {
+      return '권한이 없습니다. OPS_ADMIN 권한을 확인해 주세요.';
+    }
     const apiError = error.response?.data as ApiErrorResponse | undefined;
     return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
   }
@@ -64,7 +73,11 @@ export function OpsAdminHomeScreen() {
   const [isLoadingWasteDetail, setIsLoadingWasteDetail] = useState(false);
   const [wasteDetailError, setWasteDetailError] = useState<string | null>(null);
 
-  const [driverIdInput, setDriverIdInput] = useState('');
+  const [driverCandidateQuery, setDriverCandidateQuery] = useState('');
+  const [driverCandidates, setDriverCandidates] = useState<DriverAssignmentCandidate[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [isLoadingDriverCandidates, setIsLoadingDriverCandidates] = useState(false);
+  const [driverCandidateError, setDriverCandidateError] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignMessage, setAssignMessage] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
@@ -74,14 +87,6 @@ export function OpsAdminHomeScreen() {
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
   const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
   const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
-
-  const parsedDriverId = useMemo(() => {
-    const parsed = Number(driverIdInput.trim());
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      return null;
-    }
-    return parsed;
-  }, [driverIdInput]);
 
   const loadWasteRequests = async () => {
     setIsLoadingWasteList(true);
@@ -114,6 +119,32 @@ export function OpsAdminHomeScreen() {
       setSelectedWasteRequest(null);
     } finally {
       setIsLoadingWasteDetail(false);
+    }
+  };
+
+  const loadDriverCandidates = async () => {
+    setIsLoadingDriverCandidates(true);
+    setDriverCandidateError(null);
+
+    try {
+      const response = await getDriverAssignmentCandidatesForOps({
+        query: driverCandidateQuery.trim() || undefined,
+        page: 0,
+        size: 20,
+      });
+      setDriverCandidates(response.content);
+      setSelectedDriverId((current) => {
+        if (current && response.content.some((item) => item.driverId === current)) {
+          return current;
+        }
+        return response.content[0]?.driverId ?? null;
+      });
+    } catch (error) {
+      setDriverCandidates([]);
+      setSelectedDriverId(null);
+      setDriverCandidateError(toErrorMessage(error));
+    } finally {
+      setIsLoadingDriverCandidates(false);
     }
   };
 
@@ -209,8 +240,8 @@ export function OpsAdminHomeScreen() {
       setAssignError('배정할 요청을 목록에서 선택해 주세요.');
       return;
     }
-    if (!parsedDriverId) {
-      setAssignError('배정할 기사 사용자 ID를 숫자로 입력해 주세요.');
+    if (!selectedDriverId) {
+      setAssignError('배정할 기사를 검색 후 선택해 주세요.');
       return;
     }
 
@@ -219,7 +250,7 @@ export function OpsAdminHomeScreen() {
     setAssignMessage(null);
 
     try {
-      const response = await assignWasteRequestForOps(selectedWasteRequestId, { driverId: parsedDriverId });
+      const response = await assignWasteRequestForOps(selectedWasteRequestId, { driverId: selectedDriverId });
       setAssignMessage(`요청 #${response.id} 기사 배정 완료`);
       await loadWasteRequests();
       await loadWasteRequestDetail(response.id);
@@ -253,6 +284,7 @@ export function OpsAdminHomeScreen() {
   useEffect(() => {
     void loadPendingApplications();
     void loadWasteRequests();
+    void loadDriverCandidates();
     void loadFailedPayments();
   }, []);
 
@@ -414,14 +446,43 @@ export function OpsAdminHomeScreen() {
                 {index + 1}. [{photo.type || 'PHOTO'}] {photo.url}
               </Text>
             ))}
-            <TextInput
-              style={styles.input}
-              value={driverIdInput}
-              onChangeText={setDriverIdInput}
-              placeholder="배정할 기사 사용자 ID"
-              keyboardType="numeric"
-              placeholderTextColor="#94a3b8"
-            />
+            <Text style={styles.detailText}>배정 기사 검색</Text>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={[styles.input, styles.queryInput]}
+                value={driverCandidateQuery}
+                onChangeText={setDriverCandidateQuery}
+                placeholder="기사 검색(이름/아이디)"
+                placeholderTextColor="#94a3b8"
+                editable={!isLoadingDriverCandidates}
+              />
+              <Pressable
+                style={[styles.ghostButton, isLoadingDriverCandidates && styles.buttonDisabled]}
+                onPress={() => void loadDriverCandidates()}
+                disabled={isLoadingDriverCandidates}
+              >
+                <Text style={styles.ghostButtonText}>검색</Text>
+              </Pressable>
+            </View>
+            {isLoadingDriverCandidates && <Text style={styles.meta}>기사 후보 조회 중..</Text>}
+            {driverCandidateError && <Text style={styles.error}>{driverCandidateError}</Text>}
+            {driverCandidates.map((candidate) => (
+              <Pressable
+                key={candidate.driverId}
+                style={[styles.listItem, selectedDriverId === candidate.driverId && styles.listItemActive]}
+                onPress={() => {
+                  setSelectedDriverId(candidate.driverId);
+                  setAssignError(null);
+                }}
+              >
+                <Text style={styles.listTitle}>기사 #{candidate.driverId}</Text>
+                <Text style={styles.listSub}>이름: {candidate.name}</Text>
+                <Text style={styles.listSub}>아이디: {candidate.loginId}</Text>
+              </Pressable>
+            ))}
+            {!isLoadingDriverCandidates && driverCandidates.length === 0 && (
+              <Text style={styles.meta}>검색 결과가 없습니다.</Text>
+            )}
             {assignMessage && <Text style={styles.success}>{assignMessage}</Text>}
             {assignError && <Text style={styles.error}>{assignError}</Text>}
             <Pressable
@@ -541,6 +602,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   buttonRow: {
     flexDirection: 'row',
     gap: 8,
@@ -584,6 +650,9 @@ const styles = StyleSheet.create({
     color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
+  },
+  queryInput: {
+    flex: 1,
   },
   listItem: {
     borderWidth: 1,
