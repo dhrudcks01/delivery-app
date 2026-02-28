@@ -29,6 +29,7 @@ type AddressRegion = {
 };
 
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
+const PRIMARY_ADDRESS_MISSING_MESSAGE = '대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.';
 const CITY_SUFFIXES = ['특별시', '광역시', '자치시', '자치도', '-si', '-do', '시', '도'];
 const DISTRICT_SUFFIXES = ['자치구', '-gu', '-gun', '구', '군'];
 const DONG_SUFFIXES = ['-dong', '-eup', '-myeon', '동', '읍', '면', '가'];
@@ -143,6 +144,15 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   const canUsePrimaryAddress = primaryAddressBuildResult?.ok ?? false;
   const primaryRequestAddress = primaryAddressBuildResult?.ok ? primaryAddressBuildResult.address : null;
+  const isPrimaryAddressMissing = !isLoadingPrimaryAddress && !primaryAddress && !primaryAddressError;
+  const shouldShowAddressManagementCta = isPrimaryAddressMissing;
+  const primaryAddressIssueMessage =
+    isPrimaryAddressMissing
+      ? PRIMARY_ADDRESS_MISSING_MESSAGE
+      : (primaryAddressError
+        ?? (primaryAddress && primaryAddressBuildResult && !primaryAddressBuildResult.ok
+          ? primaryAddressBuildResult.message
+          : null));
   const isServiceAreaBlocked = isServiceAreaAvailable === false;
   const canSubmitRequest =
     canUsePrimaryAddress
@@ -177,9 +187,6 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       const addresses = await loadUserAddresses(me.id);
       const selected = addresses.find((item) => item.isPrimary) ?? addresses[0] ?? null;
       setPrimaryAddress(selected);
-      if (!selected) {
-        setPrimaryAddressError('대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.');
-      }
     } catch (error) {
       setPrimaryAddress(null);
       setPrimaryAddressError(toErrorMessage(error));
@@ -345,12 +352,11 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
               <Text style={styles.addressSub}>지번: {primaryAddress.jibunAddress || '-'}</Text>
             </View>
           )}
-          {!isLoadingPrimaryAddress && !primaryAddress && (
-            <Text style={styles.error}>대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.</Text>
-          )}
-          {primaryAddressError && <Text style={styles.error}>{primaryAddressError}</Text>}
-          {primaryAddress && primaryAddressBuildResult && !primaryAddressBuildResult.ok && (
-            <Text style={styles.error}>{primaryAddressBuildResult.message}</Text>
+          {primaryAddressIssueMessage && <Text style={styles.error}>{primaryAddressIssueMessage}</Text>}
+          {shouldShowAddressManagementCta && (
+            <Pressable style={styles.retryButton} onPress={() => navigation.navigate('UserAddressManagement')}>
+              <Text style={styles.retryButtonText}>주소관리로 이동</Text>
+            </Pressable>
           )}
 
           <Text style={styles.meta}>
