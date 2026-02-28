@@ -45,14 +45,14 @@ public class WasteStatusTransitionService {
     public WasteRequestEntity transition(Long requestId, String toStatus, String actorEmail) {
         WasteRequestEntity request = wasteRequestRepository.findById(requestId)
                 .orElseThrow(WasteRequestNotFoundException::new);
-        UserEntity actor = userRepository.findByEmail(actorEmail)
+        UserEntity actor = userRepository.findByLoginId(actorEmail)
                 .orElseThrow(InvalidCredentialsException::new);
         return transitionInternal(request, toStatus, actor);
     }
 
     @Transactional
     public WasteRequestEntity transitionForOwner(Long requestId, String toStatus, String actorEmail) {
-        UserEntity actor = userRepository.findByEmail(actorEmail)
+        UserEntity actor = userRepository.findByLoginId(actorEmail)
                 .orElseThrow(InvalidCredentialsException::new);
         WasteRequestEntity request = wasteRequestRepository.findByIdAndUser(requestId, actor)
                 .orElseThrow(WasteRequestNotFoundException::new);

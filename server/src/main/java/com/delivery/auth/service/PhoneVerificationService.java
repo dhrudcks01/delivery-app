@@ -46,11 +46,11 @@ public class PhoneVerificationService {
 
     @Transactional
     public PhoneVerificationStartResponse start(String email) {
-        UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow(InvalidCredentialsException::new);
         log.info(
-                "phoneVerification.start requested userId={} email={} provider={}",
+                "phoneVerification.start requested userId={} loginId={} provider={}",
                 user.getId(),
-                user.getEmail(),
+                user.getLoginId(),
                 phoneVerificationProperties.getProvider()
         );
         validateStartConfiguration();
@@ -78,11 +78,11 @@ public class PhoneVerificationService {
 
     @Transactional(rollbackOn = Exception.class, dontRollbackOn = PhoneVerificationException.class)
     public PhoneVerificationCompleteResponse complete(String email, String identityVerificationId) {
-        UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow(InvalidCredentialsException::new);
         log.info(
-                "phoneVerification.complete requested userId={} email={} identityVerificationId={}",
+                "phoneVerification.complete requested userId={} loginId={} identityVerificationId={}",
                 user.getId(),
-                user.getEmail(),
+                user.getLoginId(),
                 identityVerificationId
         );
         UserPhoneVerificationEntity verification = userPhoneVerificationRepository.findByIdentityVerificationId(identityVerificationId)

@@ -45,7 +45,7 @@ public class PaymentMethodRegistrationService {
 
     @Transactional
     public PaymentMethodRegistrationStartResponse startRegistration(String email, String rawMethodType) {
-        UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow(InvalidCredentialsException::new);
         PaymentMethodType methodType = parseMethodType(rawMethodType);
 
         String customerKey = generateCustomerKey(user.getId());
@@ -73,7 +73,7 @@ public class PaymentMethodRegistrationService {
         }
 
         PaymentMethodType methodType = parseMethodType(rawMethodType);
-        UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow(InvalidCredentialsException::new);
         validateCustomerKeyOwnership(customerKey, user.getId());
         paymentFailureHandlingService.deactivateActiveMethods(user);
 

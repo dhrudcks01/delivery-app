@@ -46,10 +46,10 @@ public class SysAdminBootstrapRunner implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        String email = properties.getEmail();
+        String loginId = properties.getEmail();
         String password = properties.getPassword();
 
-        if (!StringUtils.hasText(email) || !StringUtils.hasText(password)) {
+        if (!StringUtils.hasText(loginId) || !StringUtils.hasText(password)) {
             log.info("SYS_ADMIN 부트스트랩 설정이 없어 초기 계정 생성을 건너뜁니다.");
             return;
         }
@@ -60,21 +60,22 @@ public class SysAdminBootstrapRunner implements ApplicationRunner {
         }
 
         Long roleId = ensureSysAdminRole();
-        UserEntity user = userRepository.findByEmail(email)
+        UserEntity user = userRepository.findByLoginId(loginId)
                 .orElseGet(() -> userRepository.save(new UserEntity(
-                        email,
+                        loginId,
+                        loginId,
                         passwordEncoder.encode(password),
                         properties.getDisplayName(),
                         "ACTIVE"
                 )));
 
-        if (!authIdentityRepository.existsByProviderAndProviderUserId(LOCAL_PROVIDER, email)) {
-            authIdentityRepository.save(new AuthIdentityEntity(user, LOCAL_PROVIDER, email));
+        if (!authIdentityRepository.existsByProviderAndProviderUserId(LOCAL_PROVIDER, loginId)) {
+            authIdentityRepository.save(new AuthIdentityEntity(user, LOCAL_PROVIDER, loginId));
         }
 
         ensureUserRole(user.getId(), roleId);
-        insertBootstrapMetadata(email);
-        log.info("SYS_ADMIN 초기 계정을 준비했습니다. email={}", email);
+        insertBootstrapMetadata(loginId);
+        log.info("SYS_ADMIN 초기 계정을 준비했습니다. loginId={}", loginId);
     }
 
     private boolean isBootstrapCompleted() {
@@ -125,11 +126,11 @@ public class SysAdminBootstrapRunner implements ApplicationRunner {
         }
     }
 
-    private void insertBootstrapMetadata(String email) {
+    private void insertBootstrapMetadata(String loginId) {
         jdbcTemplate.update(
                 "INSERT INTO bootstrap_metadata (metadata_key, metadata_value) VALUES (?, ?)",
                 BOOTSTRAP_KEY,
-                email
+                loginId
         );
     }
 }

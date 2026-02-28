@@ -48,7 +48,7 @@ class SysAdminBootstrapIntegrationTest {
 
     @Test
     void bootstrapCreatesSysAdminUserAndRoleBinding() {
-        UserEntity user = userRepository.findByEmail("bootstrap-admin@example.com").orElseThrow();
+        UserEntity user = userRepository.findByLoginId("bootstrap-admin@example.com").orElseThrow();
         assertThat(passwordEncoder.matches("bootstrap-password-123", user.getPasswordHash())).isTrue();
         assertThat(user.getDisplayName()).isEqualTo("초기시스템관리자");
         assertThat(authIdentityRepository.existsByProviderAndProviderUserId("LOCAL", "bootstrap-admin@example.com"))

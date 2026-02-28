@@ -59,7 +59,7 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").isNotEmpty());
 
-        UserEntity user = userRepository.findByEmail(email).orElseThrow();
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow();
         assertThat(user.getPasswordHash()).isNotEqualTo(password);
         assertThat(passwordEncoder.matches(password, user.getPasswordHash())).isTrue();
         assertThat(authIdentityRepository.existsByProviderAndProviderUserId("LOCAL", email)).isTrue();
@@ -79,7 +79,7 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").isNotEmpty());
 
-        UserEntity user = userRepository.findByEmail(identifier).orElseThrow();
+        UserEntity user = userRepository.findByLoginId(identifier).orElseThrow();
         assertThat(user.getDisplayName()).isEqualTo("문자열식별자유저");
         assertThat(authIdentityRepository.existsByProviderAndProviderUserId("LOCAL", identifier)).isTrue();
     }

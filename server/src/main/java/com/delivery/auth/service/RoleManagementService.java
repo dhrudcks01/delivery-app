@@ -107,7 +107,7 @@ public class RoleManagementService {
                 )
                 AND (
                     ? = ''
-                    OR LOWER(u.email) LIKE LOWER(?)
+                    OR LOWER(u.login_id) LIKE LOWER(?)
                     OR LOWER(u.display_name) LIKE LOWER(?)
                 )
                 """,
@@ -121,7 +121,7 @@ public class RoleManagementService {
 
         List<OpsAdminGrantCandidateResponse> content = jdbcTemplate.query(
                 """
-                SELECT u.id, u.email, u.display_name
+                SELECT u.id, u.login_id AS email, u.display_name
                 FROM users u
                 WHERE EXISTS (
                     SELECT 1
@@ -137,7 +137,7 @@ public class RoleManagementService {
                 )
                 AND (
                     ? = ''
-                    OR LOWER(u.email) LIKE LOWER(?)
+                    OR LOWER(u.login_id) LIKE LOWER(?)
                     OR LOWER(u.display_name) LIKE LOWER(?)
                 )
                 ORDER BY u.id DESC
@@ -224,7 +224,7 @@ public class RoleManagementService {
                 )
                 AND (
                     ? = ''
-                    OR LOWER(u.email) LIKE LOWER(?)
+                    OR LOWER(u.login_id) LIKE LOWER(?)
                     OR LOWER(u.display_name) LIKE LOWER(?)
                 )
                 """,
@@ -237,7 +237,7 @@ public class RoleManagementService {
 
         List<SysAdminGrantCandidateResponse> content = jdbcTemplate.query(
                 """
-                SELECT u.id, u.email, u.display_name
+                SELECT u.id, u.login_id AS email, u.display_name
                 FROM users u
                 WHERE NOT EXISTS (
                     SELECT 1
@@ -247,7 +247,7 @@ public class RoleManagementService {
                 )
                 AND (
                     ? = ''
-                    OR LOWER(u.email) LIKE LOWER(?)
+                    OR LOWER(u.login_id) LIKE LOWER(?)
                     OR LOWER(u.display_name) LIKE LOWER(?)
                 )
                 ORDER BY u.id DESC
@@ -298,7 +298,7 @@ public class RoleManagementService {
     }
 
     private UserEntity findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+        return userRepository.findByLoginId(email)
                 .orElseThrow(InvalidCredentialsException::new);
     }
 

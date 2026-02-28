@@ -21,7 +21,10 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(name = "login_id", nullable = false, unique = true, length = 255)
+    private String loginId;
+
+    @Column(unique = true, length = 255)
     private String email;
 
     @Column(name = "password_hash", length = 255)
@@ -60,11 +63,16 @@ public class UserEntity {
     protected UserEntity() {
     }
 
-    public UserEntity(String email, String passwordHash, String displayName, String status) {
+    public UserEntity(String loginId, String email, String passwordHash, String displayName, String status) {
+        this.loginId = Objects.requireNonNull(loginId);
         this.email = email;
         this.passwordHash = passwordHash;
         this.displayName = displayName;
         this.status = status;
+    }
+
+    public UserEntity(String loginId, String passwordHash, String displayName, String status) {
+        this(loginId, loginId, passwordHash, displayName, status);
     }
 
     @PrePersist
@@ -81,6 +89,10 @@ public class UserEntity {
 
     public Long getId() {
         return id;
+    }
+
+    public String getLoginId() {
+        return loginId;
     }
 
     public String getEmail() {

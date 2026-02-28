@@ -60,7 +60,7 @@ public class PaymentFailureHandlingService {
 
     @Transactional
     public PaymentMethodStatusResponse getPaymentMethodStatus(String email) {
-        UserEntity user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow(InvalidCredentialsException::new);
         return new PaymentMethodStatusResponse(
                 true,
                 paymentMethodRepository.findAllByUserOrderByCreatedAtDesc(user).stream()

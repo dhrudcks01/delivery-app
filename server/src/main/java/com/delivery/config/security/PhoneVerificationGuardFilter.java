@@ -88,8 +88,8 @@ public class PhoneVerificationGuardFilter extends OncePerRequestFilter {
             return;
         }
 
-        String email = authentication.getName();
-        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        String loginId = authentication.getName();
+        UserEntity user = userRepository.findByLoginId(loginId).orElse(null);
         if (user == null || isVerified(user)) {
             filterChain.doFilter(request, response);
             return;

@@ -42,15 +42,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtTokenProvider.parseClaims(token);
                 Object tokenType = claims.get("type");
                 if ("access".equals(tokenType)) {
-                    String email = claims.getSubject();
-                    userRepository.findByEmail(email).ifPresent(user -> {
-                        List<SimpleGrantedAuthority> authorities = userRepository.findRoleCodesByEmail(email)
+                    String loginId = claims.getSubject();
+                    userRepository.findByLoginId(loginId).ifPresent(user -> {
+                        List<SimpleGrantedAuthority> authorities = userRepository.findRoleCodesByLoginId(loginId)
                                 .stream()
                                 .map(roleCode -> new SimpleGrantedAuthority("ROLE_" + roleCode))
                                 .toList();
                         UsernamePasswordAuthenticationToken authentication =
                                 new UsernamePasswordAuthenticationToken(
-                                        email,
+                                        loginId,
                                         null,
                                         authorities
                                 );

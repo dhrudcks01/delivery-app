@@ -108,7 +108,7 @@ public class SysAdminApplicationService {
     }
 
     private UserEntity findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+        return userRepository.findByLoginId(email)
                 .orElseThrow(InvalidCredentialsException::new);
     }
 
@@ -118,12 +118,12 @@ public class SysAdminApplicationService {
         return new SysAdminApplicationResponse(
                 entity.getId(),
                 applicant.getId(),
-                applicant.getEmail(),
+                applicant.getLoginId(),
                 applicant.getDisplayName(),
                 entity.getStatus(),
                 entity.getReason(),
                 processor != null ? processor.getId() : null,
-                processor != null ? processor.getEmail() : null,
+                processor != null ? processor.getLoginId() : null,
                 entity.getProcessedAt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

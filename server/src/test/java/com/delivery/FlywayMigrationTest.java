@@ -23,7 +23,7 @@ class FlywayMigrationTest {
     @Test
     void flywayAppliesInitialMigrationAndCreatesTable() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("15");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("16");
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM bootstrap_metadata WHERE 1 = 0"))
                 .doesNotThrowAnyException();
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT 1 FROM auth_identities WHERE 1 = 0"))
@@ -45,7 +45,7 @@ class FlywayMigrationTest {
         assertThatCode(() -> jdbcTemplate.queryForList("SELECT order_no, disposal_items, bag_count FROM waste_requests WHERE 1 = 0"))
                 .doesNotThrowAnyException();
         assertThatCode(() -> jdbcTemplate.queryForList("""
-                SELECT phone_e164, phone_verified_at, phone_verification_provider, identity_verification_id, ci, di
+                SELECT login_id, email, phone_e164, phone_verified_at, phone_verification_provider, identity_verification_id, ci, di
                 FROM users
                 WHERE 1 = 0
                 """))

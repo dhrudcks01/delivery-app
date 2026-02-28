@@ -145,7 +145,7 @@ public class WasteRequestService {
     }
 
     private UserEntity findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+        return userRepository.findByLoginId(email)
                 .orElseThrow(InvalidCredentialsException::new);
     }
 

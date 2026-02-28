@@ -52,25 +52,27 @@ public class AuthService {
 
     @Transactional
     public AuthTokenResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        String loginId = request.email().trim();
+        if (userRepository.existsByLoginId(loginId)) {
             throw new DuplicateEmailException();
         }
 
         UserEntity user = new UserEntity(
-                request.email(),
+                loginId,
+                loginId,
                 passwordEncoder.encode(request.password()),
                 request.displayName(),
                 "ACTIVE"
         );
         UserEntity saved = userRepository.save(user);
-        authIdentityRepository.save(new AuthIdentityEntity(saved, LOCAL_PROVIDER, request.email()));
+        authIdentityRepository.save(new AuthIdentityEntity(saved, LOCAL_PROVIDER, loginId));
         return issueTokens(saved);
     }
 
     @Transactional
     public AuthTokenResponse login(LoginRequest request, String ipAddress, String userAgent) {
         String identifier = request.email().trim();
-        UserEntity user = userRepository.findByEmail(identifier)
+        UserEntity user = userRepository.findByLoginId(identifier)
                 .orElseThrow(() -> {
                     loginAuditLogService.record(identifier, ipAddress, userAgent, "IDENTIFIER_NOT_FOUND");
                     return new LoginIdentifierNotFoundException();
@@ -99,8 +101,8 @@ public class AuthService {
             throw new InvalidRefreshTokenException();
         }
 
-        String email = claims.getSubject();
-        UserEntity user = userRepository.findByEmail(email)
+        String loginId = claims.getSubject();
+        UserEntity user = userRepository.findByLoginId(loginId)
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         return issueTokens(user);
@@ -108,15 +110,15 @@ public class AuthService {
 
     @Transactional
     public MeResponse getMe(String email) {
-        UserEntity user = userRepository.findByEmail(email)
+        UserEntity user = userRepository.findByLoginId(email)
                 .orElseThrow(InvalidCredentialsException::new);
-        List<String> roles = userRepository.findRoleCodesByEmail(email);
+        List<String> roles = userRepository.findRoleCodesByLoginId(email);
         return toMeResponse(user, roles);
     }
 
     @Transactional
     public MeResponse updateProfile(String email, UpdateProfileRequest request) {
-        UserEntity user = userRepository.findByEmail(email)
+        UserEntity user = userRepository.findByLoginId(email)
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (StringUtils.hasText(request.phoneNumber())) {
@@ -127,7 +129,7 @@ public class AuthService {
             user.changeDisplayName(request.displayName().trim());
         }
 
-        List<String> roles = userRepository.findRoleCodesByEmail(email);
+        List<String> roles = userRepository.findRoleCodesByLoginId(email);
         return toMeResponse(user, roles);
     }
 
@@ -149,7 +151,7 @@ public class AuthService {
     private MeResponse toMeResponse(UserEntity user, List<String> roles) {
         return new MeResponse(
                 user.getId(),
-                user.getEmail(),
+                user.getLoginId(),
                 user.getDisplayName(),
                 roles,
                 maskPhoneNumber(user.getPhoneE164()),

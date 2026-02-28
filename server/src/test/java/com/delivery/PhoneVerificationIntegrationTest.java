@@ -133,7 +133,7 @@ class PhoneVerificationIntegrationTest {
 
         verify(portOneIdentityVerificationClient, times(1)).getIdentityVerification(identityVerificationId);
 
-        UserEntity user = userRepository.findByEmail(email).orElseThrow();
+        UserEntity user = userRepository.findByLoginId(email).orElseThrow();
         assertThat(user.getPhoneE164()).isEqualTo("+821012341234");
         assertThat(user.getIdentityVerificationId()).isEqualTo(identityVerificationId);
         assertThat(user.getPhoneVerifiedAt()).isEqualTo(verifiedAt);

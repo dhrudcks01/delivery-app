@@ -28,7 +28,7 @@ public class JwtTokenProvider {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(jwtProperties.accessTokenExpirationSeconds());
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(user.getLoginId())
                 .claim("uid", user.getId())
                 .claim("type", "access")
                 .issuedAt(Date.from(now))
@@ -41,7 +41,7 @@ public class JwtTokenProvider {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(jwtProperties.refreshTokenExpirationSeconds());
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(user.getLoginId())
                 .claim("uid", user.getId())
                 .claim("type", "refresh")
                 .issuedAt(Date.from(now))

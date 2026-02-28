@@ -49,7 +49,7 @@ public class ApiRequestLoggingFilter extends OncePerRequestFilter {
             long durationMs = System.currentTimeMillis() - startedAt;
             RequestActor actor = resolveActor();
             log.info(
-                    "requestId={} method={} uri={} status={} durationMs={} clientIp={} userId={} userEmail={}",
+                    "requestId={} method={} uri={} status={} durationMs={} clientIp={} userId={} userLoginId={} userEmail={}",
                     requestId,
                     request.getMethod(),
                     request.getRequestURI(),
@@ -57,6 +57,7 @@ public class ApiRequestLoggingFilter extends OncePerRequestFilter {
                     durationMs,
                     resolveClientIp(request),
                     actor.userId(),
+                    actor.userLoginId(),
                     actor.userEmail()
             );
             MDC.remove(REQUEST_ID_MDC_KEY);
@@ -89,21 +90,21 @@ public class ApiRequestLoggingFilter extends OncePerRequestFilter {
         }
 
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof String userEmail) || !StringUtils.hasText(userEmail)) {
+        if (!(principal instanceof String loginId) || !StringUtils.hasText(loginId)) {
             return RequestActor.anonymous();
         }
 
-        Optional<UserEntity> user = userRepository.findByEmail(userEmail);
+        Optional<UserEntity> user = userRepository.findByLoginId(loginId);
         if (user.isEmpty()) {
-            return new RequestActor("", userEmail);
+            return new RequestActor("", loginId, "");
         }
-        return new RequestActor(String.valueOf(user.get().getId()), userEmail);
+        return new RequestActor(String.valueOf(user.get().getId()), loginId, user.get().getEmail());
     }
 
-    private record RequestActor(String userId, String userEmail) {
+    private record RequestActor(String userId, String userLoginId, String userEmail) {
 
         private static RequestActor anonymous() {
-            return new RequestActor("", "");
+            return new RequestActor("", "", "");
         }
     }
 }
