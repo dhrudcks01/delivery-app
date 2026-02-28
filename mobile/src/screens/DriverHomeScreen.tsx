@@ -196,7 +196,7 @@ export function DriverHomeScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>DRIVER 전용 배정건</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
       <View style={styles.card}>

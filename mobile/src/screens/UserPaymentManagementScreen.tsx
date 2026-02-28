@@ -210,7 +210,7 @@ export function UserPaymentManagementScreen() {
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>결제수단 관리</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
 
       {isLoading && <Text style={styles.meta}>결제수단 상태를 조회하는 중입니다.</Text>}
       {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}

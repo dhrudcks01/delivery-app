@@ -24,7 +24,8 @@ export type RefreshTokenRequest = {
 
 export type MeResponse = {
   id: number;
-  email: string;
+  loginId?: string | null;
+  email?: string | null;
   displayName: string;
   roles: string[];
   phoneNumber: string | null;

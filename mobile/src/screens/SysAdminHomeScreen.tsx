@@ -39,8 +39,12 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
+function resolveLoginId(loginId?: string | null, email?: string | null): string {
+  return loginId ?? email ?? '-';
+}
+
 function getRoleApplicationSummary(application: RoleApplication): string {
-  return `${application.userDisplayName} (${application.userEmail})`;
+  return `이름: ${application.userDisplayName} / 아이디: ${resolveLoginId(application.userLoginId, application.userEmail)}`;
 }
 
 export function SysAdminHomeScreen() {
@@ -231,7 +235,7 @@ export function SysAdminHomeScreen() {
     try {
       await grantOpsAdminRole(selectedGrantCandidate.userId);
       setRoleResultMessage(
-        `사용자 #${selectedGrantCandidate.userId} (${selectedGrantCandidate.loginId}) 에게 OPS_ADMIN 권한을 부여했습니다.`,
+        `${selectedGrantCandidate.name} (${selectedGrantCandidate.loginId}) 계정에 OPS_ADMIN 권한을 부여했습니다.`,
       );
       await loadOpsAdminGrantCandidates();
     } catch (error) {
@@ -254,7 +258,7 @@ export function SysAdminHomeScreen() {
     try {
       await grantSysAdminRole(selectedSysAdminGrantCandidate.userId);
       setRoleResultMessage(
-        `사용자 #${selectedSysAdminGrantCandidate.userId} (${selectedSysAdminGrantCandidate.loginId}) 에게 SYS_ADMIN 권한을 부여했습니다.`,
+        `${selectedSysAdminGrantCandidate.name} (${selectedSysAdminGrantCandidate.loginId}) 계정에 SYS_ADMIN 권한을 부여했습니다.`,
       );
       await loadSysAdminGrantCandidates();
     } catch (error) {
@@ -384,7 +388,7 @@ export function SysAdminHomeScreen() {
       contentInsetAdjustmentBehavior="always"
     >
       <Text style={styles.title}>SYS_ADMIN 홈</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
       <View style={styles.statusCard}>
         <Text style={styles.statusTitle}>화면 상태 점검</Text>
@@ -440,7 +444,7 @@ export function SysAdminHomeScreen() {
             <Text style={styles.listTitle}>신청 #{item.id} ({item.status})</Text>
             <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
             <Text style={styles.listSub}>신청일: {formatDate(item.createdAt)}</Text>
-            <Text style={styles.listSub}>처리자: {item.processedByEmail ?? '-'}</Text>
+            <Text style={styles.listSub}>처리자 아이디: {resolveLoginId(item.processedByLoginId, item.processedByEmail)}</Text>
             <Text style={styles.listSub}>처리시각: {formatDate(item.processedAt)}</Text>
           </Pressable>
         ))}
@@ -495,7 +499,7 @@ export function SysAdminHomeScreen() {
             <Text style={styles.listTitle}>신청 #{item.id} ({item.status})</Text>
             <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
             <Text style={styles.listSub}>신청일: {formatDate(item.createdAt)}</Text>
-            <Text style={styles.listSub}>처리자: {item.processedByEmail ?? '-'}</Text>
+            <Text style={styles.listSub}>처리자 아이디: {resolveLoginId(item.processedByLoginId, item.processedByEmail)}</Text>
             <Text style={styles.listSub}>처리시각: {formatDate(item.processedAt)}</Text>
           </Pressable>
         ))}
@@ -553,9 +557,9 @@ export function SysAdminHomeScreen() {
             style={[styles.listItem, selectedSysAdminGrantCandidateId === item.userId && styles.listItemActive]}
             onPress={() => setSelectedSysAdminGrantCandidateId(item.userId)}
           >
-            <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
-            <Text style={styles.listSub}>{item.name}</Text>
+            <Text style={styles.listTitle}>이름: {item.name}</Text>
             <Text style={styles.listSub}>아이디: {item.loginId}</Text>
+            <Text style={styles.listSub}>사용자 번호: {item.userId}</Text>
           </Pressable>
         ))}
         {!isLoadingSysAdminGrantCandidates && sysAdminGrantCandidates.length === 0 && (
@@ -564,9 +568,9 @@ export function SysAdminHomeScreen() {
 
         {selectedSysAdminGrantCandidate && (
           <View style={styles.resultBox}>
-            <Text style={styles.detailText}>선택 사용자 ID: {selectedSysAdminGrantCandidate.userId}</Text>
-            <Text style={styles.detailText}>이름: {selectedSysAdminGrantCandidate.name}</Text>
-            <Text style={styles.detailText}>아이디: {selectedSysAdminGrantCandidate.loginId}</Text>
+            <Text style={styles.detailText}>선택 이름: {selectedSysAdminGrantCandidate.name}</Text>
+            <Text style={styles.detailText}>선택 아이디: {selectedSysAdminGrantCandidate.loginId}</Text>
+            <Text style={styles.detailText}>사용자 번호: {selectedSysAdminGrantCandidate.userId}</Text>
           </View>
         )}
 
@@ -606,9 +610,9 @@ export function SysAdminHomeScreen() {
             style={[styles.listItem, selectedGrantCandidateId === item.userId && styles.listItemActive]}
             onPress={() => setSelectedGrantCandidateId(item.userId)}
           >
-            <Text style={styles.listTitle}>사용자 #{item.userId}</Text>
-            <Text style={styles.listSub}>{item.name}</Text>
+            <Text style={styles.listTitle}>이름: {item.name}</Text>
             <Text style={styles.listSub}>아이디: {item.loginId}</Text>
+            <Text style={styles.listSub}>사용자 번호: {item.userId}</Text>
           </Pressable>
         ))}
         {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (
@@ -617,9 +621,9 @@ export function SysAdminHomeScreen() {
 
         {selectedGrantCandidate && (
           <View style={styles.resultBox}>
-            <Text style={styles.detailText}>선택 사용자 ID: {selectedGrantCandidate.userId}</Text>
-            <Text style={styles.detailText}>이름: {selectedGrantCandidate.name}</Text>
-            <Text style={styles.detailText}>아이디: {selectedGrantCandidate.loginId}</Text>
+            <Text style={styles.detailText}>선택 이름: {selectedGrantCandidate.name}</Text>
+            <Text style={styles.detailText}>선택 아이디: {selectedGrantCandidate.loginId}</Text>
+            <Text style={styles.detailText}>사용자 번호: {selectedGrantCandidate.userId}</Text>
           </View>
         )}
 

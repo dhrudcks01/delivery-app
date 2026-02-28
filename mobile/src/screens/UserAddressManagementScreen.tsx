@@ -253,7 +253,7 @@ export function UserAddressManagementScreen() {
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>주소관리</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>

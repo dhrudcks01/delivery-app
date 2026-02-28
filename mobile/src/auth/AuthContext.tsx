@@ -29,9 +29,9 @@ type ApiErrorResponse = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const LOGIN_FAILED_MESSAGE = 'Login failed. Please check your credentials.';
-const SIGNUP_FAILED_MESSAGE = 'Signup failed. Please check your input.';
-const AUTH_CHECK_FAILED_MESSAGE = 'Unable to validate auth session. Please login again.';
+const LOGIN_FAILED_MESSAGE = '로그인에 실패했습니다. 아이디/비밀번호를 확인해 주세요.';
+const SIGNUP_FAILED_MESSAGE = '회원가입에 실패했습니다. 입력값을 확인해 주세요.';
+const AUTH_CHECK_FAILED_MESSAGE = '인증 세션 확인에 실패했습니다. 다시 로그인해 주세요.';
 
 function getApiErrorCode(error: unknown): string | null {
   if (!(error instanceof AxiosError)) {
@@ -136,9 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let loginErrorMessage = LOGIN_FAILED_MESSAGE;
       const errorCode = getApiErrorCode(error);
       if (errorCode === 'LOGIN_IDENTIFIER_NOT_FOUND') {
-        loginErrorMessage = 'Identifier not found.';
+        loginErrorMessage = '존재하지 않는 아이디입니다.';
       } else if (errorCode === 'LOGIN_PASSWORD_MISMATCH') {
-        loginErrorMessage = 'Password does not match.';
+        loginErrorMessage = '비밀번호가 일치하지 않습니다.';
       }
 
       await logout();

@@ -8,7 +8,7 @@ export function ProfileSettingsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>설정</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>계정</Text>

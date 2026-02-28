@@ -17,7 +17,7 @@ type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { signIn, isLoading, errorMessage } = useAuth();
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput | null>(null);
@@ -29,14 +29,14 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   }, [errorMessage]);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setFormError('이메일과 비밀번호를 모두 입력해 주세요.');
+    if (!loginId.trim() || !password.trim()) {
+      setFormError('아이디와 비밀번호를 모두 입력해 주세요.');
       return;
     }
 
     setFormError(null);
     await signIn({
-      id: email.trim(),
+      id: loginId.trim(),
       password,
     });
   };
@@ -54,14 +54,14 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
       <View style={styles.form}>
         <Text style={styles.meta}>API: {API_BASE_URL}</Text>
-        <Text style={styles.label}>이메일</Text>
+        <Text style={styles.label}>아이디</Text>
         <TextInput
           style={styles.input}
-          value={email}
-          onChangeText={setEmail}
+          value={loginId}
+          onChangeText={setLoginId}
           autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="email@example.com"
+          keyboardType="default"
+          placeholder="아이디"
           placeholderTextColor="#94a3b8"
           returnKeyType="next"
           onSubmitEditing={() => passwordInputRef.current?.focus()}

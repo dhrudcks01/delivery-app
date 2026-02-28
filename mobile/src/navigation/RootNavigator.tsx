@@ -113,18 +113,18 @@ function HeaderlessScreenContainer({ children }: { children: ReactNode }) {
 }
 
 function TabHomeScreen({
-  email,
+  loginId,
   roles,
   primaryRole,
 }: {
-  email: string | null;
+  loginId: string | null;
   roles: AppRole[];
   primaryRole: AppRole;
 }) {
   return (
     <ScrollView contentContainerStyle={styles.tabContainer}>
       <Text style={styles.tabTitle}>공통 홈</Text>
-      <Text style={styles.tabMeta}>로그인: {email ?? '-'}</Text>
+      <Text style={styles.tabMeta}>로그인 아이디: {loginId ?? '-'}</Text>
       <Text style={styles.tabMeta}>보유 권한: {roles.join(', ')}</Text>
       <Text style={styles.tabMeta}>적용 권한(최고 권한): {primaryRole}</Text>
       <View style={styles.tabCard}>
@@ -138,7 +138,7 @@ function TabHomeScreen({
 }
 
 function TabProfileScreen({
-  email,
+  loginId,
   roles,
   primaryRole,
   phoneNumber,
@@ -150,7 +150,7 @@ function TabProfileScreen({
   onOpenRoleCenter,
   onOpenSettings,
 }: {
-  email: string | null;
+  loginId: string | null;
   roles: AppRole[];
   primaryRole: AppRole;
   phoneNumber: string | null;
@@ -165,7 +165,7 @@ function TabProfileScreen({
   return (
     <ScrollView contentContainerStyle={styles.tabContainer}>
       <Text style={styles.tabTitle}>내정보</Text>
-      <Text style={styles.tabMeta}>로그인: {email ?? '-'}</Text>
+      <Text style={styles.tabMeta}>로그인 아이디: {loginId ?? '-'}</Text>
       <Text style={styles.tabMeta}>보유 권한: {roles.join(', ')}</Text>
       <Text style={styles.tabMeta}>적용 권한(최고 권한): {primaryRole}</Text>
 
@@ -222,7 +222,7 @@ function AppTabsScreen() {
           isPrimaryUser
             ? (
               <TabHomeScreen
-                email={me?.email ?? null}
+                loginId={me?.loginId ?? me?.email ?? null}
                 roles={roles}
                 primaryRole={primaryRole}
               />
@@ -271,7 +271,7 @@ function AppTabsScreen() {
         options={{ title: TAB_TO_LABEL.ProfileTab }}
         children={() => (
           <TabProfileScreen
-            email={me?.email ?? null}
+            loginId={me?.loginId ?? me?.email ?? null}
             roles={roles}
             primaryRole={primaryRole}
             phoneNumber={me?.phoneNumber ?? null}

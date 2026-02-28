@@ -324,7 +324,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       includeTopInset={includeTopInset}
     >
       <Text style={styles.title}>USER 수거 요청</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
       {showRequestForm && (

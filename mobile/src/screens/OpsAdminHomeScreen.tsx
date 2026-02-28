@@ -304,7 +304,7 @@ export function OpsAdminHomeScreen() {
       contentInsetAdjustmentBehavior="always"
     >
       <Text style={styles.title}>OPS_ADMIN 운영 관리</Text>
-      <Text style={styles.meta}>로그인: {me?.email ?? '-'}</Text>
+      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
       <View style={styles.statusCard}>
         <Text style={styles.statusTitle}>화면 상태 요약</Text>
