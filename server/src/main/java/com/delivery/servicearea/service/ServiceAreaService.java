@@ -7,6 +7,7 @@ import com.delivery.address.service.AddressSearchService;
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
 import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
+import com.delivery.servicearea.dto.ServiceAreaMasterDongSummaryResponse;
 import com.delivery.servicearea.dto.ServiceAreaResponse;
 import com.delivery.servicearea.entity.ServiceAreaMasterDongEntity;
 import com.delivery.servicearea.entity.ServiceAreaEntity;
@@ -32,6 +33,8 @@ public class ServiceAreaService {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceAreaService.class);
     private static final int ADDRESS_SEARCH_FALLBACK_LIMIT = 5;
+    private static final long MASTER_DONG_MIN_TOTAL_THRESHOLD = 3000L;
+    private static final long MASTER_DONG_MIN_CITY_THRESHOLD = 17L;
 
     private static final List<String> CITY_SUFFIXES = List.of(
             "특별자치도",
@@ -122,6 +125,25 @@ public class ServiceAreaService {
     public Page<ServiceAreaMasterDongResponse> getMasterDongsForOps(String query, Boolean active, Pageable pageable) {
         String keyword = normalizeKeyword(query);
         return serviceAreaMasterDongRepository.searchForOps(keyword, active, pageable).map(this::toMasterResponse);
+    }
+
+    @Transactional
+    public ServiceAreaMasterDongSummaryResponse getMasterDongsSummaryForOps() {
+        long totalCount = serviceAreaMasterDongRepository.count();
+        long activeCount = serviceAreaMasterDongRepository.countByActiveTrue();
+        long cityCount = serviceAreaMasterDongRepository.countDistinctCity();
+        long districtCount = serviceAreaMasterDongRepository.countDistinctCityDistrict();
+        boolean lowDataWarning = totalCount < MASTER_DONG_MIN_TOTAL_THRESHOLD || cityCount < MASTER_DONG_MIN_CITY_THRESHOLD;
+
+        return new ServiceAreaMasterDongSummaryResponse(
+                totalCount,
+                activeCount,
+                cityCount,
+                districtCount,
+                MASTER_DONG_MIN_TOTAL_THRESHOLD,
+                MASTER_DONG_MIN_CITY_THRESHOLD,
+                lowDataWarning
+        );
     }
 
     @Transactional

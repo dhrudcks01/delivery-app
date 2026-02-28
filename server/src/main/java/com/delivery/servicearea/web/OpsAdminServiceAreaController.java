@@ -3,6 +3,7 @@ package com.delivery.servicearea.web;
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
 import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
+import com.delivery.servicearea.dto.ServiceAreaMasterDongSummaryResponse;
 import com.delivery.servicearea.dto.ServiceAreaResponse;
 import com.delivery.servicearea.service.ServiceAreaService;
 import jakarta.validation.Valid;
@@ -64,5 +65,10 @@ public class OpsAdminServiceAreaController {
             @PageableDefault(size = 50, sort = "code", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return ResponseEntity.ok(serviceAreaService.getMasterDongsForOps(query, active, pageable));
+    }
+
+    @GetMapping("/master-dongs/summary")
+    public ResponseEntity<ServiceAreaMasterDongSummaryResponse> getMasterDongsSummaryForOps() {
+        return ResponseEntity.ok(serviceAreaService.getMasterDongsSummaryForOps());
     }
 }

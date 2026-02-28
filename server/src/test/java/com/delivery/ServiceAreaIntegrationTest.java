@@ -188,6 +188,25 @@ class ServiceAreaIntegrationTest {
                 .andExpect(jsonPath("$.active").value(true));
     }
 
+    @Test
+    void opsAdminCanCheckMasterDongSummaryAndLowDataWarning() throws Exception {
+        TestUser opsAdmin = createUser("service-area-master-summary-ops@example.com", "OPS_ADMIN");
+        insertMasterDong("1144012000", "서울특별시", "마포구", "서교동", true);
+        insertMasterDong("2611011000", "부산광역시", "중구", "광복동", false);
+        insertMasterDong("1168010100", "서울특별시", "강남구", "역삼동", true);
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs/summary")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCount").value(3))
+                .andExpect(jsonPath("$.activeCount").value(2))
+                .andExpect(jsonPath("$.cityCount").value(2))
+                .andExpect(jsonPath("$.districtCount").value(3))
+                .andExpect(jsonPath("$.minimumTotalCountThreshold").value(3000))
+                .andExpect(jsonPath("$.minimumCityCountThreshold").value(17))
+                .andExpect(jsonPath("$.lowDataWarning").value(true));
+    }
+
     private Long createServiceArea(String accessToken, String city, String district, String dong) throws Exception {
         String response = mockMvc.perform(post("/ops-admin/service-areas")
                         .header("Authorization", "Bearer " + accessToken)

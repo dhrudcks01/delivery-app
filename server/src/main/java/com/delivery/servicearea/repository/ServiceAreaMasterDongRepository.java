@@ -23,4 +23,12 @@ public interface ServiceAreaMasterDongRepository extends JpaRepository<ServiceAr
             @Param("active") Boolean active,
             Pageable pageable
     );
+
+    long countByActiveTrue();
+
+    @Query("SELECT COUNT(DISTINCT m.city) FROM ServiceAreaMasterDongEntity m")
+    long countDistinctCity();
+
+    @Query("SELECT COUNT(DISTINCT CONCAT(CONCAT(m.city, '|'), m.district)) FROM ServiceAreaMasterDongEntity m")
+    long countDistinctCityDistrict();
 }
