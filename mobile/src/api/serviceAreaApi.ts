@@ -1,5 +1,13 @@
 import { httpClient } from './httpClient';
-import { CreateServiceAreaRequest, ServiceArea, ServiceAreaPage, ServiceAreaSearchParams } from '../types/serviceArea';
+import {
+  CreateServiceAreaRequest,
+  RegisterServiceAreaByCodeRequest,
+  ServiceArea,
+  ServiceAreaMasterDongPage,
+  ServiceAreaMasterDongSearchParams,
+  ServiceAreaPage,
+  ServiceAreaSearchParams,
+} from '../types/serviceArea';
 
 export async function getUserServiceAreas(
   params: ServiceAreaSearchParams = {},
@@ -32,6 +40,28 @@ export async function getOpsServiceAreas(
 
 export async function createOpsServiceArea(payload: CreateServiceAreaRequest): Promise<ServiceArea> {
   const response = await httpClient.post<ServiceArea>('/ops-admin/service-areas', payload);
+  return response.data;
+}
+
+export async function createOpsServiceAreaByCode(
+  payload: RegisterServiceAreaByCodeRequest,
+): Promise<ServiceArea> {
+  const response = await httpClient.post<ServiceArea>('/ops-admin/service-areas/by-code', payload);
+  return response.data;
+}
+
+export async function getOpsServiceAreaMasterDongs(
+  params: ServiceAreaMasterDongSearchParams = {},
+): Promise<ServiceAreaMasterDongPage> {
+  const normalizedQuery = params.query?.trim();
+  const response = await httpClient.get<ServiceAreaMasterDongPage>('/ops-admin/service-areas/master-dongs', {
+    params: {
+      query: normalizedQuery ? normalizedQuery : undefined,
+      active: params.active,
+      page: params.page ?? 0,
+      size: params.size ?? 200,
+    },
+  });
   return response.data;
 }
 

@@ -2,15 +2,16 @@ import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
-  createOpsServiceArea,
+  createOpsServiceAreaByCode,
   deactivateOpsServiceArea,
+  getOpsServiceAreaMasterDongs,
   getOpsServiceAreas,
 } from '../api/serviceAreaApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse } from '../types/waste';
-import { ServiceArea } from '../types/serviceArea';
+import { ServiceArea, ServiceAreaMasterDong } from '../types/serviceArea';
 
 type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -31,8 +32,16 @@ function toErrorMessage(error: unknown): string {
   return '서비스 신청지역 작업 중 오류가 발생했습니다.';
 }
 
-function formatAreaLabel(area: ServiceArea): string {
+function toAreaKey(city: string, district: string, dong: string): string {
+  return `${city.trim().toLowerCase()}|${district.trim().toLowerCase()}|${dong.trim().toLowerCase()}`;
+}
+
+function formatAreaLabel(area: Pick<ServiceArea, 'city' | 'district' | 'dong'>): string {
   return `${area.city} ${area.district} ${area.dong}`.trim();
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'ko'));
 }
 
 export function ServiceAreaManagementScreen() {
@@ -48,9 +57,21 @@ export function ServiceAreaManagementScreen() {
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
-  const [cityInput, setCityInput] = useState('');
-  const [districtInput, setDistrictInput] = useState('');
-  const [dongInput, setDongInput] = useState('');
+  const [citySearchInput, setCitySearchInput] = useState('');
+  const [districtSearchInput, setDistrictSearchInput] = useState('');
+  const [dongSearchInput, setDongSearchInput] = useState('');
+
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
+  const [dongOptions, setDongOptions] = useState<ServiceAreaMasterDong[]>([]);
+
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
+  const [selectedDongMap, setSelectedDongMap] = useState<Map<string, ServiceAreaMasterDong>>(new Map());
+
+  const [isCityLoading, setIsCityLoading] = useState(false);
+  const [isDistrictLoading, setIsDistrictLoading] = useState(false);
+  const [isDongLoading, setIsDongLoading] = useState(false);
 
   const canManage = useMemo(() => {
     const roles = me?.roles ?? [];
@@ -63,6 +84,11 @@ export function ServiceAreaManagementScreen() {
     }
     return activeFilter === 'ACTIVE';
   }, [activeFilter]);
+
+  const selectedDongList = useMemo(
+    () => Array.from(selectedDongMap.values()).sort((a, b) => a.code.localeCompare(b.code)),
+    [selectedDongMap],
+  );
 
   const loadAreas = useCallback(async (query: string, active?: boolean) => {
     setIsLoading(true);
@@ -79,6 +105,24 @@ export function ServiceAreaManagementScreen() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const loadAllActiveAreaKeys = useCallback(async (): Promise<Set<string>> => {
+    const keys = new Set<string>();
+    let page = 0;
+    let done = false;
+    while (!done) {
+      const response = await getOpsServiceAreas({ active: true, page, size: 200 });
+      response.content.forEach((area) => {
+        keys.add(toAreaKey(area.city, area.district, area.dong));
+      });
+      done = response.last;
+      page += 1;
+      if (page > 100) {
+        done = true;
+      }
+    }
+    return keys;
   }, []);
 
   useEffect(() => {
@@ -101,27 +145,163 @@ export function ServiceAreaManagementScreen() {
     void loadAreas('', undefined);
   };
 
-  const handleRegister = async () => {
-    const city = cityInput.trim();
-    const district = districtInput.trim();
-    const dong = dongInput.trim();
+  const handleCitySearch = async () => {
+    setIsCityLoading(true);
+    setErrorMessage(null);
+    try {
+      const query = citySearchInput.trim();
+      const response = await getOpsServiceAreaMasterDongs({ query, active: true, page: 0, size: 300 });
+      setCityOptions(uniqueSorted(response.content.map((item) => item.city)));
+      if (response.content.length === 0) {
+        setResultMessage('검색된 시/도가 없습니다. 검색어를 바꿔 다시 시도해 주세요.');
+      } else {
+        setResultMessage(null);
+      }
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setIsCityLoading(false);
+    }
+  };
 
-    if (!city || !district || !dong) {
-      setErrorMessage('시/도, 시/군/구, 동을 모두 입력해 주세요.');
+  const handleSelectCity = (city: string) => {
+    setSelectedCity(city);
+    setSelectedDistrict(null);
+    setDistrictSearchInput('');
+    setDongSearchInput('');
+    setDistrictOptions([]);
+    setDongOptions([]);
+    setResultMessage(null);
+    setErrorMessage(null);
+  };
+
+  const handleDistrictSearch = async () => {
+    if (!selectedCity) {
+      setErrorMessage('먼저 시/도를 선택해 주세요.');
+      return;
+    }
+    setIsDistrictLoading(true);
+    setErrorMessage(null);
+    try {
+      const keyword = districtSearchInput.trim();
+      const query = `${selectedCity} ${keyword}`.trim();
+      const response = await getOpsServiceAreaMasterDongs({ query, active: true, page: 0, size: 400 });
+      const filtered = response.content.filter((item) => item.city === selectedCity);
+      setDistrictOptions(uniqueSorted(filtered.map((item) => item.district)));
+      if (filtered.length === 0) {
+        setResultMessage('검색된 시/군/구가 없습니다. 검색어를 바꿔 다시 시도해 주세요.');
+      } else {
+        setResultMessage(null);
+      }
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setIsDistrictLoading(false);
+    }
+  };
+
+  const handleSelectDistrict = (district: string) => {
+    setSelectedDistrict(district);
+    setDongSearchInput('');
+    setDongOptions([]);
+    setResultMessage(null);
+    setErrorMessage(null);
+  };
+
+  const handleDongSearch = async () => {
+    if (!selectedCity || !selectedDistrict) {
+      setErrorMessage('시/도와 시/군/구를 먼저 선택해 주세요.');
+      return;
+    }
+    setIsDongLoading(true);
+    setErrorMessage(null);
+    try {
+      const keyword = dongSearchInput.trim();
+      const query = `${selectedCity} ${selectedDistrict} ${keyword}`.trim();
+      const response = await getOpsServiceAreaMasterDongs({ query, active: true, page: 0, size: 500 });
+      const filtered = response.content
+        .filter((item) => item.city === selectedCity && item.district === selectedDistrict)
+        .sort((a, b) => a.dong.localeCompare(b.dong, 'ko'));
+      setDongOptions(filtered);
+      if (filtered.length === 0) {
+        setResultMessage('검색된 동이 없습니다. 검색어를 바꿔 다시 시도해 주세요.');
+      } else {
+        setResultMessage(null);
+      }
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setIsDongLoading(false);
+    }
+  };
+
+  const toggleDongSelection = (item: ServiceAreaMasterDong) => {
+    setSelectedDongMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(item.code)) {
+        next.delete(item.code);
+      } else {
+        next.set(item.code, item);
+      }
+      return next;
+    });
+    setErrorMessage(null);
+    setResultMessage(null);
+  };
+
+  const removeSelectedDong = (code: string) => {
+    setSelectedDongMap((prev) => {
+      const next = new Map(prev);
+      next.delete(code);
+      return next;
+    });
+  };
+
+  const clearSelectedDongs = () => {
+    setSelectedDongMap(new Map());
+  };
+
+  const handleRegisterSelected = async () => {
+    if (selectedDongList.length === 0) {
+      setErrorMessage('등록할 동을 1개 이상 선택해 주세요.');
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
     setResultMessage(null);
-
     try {
-      const created = await createOpsServiceArea({ city, district, dong });
-      setResultMessage(`서비스 신청지역이 저장되었습니다: ${formatAreaLabel(created)}`);
-      setCityInput('');
-      setDistrictInput('');
-      setDongInput('');
-      await loadAreas(appliedQuery, activeParam);
+      const activeKeys = await loadAllActiveAreaKeys();
+      let successCount = 0;
+      let duplicateCount = 0;
+      let failedCount = 0;
+      const failureMessages: string[] = [];
+
+      for (const item of selectedDongList) {
+        const key = toAreaKey(item.city, item.district, item.dong);
+        if (activeKeys.has(key)) {
+          duplicateCount += 1;
+          continue;
+        }
+        try {
+          await createOpsServiceAreaByCode({ code: item.code });
+          activeKeys.add(key);
+          successCount += 1;
+        } catch (error) {
+          failedCount += 1;
+          failureMessages.push(`${formatAreaLabel(item)}: ${toErrorMessage(error)}`);
+        }
+      }
+
+      setResultMessage(`등록 결과: 성공 ${successCount}건, 중복 ${duplicateCount}건, 실패 ${failedCount}건`);
+      if (failureMessages.length > 0) {
+        setErrorMessage(failureMessages.slice(0, 2).join('\n'));
+      }
+
+      if (successCount > 0) {
+        await loadAreas(appliedQuery, activeParam);
+      }
+      clearSelectedDongs();
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
@@ -162,39 +342,137 @@ export function ServiceAreaManagementScreen() {
       <Text style={styles.meta}>OPS_ADMIN/SYS_ADMIN 권한으로 서비스 지역을 관리합니다.</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>지역 등록</Text>
-        <TextInput
-          style={styles.input}
-          value={cityInput}
-          onChangeText={setCityInput}
-          placeholder="시/도 (예: 서울특별시)"
-          placeholderTextColor="#94a3b8"
-        />
-        <TextInput
-          style={styles.input}
-          value={districtInput}
-          onChangeText={setDistrictInput}
-          placeholder="시/군/구 (예: 마포구)"
-          placeholderTextColor="#94a3b8"
-        />
-        <TextInput
-          style={styles.input}
-          value={dongInput}
-          onChangeText={setDongInput}
-          placeholder="동 (예: 서교동)"
-          placeholderTextColor="#94a3b8"
-        />
-        <Pressable
-          style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
-          onPress={() => void handleRegister()}
-          disabled={isSubmitting}
-        >
-          <Text style={styles.primaryButtonText}>{isSubmitting ? '등록 중..' : '서비스 신청지역 등록'}</Text>
-        </Pressable>
+        <Text style={styles.cardTitle}>선택형 지역 등록 (시/구/동 트리)</Text>
+        <Text style={styles.meta}>텍스트 직접 입력 대신 행정구역 마스터에서 선택해 등록합니다.</Text>
+
+        <Text style={styles.sectionTitle}>1) 시/도 선택</Text>
+        <View style={styles.inlineRow}>
+          <TextInput
+            style={[styles.input, styles.inlineInput]}
+            value={citySearchInput}
+            onChangeText={setCitySearchInput}
+            placeholder="시/도 검색어 (예: 서울)"
+            placeholderTextColor="#94a3b8"
+            returnKeyType="search"
+            onSubmitEditing={() => void handleCitySearch()}
+          />
+          <Pressable style={styles.inlineButton} onPress={() => void handleCitySearch()} disabled={isCityLoading}>
+            <Text style={styles.inlineButtonText}>{isCityLoading ? '조회중' : '조회'}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.optionWrap}>
+          {cityOptions.map((city) => (
+            <Pressable
+              key={city}
+              style={[styles.optionChip, selectedCity === city && styles.optionChipActive]}
+              onPress={() => handleSelectCity(city)}
+            >
+              <Text style={[styles.optionChipText, selectedCity === city && styles.optionChipTextActive]}>{city}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>2) 시/군/구 선택</Text>
+        <View style={styles.inlineRow}>
+          <TextInput
+            style={[styles.input, styles.inlineInput]}
+            value={districtSearchInput}
+            onChangeText={setDistrictSearchInput}
+            placeholder={selectedCity ? '시/군/구 검색어 (예: 마포)' : '먼저 시/도를 선택해 주세요.'}
+            placeholderTextColor="#94a3b8"
+            editable={!!selectedCity}
+            returnKeyType="search"
+            onSubmitEditing={() => void handleDistrictSearch()}
+          />
+          <Pressable
+            style={[styles.inlineButton, !selectedCity && styles.buttonDisabled]}
+            onPress={() => void handleDistrictSearch()}
+            disabled={!selectedCity || isDistrictLoading}
+          >
+            <Text style={styles.inlineButtonText}>{isDistrictLoading ? '조회중' : '조회'}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.optionWrap}>
+          {districtOptions.map((district) => (
+            <Pressable
+              key={`${selectedCity ?? 'city'}-${district}`}
+              style={[styles.optionChip, selectedDistrict === district && styles.optionChipActive]}
+              onPress={() => handleSelectDistrict(district)}
+            >
+              <Text style={[styles.optionChipText, selectedDistrict === district && styles.optionChipTextActive]}>
+                {district}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>3) 동 선택 (다중 선택)</Text>
+        <View style={styles.inlineRow}>
+          <TextInput
+            style={[styles.input, styles.inlineInput]}
+            value={dongSearchInput}
+            onChangeText={setDongSearchInput}
+            placeholder={selectedDistrict ? '동 검색어 (예: 서교)' : '먼저 시/군/구를 선택해 주세요.'}
+            placeholderTextColor="#94a3b8"
+            editable={!!selectedDistrict}
+            returnKeyType="search"
+            onSubmitEditing={() => void handleDongSearch()}
+          />
+          <Pressable
+            style={[styles.inlineButton, !selectedDistrict && styles.buttonDisabled]}
+            onPress={() => void handleDongSearch()}
+            disabled={!selectedDistrict || isDongLoading}
+          >
+            <Text style={styles.inlineButtonText}>{isDongLoading ? '조회중' : '조회'}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.listWrap}>
+          {dongOptions.map((item) => {
+            const isSelected = selectedDongMap.has(item.code);
+            return (
+              <Pressable
+                key={item.code}
+                style={[styles.listItem, isSelected && styles.listItemSelected]}
+                onPress={() => toggleDongSelection(item)}
+              >
+                <Text style={styles.listTitle}>{item.dong}</Text>
+                <Text style={styles.listSub}>{item.code}</Text>
+                <Text style={[styles.pickText, isSelected && styles.pickTextSelected]}>
+                  {isSelected ? '선택됨' : '선택'}
+                </Text>
+              </Pressable>
+            );
+          })}
+          {dongOptions.length === 0 && <Text style={styles.meta}>조회된 동이 없습니다.</Text>}
+        </View>
+
+        <Text style={styles.meta}>선택된 동: {selectedDongList.length}건</Text>
+        <View style={styles.optionWrap}>
+          {selectedDongList.map((item) => (
+            <Pressable key={`selected-${item.code}`} style={styles.selectedChip} onPress={() => removeSelectedDong(item.code)}>
+              <Text style={styles.selectedChipText}>{formatAreaLabel(item)} (해제)</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
+            onPress={() => void handleRegisterSelected()}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isSubmitting ? '등록 중..' : `선택 지역 등록 (${selectedDongList.length})`}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.secondaryButton} onPress={clearSelectedDongs}>
+            <Text style={styles.secondaryButtonText}>선택 초기화</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>지역 조회/검색</Text>
+        <Text style={styles.cardTitle}>등록 지역 조회/비활성화</Text>
         <TextInput
           style={styles.input}
           value={queryInput}
@@ -221,7 +499,9 @@ export function ServiceAreaManagementScreen() {
             style={[styles.filterChip, activeFilter === 'INACTIVE' && styles.filterChipActive]}
             onPress={() => setActiveFilter('INACTIVE')}
           >
-            <Text style={[styles.filterChipText, activeFilter === 'INACTIVE' && styles.filterChipTextActive]}>비활성</Text>
+            <Text style={[styles.filterChipText, activeFilter === 'INACTIVE' && styles.filterChipTextActive]}>
+              비활성
+            </Text>
           </Pressable>
         </View>
         <View style={styles.actionRow}>
@@ -282,6 +562,12 @@ const styles = StyleSheet.create({
     color: ui.colors.text,
     fontSize: 13,
   },
+  sectionTitle: {
+    marginTop: 4,
+    color: ui.colors.textStrong,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   card: {
     backgroundColor: ui.colors.card,
     borderWidth: 1,
@@ -303,6 +589,64 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: ui.colors.textStrong,
     backgroundColor: '#ffffff',
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  inlineInput: {
+    flex: 1,
+  },
+  inlineButton: {
+    borderRadius: ui.radius.control,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    backgroundColor: ui.colors.primary,
+  },
+  inlineButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  optionWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: ui.colors.cardBorder,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: '#ffffff',
+  },
+  optionChipActive: {
+    borderColor: ui.colors.primary,
+    backgroundColor: '#eef8f6',
+  },
+  optionChipText: {
+    color: ui.colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  optionChipTextActive: {
+    color: ui.colors.primary,
+  },
+  selectedChip: {
+    borderRadius: 999,
+    backgroundColor: '#ecfeff',
+    borderWidth: 1,
+    borderColor: '#67e8f9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  selectedChipText: {
+    color: '#155e75',
+    fontSize: 12,
+    fontWeight: '600',
   },
   filterRow: {
     flexDirection: 'row',
@@ -379,6 +723,10 @@ const styles = StyleSheet.create({
     gap: 4,
     backgroundColor: '#ffffff',
   },
+  listItemSelected: {
+    borderColor: '#22c55e',
+    backgroundColor: '#f0fdf4',
+  },
   listTitle: {
     color: ui.colors.textStrong,
     fontSize: 14,
@@ -387,6 +735,15 @@ const styles = StyleSheet.create({
   listSub: {
     color: ui.colors.text,
     fontSize: 12,
+  },
+  pickText: {
+    color: ui.colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  pickTextSelected: {
+    color: '#15803d',
   },
   deactivateButton: {
     marginTop: 4,
