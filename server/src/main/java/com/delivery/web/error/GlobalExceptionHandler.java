@@ -386,12 +386,12 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         ApiErrorResponse response = ApiErrorResponse.of(
-                HttpStatus.BAD_REQUEST.value(),
-                "SERVICE_AREA_UNAVAILABLE",
+                exception.getStatus().value(),
+                exception.getCode(),
                 exception.getMessage(),
                 request.getRequestURI()
         );
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.status(exception.getStatus()).body(response);
     }
 
     @ExceptionHandler(WasteRequestAccessDeniedException.class)

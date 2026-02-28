@@ -1,5 +1,8 @@
 package com.delivery;
 
+import com.delivery.address.dto.AddressSearchResponse;
+import com.delivery.address.exception.AddressSearchUnavailableException;
+import com.delivery.address.service.AddressSearchService;
 import com.delivery.auth.entity.AuthIdentityEntity;
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.repository.AuthIdentityRepository;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,8 +21,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,6 +56,9 @@ class WasteRequestIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @MockBean
+    private AddressSearchService addressSearchService;
+
     @BeforeEach
     void setUp() {
         upsertRole("USER", "General User");
@@ -56,6 +68,9 @@ class WasteRequestIntegrationTest {
         registerServiceArea("Seoul", "Mapo-gu", "Seogyo-dong");
         registerServiceArea("Seoul", "Gangdong-gu", "Cheonho-dong");
         registerServiceArea("Seoul", "Seocho-gu", "Bangbae-dong");
+
+        given(addressSearchService.search(anyString(), anyInt()))
+                .willReturn(new AddressSearchResponse("", 5, List.of()));
     }
 
     @Test
@@ -329,7 +344,122 @@ class WasteRequestIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SERVICE_AREA_ADDRESS_UNRESOLVED"));
+    }
+
+    @Test
+    void roadAddressWithoutDongCanBeMatchedUsingAddressSearchFallback() throws Exception {
+        TestUser user = createUserAndLogin("waste-road-fallback-allow@example.com", "USER", true);
+        given(addressSearchService.search(eq("Seoul Mapo-gu Worldcup-ro 12"), anyInt()))
+                .willReturn(new AddressSearchResponse(
+                        "Seoul Mapo-gu Worldcup-ro 12",
+                        5,
+                        List.of(new AddressSearchResponse.AddressItem(
+                                "Seoul Mapo-gu Worldcup-ro 12",
+                                "Seoul Mapo-gu Seogyo-dong 123-1",
+                                "04000",
+                                "Seoul",
+                                "Mapo-gu",
+                                "Seogyo-dong",
+                                "1144012000"
+                        ))
+                ));
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "Seoul Mapo-gu Worldcup-ro 12",
+                                  "note": null
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REQUESTED"));
+    }
+
+    @Test
+    void roadAddressWithoutDongIsRejectedWhenFallbackResolvesToUnregisteredDong() throws Exception {
+        TestUser user = createUserAndLogin("waste-road-fallback-deny@example.com", "USER", true);
+        given(addressSearchService.search(eq("Seoul Jongno-gu Samil-daero 10"), anyInt()))
+                .willReturn(new AddressSearchResponse(
+                        "Seoul Jongno-gu Samil-daero 10",
+                        5,
+                        List.of(new AddressSearchResponse.AddressItem(
+                                "Seoul Jongno-gu Samil-daero 10",
+                                "Seoul Jongno-gu Gahoe-dong 10-1",
+                                "03000",
+                                "Seoul",
+                                "Jongno-gu",
+                                "Gahoe-dong",
+                                "1111017600"
+                        ))
+                ));
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "Seoul Jongno-gu Samil-daero 10",
+                                  "note": null
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("SERVICE_AREA_UNAVAILABLE"));
+    }
+
+    @Test
+    void jibunAddressIsMatchedWhenDongIsInWhitelist() throws Exception {
+        TestUser user = createUserAndLogin("waste-jibun-allow@example.com", "USER", true);
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "Seoul Mapo-gu Seogyo-dong 123-45",
+                                  "note": null
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REQUESTED"));
+    }
+
+    @Test
+    void jibunAddressIsRejectedWhenDongIsNotInWhitelist() throws Exception {
+        TestUser user = createUserAndLogin("waste-jibun-deny@example.com", "USER", true);
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "Seoul Jongno-gu Gahoe-dong 10-1",
+                                  "note": null
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SERVICE_AREA_UNAVAILABLE"));
+    }
+
+    @Test
+    void userGetsMatchingUnavailableWhenAddressFallbackServiceFails() throws Exception {
+        TestUser user = createUserAndLogin("waste-road-fallback-unavailable@example.com", "USER", true);
+        given(addressSearchService.search(eq("Seoul Mapo-gu Worldcup-ro 12"), anyInt()))
+                .willThrow(new AddressSearchUnavailableException("fallback unavailable"));
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "Seoul Mapo-gu Worldcup-ro 12",
+                                  "note": null
+                                }
+                                """))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("SERVICE_AREA_MATCHING_UNAVAILABLE"));
     }
 
     private Long createWasteRequest(String accessToken) throws Exception {
@@ -447,4 +577,3 @@ class WasteRequestIntegrationTest {
     private record UserSetup(UserEntity user, String phoneE164) {
     }
 }
-

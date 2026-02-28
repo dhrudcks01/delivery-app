@@ -94,7 +94,11 @@ public class AddressSearchService {
             items.add(new AddressSearchResponse.AddressItem(
                     firstText(item, "roadAddr", "roadAddress", "road_address", "address"),
                     firstText(item, "jibunAddr", "jibunAddress", "jibun_address"),
-                    firstText(item, "zipNo", "zipCode", "postalCode", "postcode", "zoneNo")
+                    firstText(item, "zipNo", "zipCode", "postalCode", "postcode", "zoneNo"),
+                    firstText(item, "siNm", "si_nm", "city", "region_1depth_name"),
+                    firstText(item, "sggNm", "sgg_nm", "district", "region_2depth_name"),
+                    firstText(item, "emdNm", "emd_nm", "dong", "region_3depth_name"),
+                    firstText(item, "admCd", "adm_cd", "administrativeCode")
             ));
         }
         return items;

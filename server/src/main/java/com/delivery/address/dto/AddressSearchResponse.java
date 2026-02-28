@@ -11,7 +11,11 @@ public record AddressSearchResponse(
     public record AddressItem(
             String roadAddress,
             String jibunAddress,
-            String zipCode
+            String zipCode,
+            String city,
+            String district,
+            String dong,
+            String administrativeCode
     ) {
     }
 }
