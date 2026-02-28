@@ -52,6 +52,9 @@ export function ServiceAreaManagementScreen() {
   const [areas, setAreas] = useState<ServiceArea[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
+  const [isBulkSelecting, setIsBulkSelecting] = useState(false);
+  const [submittingTargetCount, setSubmittingTargetCount] = useState(0);
   const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
@@ -68,6 +71,7 @@ export function ServiceAreaManagementScreen() {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
   const [selectedDongMap, setSelectedDongMap] = useState<Map<string, ServiceAreaMasterDong>>(new Map());
+  const [failedRegistrationTargets, setFailedRegistrationTargets] = useState<ServiceAreaMasterDong[]>([]);
 
   const [isCityLoading, setIsCityLoading] = useState(false);
   const [isDistrictLoading, setIsDistrictLoading] = useState(false);
@@ -125,6 +129,32 @@ export function ServiceAreaManagementScreen() {
     return keys;
   }, []);
 
+  const loadAllMasterDongsForDistrict = useCallback(
+    async (city: string, district: string): Promise<ServiceAreaMasterDong[]> => {
+      const byCode = new Map<string, ServiceAreaMasterDong>();
+      let page = 0;
+      let done = false;
+      while (!done) {
+        const response = await getOpsServiceAreaMasterDongs({
+          query: `${city} ${district}`,
+          active: true,
+          page,
+          size: 300,
+        });
+        response.content
+          .filter((item) => item.city === city && item.district === district)
+          .forEach((item) => byCode.set(item.code, item));
+        done = response.last;
+        page += 1;
+        if (page > 100) {
+          done = true;
+        }
+      }
+      return Array.from(byCode.values()).sort((a, b) => a.dong.localeCompare(b.dong, 'ko'));
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!canManage) {
       return;
@@ -171,6 +201,7 @@ export function ServiceAreaManagementScreen() {
     setDongSearchInput('');
     setDistrictOptions([]);
     setDongOptions([]);
+    setFailedRegistrationTargets([]);
     setResultMessage(null);
     setErrorMessage(null);
   };
@@ -204,6 +235,7 @@ export function ServiceAreaManagementScreen() {
     setSelectedDistrict(district);
     setDongSearchInput('');
     setDongOptions([]);
+    setFailedRegistrationTargets([]);
     setResultMessage(null);
     setErrorMessage(null);
   };
@@ -245,6 +277,7 @@ export function ServiceAreaManagementScreen() {
       }
       return next;
     });
+    setFailedRegistrationTargets([]);
     setErrorMessage(null);
     setResultMessage(null);
   };
@@ -255,58 +288,119 @@ export function ServiceAreaManagementScreen() {
       next.delete(code);
       return next;
     });
+    setFailedRegistrationTargets([]);
   };
 
   const clearSelectedDongs = () => {
     setSelectedDongMap(new Map());
+    setFailedRegistrationTargets([]);
   };
 
-  const handleRegisterSelected = async () => {
-    if (selectedDongList.length === 0) {
+  const handleAddDistrictAllDongs = async () => {
+    if (!selectedCity || !selectedDistrict) {
+      setErrorMessage('시/도와 시/군/구를 먼저 선택해 주세요.');
+      return;
+    }
+
+    setIsBulkSelecting(true);
+    setErrorMessage(null);
+    setResultMessage(null);
+    try {
+      const districtDongs = await loadAllMasterDongsForDistrict(selectedCity, selectedDistrict);
+      let addedCount = 0;
+      let skippedCount = 0;
+      setSelectedDongMap((prev) => {
+        const next = new Map(prev);
+        for (const item of districtDongs) {
+          if (next.has(item.code)) {
+            skippedCount += 1;
+            continue;
+          }
+          next.set(item.code, item);
+          addedCount += 1;
+        }
+        return next;
+      });
+      setResultMessage(`구 전체 선택 결과: 추가 ${addedCount}건, 스킵 ${skippedCount}건, 대상 ${districtDongs.length}건`);
+      setFailedRegistrationTargets([]);
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setIsBulkSelecting(false);
+    }
+  };
+
+  const registerTargets = async (targets: ServiceAreaMasterDong[], retryFailedOnly: boolean) => {
+    if (targets.length === 0) {
       setErrorMessage('등록할 동을 1개 이상 선택해 주세요.');
       return;
     }
 
     setIsSubmitting(true);
+    setIsRetrySubmitting(retryFailedOnly);
+    setSubmittingTargetCount(targets.length);
     setErrorMessage(null);
     setResultMessage(null);
     try {
       const activeKeys = await loadAllActiveAreaKeys();
-      let successCount = 0;
-      let duplicateCount = 0;
+      let addedCount = 0;
+      let skippedCount = 0;
       let failedCount = 0;
+      const failedTargets: ServiceAreaMasterDong[] = [];
       const failureMessages: string[] = [];
 
-      for (const item of selectedDongList) {
+      for (const item of targets) {
         const key = toAreaKey(item.city, item.district, item.dong);
         if (activeKeys.has(key)) {
-          duplicateCount += 1;
+          skippedCount += 1;
           continue;
         }
         try {
           await createOpsServiceAreaByCode({ code: item.code });
           activeKeys.add(key);
-          successCount += 1;
+          addedCount += 1;
         } catch (error) {
           failedCount += 1;
+          failedTargets.push(item);
           failureMessages.push(`${formatAreaLabel(item)}: ${toErrorMessage(error)}`);
         }
       }
 
-      setResultMessage(`등록 결과: 성공 ${successCount}건, 중복 ${duplicateCount}건, 실패 ${failedCount}건`);
+      setResultMessage(`등록 결과: 추가 ${addedCount}건, 스킵 ${skippedCount}건, 실패 ${failedCount}건`);
       if (failureMessages.length > 0) {
         setErrorMessage(failureMessages.slice(0, 2).join('\n'));
       }
+      setFailedRegistrationTargets(failedTargets);
 
-      if (successCount > 0) {
+      if (addedCount > 0) {
         await loadAreas(appliedQuery, activeParam);
       }
-      clearSelectedDongs();
+      if (failedTargets.length > 0) {
+        const failedMap = new Map<string, ServiceAreaMasterDong>();
+        failedTargets.forEach((item) => failedMap.set(item.code, item));
+        setSelectedDongMap(failedMap);
+      } else {
+        clearSelectedDongs();
+      }
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
       setIsSubmitting(false);
+      setIsRetrySubmitting(false);
+      setSubmittingTargetCount(0);
     }
+  };
+
+  const handleRegisterSelected = async () => {
+    await registerTargets(selectedDongList, false);
+  };
+
+  const handleRetryFailedRegistrations = async () => {
+    if (failedRegistrationTargets.length === 0) {
+      setErrorMessage('재시도할 실패 건이 없습니다.');
+      return;
+    }
+    await registerTargets(failedRegistrationTargets, true);
   };
 
   const handleDeactivate = async (serviceAreaId: number) => {
@@ -405,6 +499,18 @@ export function ServiceAreaManagementScreen() {
             </Pressable>
           ))}
         </View>
+        <Pressable
+          style={[
+            styles.bulkButton,
+            (!selectedDistrict || isBulkSelecting || isSubmitting) && styles.buttonDisabled,
+          ]}
+          onPress={() => void handleAddDistrictAllDongs()}
+          disabled={!selectedDistrict || isBulkSelecting || isSubmitting}
+        >
+          <Text style={styles.bulkButtonText}>
+            {isBulkSelecting ? '구 전체 동 불러오는 중..' : '선택한 구 전체 동 추가'}
+          </Text>
+        </Pressable>
 
         <Text style={styles.sectionTitle}>3) 동 선택 (다중 선택)</Text>
         <View style={styles.inlineRow}>
@@ -421,7 +527,7 @@ export function ServiceAreaManagementScreen() {
           <Pressable
             style={[styles.inlineButton, !selectedDistrict && styles.buttonDisabled]}
             onPress={() => void handleDongSearch()}
-            disabled={!selectedDistrict || isDongLoading}
+            disabled={!selectedDistrict || isDongLoading || isSubmitting}
           >
             <Text style={styles.inlineButtonText}>{isDongLoading ? '조회중' : '조회'}</Text>
           </Pressable>
@@ -459,16 +565,35 @@ export function ServiceAreaManagementScreen() {
           <Pressable
             style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
             onPress={() => void handleRegisterSelected()}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isBulkSelecting}
           >
             <Text style={styles.primaryButtonText}>
               {isSubmitting ? '등록 중..' : `선택 지역 등록 (${selectedDongList.length})`}
             </Text>
           </Pressable>
-          <Pressable style={styles.secondaryButton} onPress={clearSelectedDongs}>
+          <Pressable
+            style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
+            onPress={clearSelectedDongs}
+            disabled={isSubmitting}
+          >
             <Text style={styles.secondaryButtonText}>선택 초기화</Text>
           </Pressable>
         </View>
+        {isSubmitting && (
+          <Text style={styles.meta}>
+            {isRetrySubmitting
+              ? `실패 건 재시도 중입니다. (${submittingTargetCount}건)`
+              : `대량 등록 처리 중입니다. (${submittingTargetCount}건)`}
+          </Text>
+        )}
+        {failedRegistrationTargets.length > 0 && !isSubmitting && (
+          <View style={styles.retryWrap}>
+            <Text style={styles.warningText}>실패 {failedRegistrationTargets.length}건이 남아 있습니다.</Text>
+            <Pressable style={styles.retryButton} onPress={() => void handleRetryFailedRegistrations()}>
+              <Text style={styles.retryButtonText}>실패 건 재시도</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
 
       <View style={styles.card}>
@@ -610,6 +735,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  bulkButton: {
+    borderRadius: ui.radius.control,
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#ecfeff',
+  },
+  bulkButtonText: {
+    color: '#0f766e',
+    fontWeight: '700',
+    fontSize: 13,
+  },
   optionWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -711,6 +849,32 @@ const styles = StyleSheet.create({
   errorText: {
     color: ui.colors.error,
     fontSize: 13,
+  },
+  retryWrap: {
+    borderWidth: 1,
+    borderColor: ui.colors.warningBorder,
+    backgroundColor: ui.colors.warningBg,
+    borderRadius: ui.radius.control,
+    padding: 10,
+    gap: 8,
+  },
+  warningText: {
+    color: ui.colors.warningText,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  retryButton: {
+    borderRadius: ui.radius.control,
+    borderWidth: 1,
+    borderColor: ui.colors.warningBorder,
+    backgroundColor: '#ffffff',
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: ui.colors.warningText,
+    fontSize: 13,
+    fontWeight: '700',
   },
   listWrap: {
     gap: 8,
