@@ -24,6 +24,7 @@ import {
   OpsWasteRequestDetail,
 } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
+import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -268,7 +269,7 @@ export function OpsAdminHomeScreen() {
 
     try {
       const response = await retryFailedPaymentForOps(wasteRequestId);
-      setRetryResultMessage(`요청 #${response.id} 결제 재시도 완료 (${response.status})`);
+      setRetryResultMessage(`요청 #${response.id} 결제 재시도 완료 (${toWasteStatusLabel(response.status)})`);
       await loadFailedPayments();
       await loadWasteRequests();
       if (selectedWasteRequestId === wasteRequestId) {
@@ -411,7 +412,7 @@ export function OpsAdminHomeScreen() {
             style={[styles.listItem, selectedWasteRequestId === item.id && styles.listItemActive]}
             onPress={() => void loadWasteRequestDetail(item.id)}
           >
-            <Text style={styles.listTitle}>#{item.id} {item.status}</Text>
+            <Text style={styles.listTitle}>#{item.id} {toWasteStatusLabel(item.status)}</Text>
             <Text style={styles.listSub}>{item.address}</Text>
             <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
           </Pressable>
@@ -432,7 +433,7 @@ export function OpsAdminHomeScreen() {
           <View style={styles.resultBox}>
             <Text style={styles.detailText}>요청 ID: {selectedWasteRequest.id}</Text>
             <Text style={styles.detailText}>주문번호: {selectedWasteRequest.orderNo || '-'}</Text>
-            <Text style={styles.detailText}>상태: {selectedWasteRequest.status}</Text>
+            <Text style={styles.detailText}>상태: {toWasteStatusLabel(selectedWasteRequest.status)}</Text>
             <Text style={styles.detailText}>주소: {selectedWasteRequest.address}</Text>
             <Text style={styles.detailText}>연락처: {selectedWasteRequest.contactPhone}</Text>
             <Text style={styles.detailText}>배출품목: {selectedWasteRequest.disposalItems.join(', ') || '-'}</Text>

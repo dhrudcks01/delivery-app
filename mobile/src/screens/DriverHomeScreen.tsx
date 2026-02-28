@@ -11,6 +11,7 @@ import { uploadImageFile } from '../api/uploadApi';
 import { useAuth } from '../auth/AuthContext';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
+import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 type DriverFilter = 'ALL' | 'ACTION_REQUIRED' | 'DONE';
 
@@ -58,7 +59,7 @@ export function DriverHomeScreen() {
     if (!selectedRequest) {
       return '상세 요청을 선택해 주세요.';
     }
-    return `요청 #${selectedRequest.requestId} (${selectedRequest.status})`;
+    return `요청 #${selectedRequest.requestId} (${toWasteStatusLabel(selectedRequest.status)})`;
   }, [selectedRequest]);
 
   const canMeasureSelected = selectedRequest?.status === 'ASSIGNED';
@@ -240,7 +241,7 @@ export function DriverHomeScreen() {
             onPress={() => void loadAssignedRequestDetail(item.requestId)}
           >
             <View style={styles.rowBetween}>
-              <Text style={styles.listTitle}>#{item.requestId} {item.status}</Text>
+              <Text style={styles.listTitle}>#{item.requestId} {toWasteStatusLabel(item.status)}</Text>
               {item.status === 'ASSIGNED' && <Text style={styles.priorityBadge}>우선 처리</Text>}
             </View>
             <Text style={styles.listSub}>{item.address}</Text>
@@ -266,7 +267,7 @@ export function DriverHomeScreen() {
             <Text style={styles.detailText}>주소: {selectedRequest.address}</Text>
             <Text style={styles.detailText}>연락처: {selectedRequest.contactPhone}</Text>
             <Text style={styles.detailText}>요청사항: {selectedRequest.note || '-'}</Text>
-            <Text style={styles.detailText}>상태: {selectedRequest.status}</Text>
+            <Text style={styles.detailText}>상태: {toWasteStatusLabel(selectedRequest.status)}</Text>
             <Text style={styles.detailText}>배정일: {formatDate(selectedRequest.assignedAt)}</Text>
             <Text style={styles.detailText}>생성일: {formatDate(selectedRequest.createdAt)}</Text>
             <Text style={styles.detailText}>수정일: {formatDate(selectedRequest.updatedAt)}</Text>
@@ -277,7 +278,7 @@ export function DriverHomeScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>3단계. 측정 완료 처리</Text>
         {!canMeasureSelected && (
-          <Text style={styles.meta}>ASSIGNED 상태 요청을 선택해야 측정 완료할 수 있습니다.</Text>
+          <Text style={styles.meta}>기사 배정 상태 요청을 선택해야 측정 완료할 수 있습니다.</Text>
         )}
 
         <Text style={styles.label}>무게(kg)</Text>

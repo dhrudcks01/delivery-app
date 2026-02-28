@@ -8,8 +8,9 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, WasteRequestDetail } from '../types/waste';
+import { toWasteStatusLabel, toWasteStatusLabelOrStart } from '../utils/wasteStatusLabel';
 
-const STATUS_FLOW = ['REQUESTED', 'ASSIGNED', 'MEASURED', 'PAID', 'COMPLETED'] as const;
+const STATUS_FLOW = ['REQUESTED', 'ASSIGNED', 'MEASURED', 'PAYMENT_PENDING', 'PAID', 'COMPLETED'] as const;
 
 type StepState = 'done' | 'current' | 'upcoming';
 
@@ -163,7 +164,7 @@ export function UserWasteRequestDetailScreen() {
           <>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>주문정보</Text>
-              <InfoRow label="요청상태" value={detail.status} />
+              <InfoRow label="요청상태" value={toWasteStatusLabel(detail.status)} />
               <InfoRow label="주소" value={detail.address} />
               <InfoRow label="연락처" value={detail.contactPhone} />
               <InfoRow label="요청사항" value={detail.note || '-'} />
@@ -259,7 +260,7 @@ export function UserWasteRequestDetailScreen() {
                         state === 'current' && styles.stepTextCurrent,
                       ]}
                     >
-                      {status}
+                      {toWasteStatusLabel(status)}
                     </Text>
                   </View>
                 );
@@ -269,7 +270,7 @@ export function UserWasteRequestDetailScreen() {
                 <View style={styles.timelineLogBox}>
                   {detail.statusTimeline.map((timeline, index) => (
                     <Text key={`${timeline.toStatus}-${timeline.at}-${index}`} style={styles.timelineLogText}>
-                      {`${timeline.fromStatus || 'START'} -> ${timeline.toStatus} (${formatDate(timeline.at)})`}
+                      {`${toWasteStatusLabelOrStart(timeline.fromStatus)} -> ${toWasteStatusLabel(timeline.toStatus)} (${formatDate(timeline.at)})`}
                     </Text>
                   ))}
                 </View>
