@@ -1,6 +1,7 @@
 package com.delivery.waste.web;
 
 import com.delivery.waste.dto.AssignWasteRequest;
+import com.delivery.waste.dto.DriverAssignmentCandidateResponse;
 import com.delivery.waste.dto.WasteRequestDetailResponse;
 import com.delivery.waste.dto.WasteRequestResponse;
 import com.delivery.waste.service.WasteRequestService;
@@ -40,6 +41,14 @@ public class OpsAdminWasteRequestController {
     @GetMapping("/{requestId}")
     public ResponseEntity<WasteRequestDetailResponse> getDetail(@PathVariable Long requestId) {
         return ResponseEntity.ok(wasteRequestService.getDetailForOps(requestId));
+    }
+
+    @GetMapping("/driver-candidates")
+    public ResponseEntity<Page<DriverAssignmentCandidateResponse>> getDriverCandidates(
+            @RequestParam(required = false) String query,
+            @PageableDefault(size = 20, sort = "driverId", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(wasteRequestService.getDriverCandidatesForOps(query, pageable));
     }
 
     @PostMapping("/{requestId}/assign")

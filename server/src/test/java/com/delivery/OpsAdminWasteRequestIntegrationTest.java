@@ -159,12 +159,65 @@ class OpsAdminWasteRequestIntegrationTest {
                 .andExpect(jsonPath("$.code").value("DRIVER_ROLE_REQUIRED"));
     }
 
+    @Test
+    void opsAdminCanSearchDriverCandidatesByNameAndExcludesInactiveOrNonDriver() throws Exception {
+        createUser("driver-search-active@example.com", "DRIVER", "ACTIVE", "김기사");
+        createUser("driver-search-inactive@example.com", "DRIVER", "INACTIVE", "김기사");
+        createUser("user-search@example.com", "USER", "ACTIVE", "김기사");
+        String opsToken = login("search-ops-admin@example.com", "OPS_ADMIN");
+
+        mockMvc.perform(get("/ops-admin/waste-requests/driver-candidates")
+                        .header("Authorization", "Bearer " + opsToken)
+                        .param("query", "김기사")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].loginId").value("driver-search-active@example.com"))
+                .andExpect(jsonPath("$.content[0].name").value("김기사"));
+
+        mockMvc.perform(get("/ops-admin/waste-requests/driver-candidates")
+                        .header("Authorization", "Bearer " + opsToken)
+                        .param("query", "search-active")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].loginId").value("driver-search-active@example.com"));
+    }
+
+    @Test
+    void assignReturnsBadRequestWhenTargetDriverIsInactive() throws Exception {
+        UserEntity requester = createUser("assign-inactive-requester@example.com", "USER");
+        UserEntity inactiveDriver = createUser(
+                "assign-inactive-driver@example.com",
+                "DRIVER",
+                "INACTIVE",
+                "비활성기사"
+        );
+        WasteRequestEntity request = createWasteRequest(requester, "REQUESTED", "서울시 성동구 9");
+        String opsToken = login("assign-inactive-ops-admin@example.com", "OPS_ADMIN");
+
+        String body = objectMapper.writeValueAsString(new AssignPayload(inactiveDriver.getId()));
+        mockMvc.perform(post("/ops-admin/waste-requests/{requestId}/assign", request.getId())
+                        .header("Authorization", "Bearer " + opsToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DRIVER_ROLE_REQUIRED"));
+    }
+
     private UserEntity createUser(String email, String roleCode) {
+        return createUser(email, roleCode, "ACTIVE", "수거요청조회테스터");
+    }
+
+    private UserEntity createUser(String email, String roleCode, String status, String displayName) {
         UserEntity user = userRepository.save(new UserEntity(
                 email,
+                email,
                 passwordEncoder.encode("password123"),
-                "수거요청조회테스터",
-                "ACTIVE"
+                displayName,
+                status
         ));
         authIdentityRepository.save(new AuthIdentityEntity(user, "LOCAL", email));
         jdbcTemplate.update(

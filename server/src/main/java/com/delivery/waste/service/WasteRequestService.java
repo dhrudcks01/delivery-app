@@ -8,6 +8,7 @@ import com.delivery.auth.repository.UserRepository;
 import com.delivery.servicearea.service.ServiceAreaService;
 import com.delivery.waste.dto.AssignWasteRequest;
 import com.delivery.waste.dto.CreateWasteRequestRequest;
+import com.delivery.waste.dto.DriverAssignmentCandidateResponse;
 import com.delivery.waste.dto.WasteRequestDetailResponse;
 import com.delivery.waste.dto.WasteRequestResponse;
 import com.delivery.waste.entity.WasteAssignmentEntity;
@@ -22,9 +23,11 @@ import com.delivery.waste.repository.WastePhotoRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
 import com.delivery.waste.repository.WasteStatusLogRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -38,6 +41,7 @@ public class WasteRequestService {
     private static final String KRW = "KRW";
     private static final String ASSIGNED = "ASSIGNED";
     private static final String DRIVER = "DRIVER";
+    private static final String ACTIVE = "ACTIVE";
     private static final String PHONE_VERIFICATION_REQUIRED = "PHONE_VERIFICATION_REQUIRED";
 
     private final WasteRequestRepository wasteRequestRepository;
@@ -47,6 +51,7 @@ public class WasteRequestService {
     private final UserRepository userRepository;
     private final ServiceAreaService serviceAreaService;
     private final WasteStatusTransitionService wasteStatusTransitionService;
+    private final JdbcTemplate jdbcTemplate;
 
     public WasteRequestService(
             WasteRequestRepository wasteRequestRepository,
@@ -55,7 +60,8 @@ public class WasteRequestService {
             WasteStatusLogRepository wasteStatusLogRepository,
             UserRepository userRepository,
             ServiceAreaService serviceAreaService,
-            WasteStatusTransitionService wasteStatusTransitionService
+            WasteStatusTransitionService wasteStatusTransitionService,
+            JdbcTemplate jdbcTemplate
     ) {
         this.wasteRequestRepository = wasteRequestRepository;
         this.wasteAssignmentRepository = wasteAssignmentRepository;
@@ -64,6 +70,7 @@ public class WasteRequestService {
         this.userRepository = userRepository;
         this.serviceAreaService = serviceAreaService;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional
@@ -130,10 +137,78 @@ public class WasteRequestService {
     }
 
     @Transactional
+    public Page<DriverAssignmentCandidateResponse> getDriverCandidatesForOps(String query, Pageable pageable) {
+        String keyword = query == null ? "" : query.trim();
+        String likeKeyword = "%" + keyword + "%";
+
+        Integer total = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM users u
+                WHERE u.status = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM user_roles ur
+                      JOIN roles r ON r.id = ur.role_id
+                      WHERE ur.user_id = u.id
+                        AND r.code = ?
+                  )
+                  AND (
+                      ? = ''
+                      OR LOWER(u.display_name) LIKE LOWER(?)
+                      OR LOWER(u.login_id) LIKE LOWER(?)
+                  )
+                """,
+                Integer.class,
+                ACTIVE,
+                DRIVER,
+                keyword,
+                likeKeyword,
+                likeKeyword
+        );
+
+        List<DriverAssignmentCandidateResponse> content = jdbcTemplate.query(
+                """
+                SELECT u.id, u.login_id, u.display_name
+                FROM users u
+                WHERE u.status = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM user_roles ur
+                      JOIN roles r ON r.id = ur.role_id
+                      WHERE ur.user_id = u.id
+                        AND r.code = ?
+                  )
+                  AND (
+                      ? = ''
+                      OR LOWER(u.display_name) LIKE LOWER(?)
+                      OR LOWER(u.login_id) LIKE LOWER(?)
+                  )
+                ORDER BY u.id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (rs, rowNum) -> new DriverAssignmentCandidateResponse(
+                        rs.getLong("id"),
+                        rs.getString("login_id"),
+                        rs.getString("display_name")
+                ),
+                ACTIVE,
+                DRIVER,
+                keyword,
+                likeKeyword,
+                likeKeyword,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    @Transactional
     public WasteRequestResponse assignForOps(Long requestId, AssignWasteRequest request, String actorEmail) {
         UserEntity driver = userRepository.findById(request.driverId())
                 .orElseThrow(UserNotFoundException::new);
-        if (userRepository.countRoleByUserIdAndRoleCode(driver.getId(), DRIVER) == 0) {
+        if (!isAssignableDriver(driver)) {
             throw new DriverRoleRequiredException();
         }
 
@@ -142,6 +217,12 @@ public class WasteRequestService {
             wasteAssignmentRepository.save(new WasteAssignmentEntity(updated, driver));
         }
         return toResponse(updated);
+    }
+
+    private boolean isAssignableDriver(UserEntity user) {
+        boolean isDriver = userRepository.countRoleByUserIdAndRoleCode(user.getId(), DRIVER) > 0;
+        boolean isActive = ACTIVE.equalsIgnoreCase(user.getStatus());
+        return isDriver && isActive;
     }
 
     private UserEntity findUserByEmail(String email) {
