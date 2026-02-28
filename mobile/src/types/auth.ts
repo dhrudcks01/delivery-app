@@ -8,12 +8,12 @@ export type AuthTokens = {
 };
 
 export type LoginRequest = {
-  email: string;
+  id: string;
   password: string;
 };
 
 export type RegisterRequest = {
-  email: string;
+  id: string;
   password: string;
   displayName: string;
 };

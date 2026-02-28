@@ -52,7 +52,7 @@ public class AuthService {
 
     @Transactional
     public AuthTokenResponse register(RegisterRequest request) {
-        String loginId = request.email().trim();
+        String loginId = request.normalizedId();
         if (userRepository.existsByLoginId(loginId)) {
             throw new DuplicateEmailException();
         }
@@ -71,7 +71,7 @@ public class AuthService {
 
     @Transactional
     public AuthTokenResponse login(LoginRequest request, String ipAddress, String userAgent) {
-        String identifier = request.email().trim();
+        String identifier = request.normalizedId();
         UserEntity user = userRepository.findByLoginId(identifier)
                 .orElseThrow(() -> {
                     loginAuditLogService.record(identifier, ipAddress, userAgent, "IDENTIFIER_NOT_FOUND");

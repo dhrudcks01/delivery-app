@@ -36,7 +36,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
     setFormError(null);
     await signIn({
-      email: email.trim(),
+      id: email.trim(),
       password,
     });
   };

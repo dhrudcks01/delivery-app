@@ -37,7 +37,7 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
 
     setFormError(null);
     await signUp({
-      email: trimmedIdentifier,
+      id: trimmedIdentifier,
       displayName: trimmedDisplayName,
       password: trimmedPassword,
     });

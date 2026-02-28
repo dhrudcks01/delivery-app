@@ -296,10 +296,10 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_EXISTS"));
     }
 
-    private record RegisterPayload(String email, String password, String displayName) {
+    private record RegisterPayload(String id, String password, String displayName) {
     }
 
-    private record LoginPayload(String email, String password) {
+    private record LoginPayload(String id, String password) {
     }
 
     private record RefreshPayload(String refreshToken) {
