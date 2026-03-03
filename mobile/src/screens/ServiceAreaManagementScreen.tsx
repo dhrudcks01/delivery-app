@@ -3,9 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   createOpsServiceAreaByCode,
+  deleteOpsServiceArea,
   deactivateOpsServiceArea,
   getOpsServiceAreaMasterDongs,
   getOpsServiceAreas,
+  reactivateOpsServiceArea,
 } from '../api/serviceAreaApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { useAuth } from '../auth/AuthContext';
@@ -14,6 +16,17 @@ import { ApiErrorResponse } from '../types/waste';
 import { ServiceArea, ServiceAreaMasterDong } from '../types/serviceArea';
 
 type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
+
+const CITY_ALIAS_BY_NORMALIZED: Record<string, string> = {
+  seoul: '서울특별시',
+  busan: '부산광역시',
+  daegu: '대구광역시',
+  incheon: '인천광역시',
+  gwangju: '광주광역시',
+  daejeon: '대전광역시',
+  ulsan: '울산광역시',
+  sejong: '세종특별자치시',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -32,8 +45,29 @@ function toErrorMessage(error: unknown): string {
   return '서비스 신청지역 작업 중 오류가 발생했습니다.';
 }
 
+function normalizeToken(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function normalizeCityToken(value: string): string {
+  const normalized = normalizeToken(value);
+  const canonical = CITY_ALIAS_BY_NORMALIZED[normalized];
+  if (!canonical) {
+    return normalized;
+  }
+  return normalizeToken(canonical);
+}
+
+function isSameCity(cityA: string, cityB: string): boolean {
+  return normalizeCityToken(cityA) === normalizeCityToken(cityB);
+}
+
+function isSameDistrict(districtA: string, districtB: string): boolean {
+  return normalizeToken(districtA) === normalizeToken(districtB);
+}
+
 function toAreaKey(city: string, district: string, dong: string): string {
-  return `${city.trim().toLowerCase()}|${district.trim().toLowerCase()}|${dong.trim().toLowerCase()}`;
+  return `${normalizeCityToken(city)}|${normalizeToken(district)}|${normalizeToken(dong)}`;
 }
 
 function formatAreaLabel(area: Pick<ServiceArea, 'city' | 'district' | 'dong'>): string {
@@ -55,7 +89,8 @@ export function ServiceAreaManagementScreen() {
   const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
   const [isBulkSelecting, setIsBulkSelecting] = useState(false);
   const [submittingTargetCount, setSubmittingTargetCount] = useState(0);
-  const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
+  const [updatingAreaId, setUpdatingAreaId] = useState<number | null>(null);
+  const [deletingAreaId, setDeletingAreaId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -129,30 +164,42 @@ export function ServiceAreaManagementScreen() {
     return keys;
   }, []);
 
-  const loadAllMasterDongsForDistrict = useCallback(
-    async (city: string, district: string): Promise<ServiceAreaMasterDong[]> => {
+  const loadMasterDongs = useCallback(
+    async (params: { query?: string; city?: string; district?: string }): Promise<ServiceAreaMasterDong[]> => {
       const byCode = new Map<string, ServiceAreaMasterDong>();
       let page = 0;
       let done = false;
       while (!done) {
         const response = await getOpsServiceAreaMasterDongs({
-          query: `${city} ${district}`,
+          query: params.query,
+          city: params.city,
+          district: params.district,
           active: true,
           page,
           size: 300,
         });
-        response.content
-          .filter((item) => item.city === city && item.district === district)
-          .forEach((item) => byCode.set(item.code, item));
+        response.content.forEach((item) => {
+          byCode.set(item.code, item);
+        });
         done = response.last;
         page += 1;
         if (page > 100) {
           done = true;
         }
       }
-      return Array.from(byCode.values()).sort((a, b) => a.dong.localeCompare(b.dong, 'ko'));
+      return Array.from(byCode.values());
     },
     [],
+  );
+
+  const loadAllMasterDongsForDistrict = useCallback(
+    async (city: string, district: string): Promise<ServiceAreaMasterDong[]> => {
+      const dongs = await loadMasterDongs({ city, district });
+      return dongs
+        .filter((item) => isSameCity(item.city, city) && isSameDistrict(item.district, district))
+        .sort((a, b) => a.dong.localeCompare(b.dong, 'ko'));
+    },
+    [loadMasterDongs],
   );
 
   useEffect(() => {
@@ -175,14 +222,14 @@ export function ServiceAreaManagementScreen() {
     void loadAreas('', undefined);
   };
 
-  const handleCitySearch = async () => {
+  const handleCitySearch = useCallback(async () => {
     setIsCityLoading(true);
     setErrorMessage(null);
     try {
       const query = citySearchInput.trim();
-      const response = await getOpsServiceAreaMasterDongs({ query, active: true, page: 0, size: 300 });
-      setCityOptions(uniqueSorted(response.content.map((item) => item.city)));
-      if (response.content.length === 0) {
+      const masterDongs = await loadMasterDongs({ query });
+      setCityOptions(uniqueSorted(masterDongs.map((item) => item.city)));
+      if (masterDongs.length === 0) {
         setResultMessage('검색된 시/도가 없습니다. 검색어를 바꿔 다시 시도해 주세요.');
       } else {
         setResultMessage(null);
@@ -192,7 +239,7 @@ export function ServiceAreaManagementScreen() {
     } finally {
       setIsCityLoading(false);
     }
-  };
+  }, [citySearchInput, loadMasterDongs]);
 
   const handleSelectCity = (city: string) => {
     setSelectedCity(city);
@@ -206,7 +253,7 @@ export function ServiceAreaManagementScreen() {
     setErrorMessage(null);
   };
 
-  const handleDistrictSearch = async () => {
+  const handleDistrictSearch = useCallback(async () => {
     if (!selectedCity) {
       setErrorMessage('먼저 시/도를 선택해 주세요.');
       return;
@@ -215,9 +262,11 @@ export function ServiceAreaManagementScreen() {
     setErrorMessage(null);
     try {
       const keyword = districtSearchInput.trim();
-      const query = `${selectedCity} ${keyword}`.trim();
-      const response = await getOpsServiceAreaMasterDongs({ query, active: true, page: 0, size: 400 });
-      const filtered = response.content.filter((item) => item.city === selectedCity);
+      const masterDongs = await loadMasterDongs({
+        query: keyword,
+        city: selectedCity,
+      });
+      const filtered = masterDongs.filter((item) => isSameCity(item.city, selectedCity));
       setDistrictOptions(uniqueSorted(filtered.map((item) => item.district)));
       if (filtered.length === 0) {
         setResultMessage('검색된 시/군/구가 없습니다. 검색어를 바꿔 다시 시도해 주세요.');
@@ -229,7 +278,7 @@ export function ServiceAreaManagementScreen() {
     } finally {
       setIsDistrictLoading(false);
     }
-  };
+  }, [districtSearchInput, loadMasterDongs, selectedCity]);
 
   const handleSelectDistrict = (district: string) => {
     setSelectedDistrict(district);
@@ -240,7 +289,7 @@ export function ServiceAreaManagementScreen() {
     setErrorMessage(null);
   };
 
-  const handleDongSearch = async () => {
+  const handleDongSearch = useCallback(async () => {
     if (!selectedCity || !selectedDistrict) {
       setErrorMessage('시/도와 시/군/구를 먼저 선택해 주세요.');
       return;
@@ -249,10 +298,15 @@ export function ServiceAreaManagementScreen() {
     setErrorMessage(null);
     try {
       const keyword = dongSearchInput.trim();
-      const query = `${selectedCity} ${selectedDistrict} ${keyword}`.trim();
-      const response = await getOpsServiceAreaMasterDongs({ query, active: true, page: 0, size: 500 });
-      const filtered = response.content
-        .filter((item) => item.city === selectedCity && item.district === selectedDistrict)
+      const masterDongs = await loadMasterDongs({
+        query: keyword,
+        city: selectedCity,
+        district: selectedDistrict,
+      });
+      const filtered = masterDongs
+        .filter(
+          (item) => isSameCity(item.city, selectedCity) && isSameDistrict(item.district, selectedDistrict),
+        )
         .sort((a, b) => a.dong.localeCompare(b.dong, 'ko'));
       setDongOptions(filtered);
       if (filtered.length === 0) {
@@ -265,7 +319,7 @@ export function ServiceAreaManagementScreen() {
     } finally {
       setIsDongLoading(false);
     }
-  };
+  }, [dongSearchInput, loadMasterDongs, selectedCity, selectedDistrict]);
 
   const toggleDongSelection = (item: ServiceAreaMasterDong) => {
     setSelectedDongMap((prev) => {
@@ -404,7 +458,7 @@ export function ServiceAreaManagementScreen() {
   };
 
   const handleDeactivate = async (serviceAreaId: number) => {
-    setDeactivatingId(serviceAreaId);
+    setUpdatingAreaId(serviceAreaId);
     setErrorMessage(null);
     setResultMessage(null);
     try {
@@ -414,7 +468,37 @@ export function ServiceAreaManagementScreen() {
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
-      setDeactivatingId(null);
+      setUpdatingAreaId(null);
+    }
+  };
+
+  const handleReactivate = async (serviceAreaId: number) => {
+    setUpdatingAreaId(serviceAreaId);
+    setErrorMessage(null);
+    setResultMessage(null);
+    try {
+      const updated = await reactivateOpsServiceArea(serviceAreaId);
+      setResultMessage(`재활성화 처리되었습니다: ${formatAreaLabel(updated)}`);
+      await loadAreas(appliedQuery, activeParam);
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setUpdatingAreaId(null);
+    }
+  };
+
+  const handleDeleteInactive = async (serviceAreaId: number) => {
+    setDeletingAreaId(serviceAreaId);
+    setErrorMessage(null);
+    setResultMessage(null);
+    try {
+      await deleteOpsServiceArea(serviceAreaId);
+      setResultMessage('비활성 서비스 신청지역이 삭제되었습니다.');
+      await loadAreas(appliedQuery, activeParam);
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setDeletingAreaId(null);
     }
   };
 
@@ -654,14 +738,36 @@ export function ServiceAreaManagementScreen() {
                 <Text style={styles.listSub}>업데이트: {new Date(area.updatedAt).toLocaleString()}</Text>
                 {area.active && (
                   <Pressable
-                    style={[styles.deactivateButton, deactivatingId === area.id && styles.buttonDisabled]}
+                    style={[styles.deactivateButton, updatingAreaId === area.id && styles.buttonDisabled]}
                     onPress={() => void handleDeactivate(area.id)}
-                    disabled={deactivatingId !== null}
+                    disabled={updatingAreaId !== null || deletingAreaId !== null}
                   >
                     <Text style={styles.deactivateButtonText}>
-                      {deactivatingId === area.id ? '처리 중..' : '비활성화'}
+                      {updatingAreaId === area.id ? '처리 중..' : '비활성화'}
                     </Text>
                   </Pressable>
+                )}
+                {!area.active && (
+                  <View style={styles.actionRow}>
+                    <Pressable
+                      style={[styles.reactivateButton, updatingAreaId === area.id && styles.buttonDisabled]}
+                      onPress={() => void handleReactivate(area.id)}
+                      disabled={updatingAreaId !== null || deletingAreaId !== null}
+                    >
+                      <Text style={styles.reactivateButtonText}>
+                        {updatingAreaId === area.id ? '처리 중..' : '재활성화'}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.deleteButton, deletingAreaId === area.id && styles.buttonDisabled]}
+                      onPress={() => void handleDeleteInactive(area.id)}
+                      disabled={updatingAreaId !== null || deletingAreaId !== null}
+                    >
+                      <Text style={styles.deleteButtonText}>
+                        {deletingAreaId === area.id ? '처리 중..' : '삭제'}
+                      </Text>
+                    </Pressable>
+                  </View>
                 )}
               </View>
             ))}
@@ -919,6 +1025,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff1f2',
   },
   deactivateButtonText: {
+    color: '#b91c1c',
+    fontWeight: '700',
+  },
+  reactivateButton: {
+    flex: 1,
+    marginTop: 4,
+    borderRadius: ui.radius.control,
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: '#ecfeff',
+  },
+  reactivateButtonText: {
+    color: '#0f766e',
+    fontWeight: '700',
+  },
+  deleteButton: {
+    flex: 1,
+    marginTop: 4,
+    borderRadius: ui.radius.control,
+    borderWidth: 1,
+    borderColor: '#b91c1c',
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: '#fff1f2',
+  },
+  deleteButtonText: {
     color: '#b91c1c',
     fontWeight: '700',
   },

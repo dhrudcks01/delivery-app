@@ -13,6 +13,8 @@ public interface ServiceAreaMasterDongRepository extends JpaRepository<ServiceAr
             SELECT m
             FROM ServiceAreaMasterDongEntity m
             WHERE (:active IS NULL OR m.active = :active)
+              AND (:city = '' OR LOWER(m.city) = LOWER(:city) OR LOWER(m.city) LIKE LOWER(CONCAT('%', :city, '%')))
+              AND (:district = '' OR LOWER(m.district) = LOWER(:district) OR LOWER(m.district) LIKE LOWER(CONCAT('%', :district, '%')))
               AND (:keyword = '' OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(m.city) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(m.district) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -20,6 +22,8 @@ public interface ServiceAreaMasterDongRepository extends JpaRepository<ServiceAr
             """)
     Page<ServiceAreaMasterDongEntity> searchForOps(
             @Param("keyword") String keyword,
+            @Param("city") String city,
+            @Param("district") String district,
             @Param("active") Boolean active,
             Pageable pageable
     );

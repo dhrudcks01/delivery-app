@@ -107,6 +107,16 @@ public class ServiceAreaService {
             "\uB300\uAD6C\uAD11\uC5ED\uC2DC",
             "\uC778\uCC9C\uAD11\uC5ED\uC2DC"
     );
+    private static final Map<String, String> CITY_ALIAS_MAP = Map.ofEntries(
+            Map.entry("seoul", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC"),
+            Map.entry("busan", "\uBD80\uC0B0\uAD11\uC5ED\uC2DC"),
+            Map.entry("daegu", "\uB300\uAD6C\uAD11\uC5ED\uC2DC"),
+            Map.entry("incheon", "\uC778\uCC9C\uAD11\uC5ED\uC2DC"),
+            Map.entry("gwangju", "\uAD11\uC8FC\uAD11\uC5ED\uC2DC"),
+            Map.entry("daejeon", "\uB300\uC804\uAD11\uC5ED\uC2DC"),
+            Map.entry("ulsan", "\uC6B8\uC0B0\uAD11\uC5ED\uC2DC"),
+            Map.entry("sejong", "\uC138\uC885\uD2B9\uBCC4\uC790\uCE58\uC2DC")
+    );
 
     private final ServiceAreaRepository serviceAreaRepository;
     private final ServiceAreaMasterDongRepository serviceAreaMasterDongRepository;
@@ -205,9 +215,23 @@ public class ServiceAreaService {
     }
 
     @Transactional
-    public Page<ServiceAreaMasterDongResponse> getMasterDongsForOps(String query, Boolean active, Pageable pageable) {
+    public Page<ServiceAreaMasterDongResponse> getMasterDongsForOps(
+            String query,
+            String city,
+            String district,
+            Boolean active,
+            Pageable pageable
+    ) {
         String keyword = normalizeKeyword(query);
-        return serviceAreaMasterDongRepository.searchForOps(keyword, active, pageable).map(this::toMasterResponse);
+        String normalizedCity = normalizeCityFilter(city);
+        String normalizedDistrict = normalizeKeyword(district);
+        return serviceAreaMasterDongRepository.searchForOps(
+                keyword,
+                normalizedCity,
+                normalizedDistrict,
+                active,
+                pageable
+        ).map(this::toMasterResponse);
     }
 
     @Transactional
@@ -457,6 +481,15 @@ public class ServiceAreaService {
             return "";
         }
         return query.trim();
+    }
+
+    private String normalizeCityFilter(String city) {
+        String normalized = normalizeKeyword(city);
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+        String aliasKey = normalized.toLowerCase().replaceAll("\\s+", "");
+        return CITY_ALIAS_MAP.getOrDefault(aliasKey, normalized);
     }
 
     private DecodedFile decodeMasterDongFile(byte[] payload) {

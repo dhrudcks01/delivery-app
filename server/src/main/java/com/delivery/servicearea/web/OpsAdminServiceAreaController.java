@@ -75,10 +75,12 @@ public class OpsAdminServiceAreaController {
     @GetMapping("/master-dongs")
     public ResponseEntity<Page<ServiceAreaMasterDongResponse>> getMasterDongsForOps(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String district,
             @RequestParam(required = false) Boolean active,
             @PageableDefault(size = 50, sort = "code", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return ResponseEntity.ok(serviceAreaService.getMasterDongsForOps(query, active, pageable));
+        return ResponseEntity.ok(serviceAreaService.getMasterDongsForOps(query, city, district, active, pageable));
     }
 
     @GetMapping("/master-dongs/summary")

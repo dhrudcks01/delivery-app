@@ -37,6 +37,8 @@ export type ServiceAreaMasterDong = {
 
 export type ServiceAreaMasterDongSearchParams = {
   query?: string;
+  city?: string;
+  district?: string;
   active?: boolean;
   page?: number;
   size?: number;

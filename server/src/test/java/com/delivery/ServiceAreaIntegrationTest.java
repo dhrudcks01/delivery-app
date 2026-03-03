@@ -192,6 +192,34 @@ class ServiceAreaIntegrationTest {
     }
 
     @Test
+    void opsAdminCanFilterMasterDongsByCityAndDistrict() throws Exception {
+        TestUser opsAdmin = createUser("service-area-master-filter-ops@example.com", "OPS_ADMIN");
+        insertMasterDong("1111010100", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC", "\uC885\uB85C\uAD6C", "\uCCAD\uC6B4\uB3D9", true);
+        insertMasterDong("1111010200", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC", "\uC885\uB85C\uAD6C", "\uC2E0\uAD50\uB3D9", true);
+        insertMasterDong("2611011000", "\uBD80\uC0B0\uAD11\uC5ED\uC2DC", "\uC911\uAD6C", "\uAD11\uBCF5\uB3D9", true);
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("city", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC")
+                        .param("district", "\uC885\uB85C\uAD6C")
+                        .param("query", "\uCCAD\uC6B4")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].code").value("1111010100"));
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("city", "Seoul")
+                        .param("district", "\uC885\uB85C\uAD6C")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2));
+    }
+
+    @Test
     void opsAdminCanCheckMasterDongSummaryAndLowDataWarning() throws Exception {
         TestUser opsAdmin = createUser("service-area-master-summary-ops@example.com", "OPS_ADMIN");
         insertMasterDong("1144012000", "서울특별시", "마포구", "서교동", true);

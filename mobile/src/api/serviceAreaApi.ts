@@ -54,9 +54,13 @@ export async function getOpsServiceAreaMasterDongs(
   params: ServiceAreaMasterDongSearchParams = {},
 ): Promise<ServiceAreaMasterDongPage> {
   const normalizedQuery = params.query?.trim();
+  const normalizedCity = params.city?.trim();
+  const normalizedDistrict = params.district?.trim();
   const response = await httpClient.get<ServiceAreaMasterDongPage>('/ops-admin/service-areas/master-dongs', {
     params: {
       query: normalizedQuery ? normalizedQuery : undefined,
+      city: normalizedCity ? normalizedCity : undefined,
+      district: normalizedDistrict ? normalizedDistrict : undefined,
       active: params.active,
       page: params.page ?? 0,
       size: params.size ?? 200,
@@ -70,4 +74,15 @@ export async function deactivateOpsServiceArea(serviceAreaId: number): Promise<S
     `/ops-admin/service-areas/${serviceAreaId}/deactivate`,
   );
   return response.data;
+}
+
+export async function reactivateOpsServiceArea(serviceAreaId: number): Promise<ServiceArea> {
+  const response = await httpClient.patch<ServiceArea>(
+    `/ops-admin/service-areas/${serviceAreaId}/reactivate`,
+  );
+  return response.data;
+}
+
+export async function deleteOpsServiceArea(serviceAreaId: number): Promise<void> {
+  await httpClient.delete(`/ops-admin/service-areas/${serviceAreaId}`);
 }
