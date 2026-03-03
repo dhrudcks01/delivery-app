@@ -1,6 +1,7 @@
 package com.delivery.servicearea.web;
 
 import com.delivery.servicearea.dto.ServiceAreaResponse;
+import com.delivery.servicearea.dto.ServiceAreaAvailabilityResponse;
 import com.delivery.servicearea.service.ServiceAreaService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,5 +30,11 @@ public class UserServiceAreaController {
     ) {
         return ResponseEntity.ok(serviceAreaService.getForUser(query, pageable));
     }
-}
 
+    @GetMapping("/availability")
+    public ResponseEntity<ServiceAreaAvailabilityResponse> checkAddressAvailability(
+            @RequestParam String address
+    ) {
+        return ResponseEntity.ok(serviceAreaService.checkAddressAvailability(address));
+    }
+}

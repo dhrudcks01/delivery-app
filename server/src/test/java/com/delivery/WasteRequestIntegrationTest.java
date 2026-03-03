@@ -65,9 +65,18 @@ class WasteRequestIntegrationTest {
         upsertRole("DRIVER", "Driver");
 
         jdbcTemplate.update("DELETE FROM service_areas");
+        jdbcTemplate.update("DELETE FROM service_area_master_dongs");
         registerServiceArea("Seoul", "Mapo-gu", "Seogyo-dong");
         registerServiceArea("Seoul", "Gangdong-gu", "Cheonho-dong");
         registerServiceArea("Seoul", "Seocho-gu", "Bangbae-dong");
+        registerServiceArea("\uC11C\uC6B8\uD2B9\uBCC4\uC2DC", "\uAD00\uC545\uAD6C", "\uBD09\uCC9C\uB3D9");
+        insertMasterDong(
+                "1162010100",
+                "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC",
+                "\uAD00\uC545\uAD6C",
+                "\uBD09\uCC9C\uB3D9",
+                true
+        );
 
         given(addressSearchService.search(anyString(), anyInt()))
                 .willReturn(new AddressSearchResponse("", 5, List.of()));
@@ -379,6 +388,94 @@ class WasteRequestIntegrationTest {
     }
 
     @Test
+    void roadAddressWithoutDongCanBeMatchedUsingAdministrativeCodeFallback() throws Exception {
+        TestUser user = createUserAndLogin("waste-road-admin-code-allow@example.com", "USER", true);
+        String address = "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC \uAD00\uC545\uAD6C \uC778\uD5CC1\uAE38 66";
+        given(addressSearchService.search(eq(address), anyInt()))
+                .willReturn(new AddressSearchResponse(
+                        address,
+                        5,
+                        List.of(new AddressSearchResponse.AddressItem(
+                                address,
+                                address,
+                                "08790",
+                                "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC",
+                                "\uAD00\uC545\uAD6C",
+                                null,
+                                "1162010100"
+                        ))
+                ));
+
+        mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC \uAD00\uC545\uAD6C \uC778\uD5CC1\uAE38 66",
+                                  "note": null
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REQUESTED"));
+    }
+
+    @Test
+    void userCanCheckAddressAvailabilityWithAdministrativeCodeFallback() throws Exception {
+        TestUser user = createUserAndLogin("waste-road-admin-code-check@example.com", "USER", true);
+        String address = "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC \uAD00\uC545\uAD6C \uC778\uD5CC1\uAE38 66";
+        given(addressSearchService.search(eq(address), anyInt()))
+                .willReturn(new AddressSearchResponse(
+                        address,
+                        5,
+                        List.of(new AddressSearchResponse.AddressItem(
+                                address,
+                                address,
+                                "08790",
+                                "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC",
+                                "\uAD00\uC545\uAD6C",
+                                null,
+                                "1162010100"
+                        ))
+                ));
+
+        mockMvc.perform(get("/user/service-areas/availability")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .param("address", address))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.city").value("\uC11C\uC6B8\uD2B9\uBCC4\uC2DC"))
+                .andExpect(jsonPath("$.district").value("\uAD00\uC545\uAD6C"))
+                .andExpect(jsonPath("$.dong").value("\uBD09\uCC9C\uB3D9"));
+    }
+
+    @Test
+    void userGetsUnresolvedWhenAvailabilityFallbackCannotMapDong() throws Exception {
+        TestUser user = createUserAndLogin("waste-road-admin-code-unresolved@example.com", "USER", true);
+        String address = "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC \uAD00\uC545\uAD6C \uC778\uD5CC1\uAE38 66";
+        given(addressSearchService.search(eq(address), anyInt()))
+                .willReturn(new AddressSearchResponse(
+                        address,
+                        5,
+                        List.of(new AddressSearchResponse.AddressItem(
+                                address,
+                                address,
+                                "08790",
+                                "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC",
+                                "\uAD00\uC545\uAD6C",
+                                null,
+                                null
+                        ))
+                ));
+
+        mockMvc.perform(get("/user/service-areas/availability")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .param("address", address))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.reasonCode").value("SERVICE_AREA_ADDRESS_UNRESOLVED"));
+    }
+
+    @Test
     void roadAddressWithoutDongIsRejectedWhenFallbackResolvesToUnregisteredDong() throws Exception {
         TestUser user = createUserAndLogin("waste-road-fallback-deny@example.com", "USER", true);
         given(addressSearchService.search(eq("Seoul Jongno-gu Samil-daero 10"), anyInt()))
@@ -553,6 +650,20 @@ class WasteRequestIntegrationTest {
                 city,
                 district,
                 dong
+        );
+    }
+
+    private void insertMasterDong(String code, String city, String district, String dong, boolean active) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO service_area_master_dongs (code, city, district, dong, is_active)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                code,
+                city,
+                district,
+                dong,
+                active
         );
     }
 

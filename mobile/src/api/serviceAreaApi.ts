@@ -2,6 +2,7 @@ import { httpClient } from './httpClient';
 import {
   CreateServiceAreaRequest,
   RegisterServiceAreaByCodeRequest,
+  ServiceAreaAvailabilityResponse,
   ServiceArea,
   ServiceAreaMasterDongPage,
   ServiceAreaMasterDongSearchParams,
@@ -73,6 +74,15 @@ export async function deactivateOpsServiceArea(serviceAreaId: number): Promise<S
   const response = await httpClient.patch<ServiceArea>(
     `/ops-admin/service-areas/${serviceAreaId}/deactivate`,
   );
+  return response.data;
+}
+
+export async function getUserServiceAreaAvailability(
+  address: string,
+): Promise<ServiceAreaAvailabilityResponse> {
+  const response = await httpClient.get<ServiceAreaAvailabilityResponse>('/user/service-areas/availability', {
+    params: { address },
+  });
   return response.data;
 }
 

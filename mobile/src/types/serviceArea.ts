@@ -25,6 +25,15 @@ export type CreateServiceAreaRequest = {
 
 export type ServiceAreaPage = PageResponse<ServiceArea>;
 
+export type ServiceAreaAvailabilityResponse = {
+  available: boolean;
+  reasonCode: string | null;
+  message: string | null;
+  city: string | null;
+  district: string | null;
+  dong: string | null;
+};
+
 export type ServiceAreaMasterDong = {
   code: string;
   city: string;

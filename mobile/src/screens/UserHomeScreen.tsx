@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { getUserServiceAreas } from '../api/serviceAreaApi';
+import { getUserServiceAreaAvailability } from '../api/serviceAreaApi';
 import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
@@ -23,17 +23,8 @@ type UserHomeScreenProps = {
   includeTopInset?: boolean;
 };
 
-type AddressRegion = {
-  city: string;
-  district: string;
-  dong: string;
-};
-
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
 const PRIMARY_ADDRESS_MISSING_MESSAGE = '대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.';
-const CITY_SUFFIXES = ['특별시', '광역시', '자치시', '자치도', '-si', '-do', '시', '도'];
-const DISTRICT_SUFFIXES = ['자치구', '-gu', '-gun', '구', '군'];
-const DONG_SUFFIXES = ['-dong', '-eup', '-myeon', '동', '읍', '면', '가'];
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -54,58 +45,6 @@ function formatDate(dateTime: string | null): string {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
-}
-
-function tokenizeAddress(address: string): string[] {
-  return address
-    .trim()
-    .split(/\s+/)
-    .map((token) => token.replace(/[(),]/g, '').trim())
-    .filter((token) => token.length > 0);
-}
-
-function hasAnySuffix(token: string, suffixes: string[]): boolean {
-  const lower = token.toLowerCase();
-  return suffixes.some((suffix) => lower.endsWith(suffix.toLowerCase()));
-}
-
-function extractAddressRegion(address: string): AddressRegion | null {
-  if (!address.trim()) {
-    return null;
-  }
-
-  const tokens = tokenizeAddress(address);
-  let city: string | null = null;
-  let district: string | null = null;
-  let dong: string | null = null;
-
-  for (const token of tokens) {
-    if (!city && hasAnySuffix(token, CITY_SUFFIXES)) {
-      city = token;
-      continue;
-    }
-    if (!district && hasAnySuffix(token, DISTRICT_SUFFIXES)) {
-      district = token;
-      continue;
-    }
-    if (!dong && hasAnySuffix(token, DONG_SUFFIXES)) {
-      dong = token;
-    }
-  }
-
-  if (!city && district && dong && tokens.length >= 3) {
-    city = tokens[0];
-  }
-
-  if (!city || !district || !dong) {
-    return null;
-  }
-
-  return { city, district, dong };
-}
-
-function normalizeRegionToken(value: string): string {
-  return value.trim().toLowerCase();
 }
 
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
@@ -211,32 +150,21 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
   };
 
   const checkServiceAreaAvailability = useCallback(async (address: string) => {
-    const region = extractAddressRegion(address);
-    if (!region) {
-      setIsServiceAreaAvailable(false);
-      setServiceAreaCheckError('대표 주소지의 시/구/동 정보를 확인할 수 없습니다.');
-      return;
-    }
-
     setIsCheckingServiceArea(true);
     setServiceAreaCheckError(null);
 
     try {
-      const response = await getUserServiceAreas({
-        query: `${region.city} ${region.district} ${region.dong}`,
-        page: 0,
-        size: 100,
-      });
+      const response = await getUserServiceAreaAvailability(address);
+      setIsServiceAreaAvailable(response.available);
 
-      const available = response.content.some(
-        (item) =>
-          normalizeRegionToken(item.city) === normalizeRegionToken(region.city)
-          && normalizeRegionToken(item.district) === normalizeRegionToken(region.district)
-          && normalizeRegionToken(item.dong) === normalizeRegionToken(region.dong),
-      );
+      if (response.reasonCode === 'SERVICE_AREA_ADDRESS_UNRESOLVED') {
+        setServiceAreaCheckError(
+          response.message ?? '대표 주소지의 동 정보를 확인할 수 없습니다. 주소를 다시 확인해 주세요.',
+        );
+        return;
+      }
 
-      setIsServiceAreaAvailable(available);
-      if (!available && unavailableAlertAddressRef.current !== address) {
+      if (!response.available && unavailableAlertAddressRef.current !== address) {
         Alert.alert('서비스 지역이 아니예요!');
         unavailableAlertAddressRef.current = address;
       }

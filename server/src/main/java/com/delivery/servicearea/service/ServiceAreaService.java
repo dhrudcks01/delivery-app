@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
 import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
+import com.delivery.servicearea.dto.ServiceAreaAvailabilityResponse;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongImportResponse;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongSummaryResponse;
@@ -108,14 +109,39 @@ public class ServiceAreaService {
             "\uC778\uCC9C\uAD11\uC5ED\uC2DC"
     );
     private static final Map<String, String> CITY_ALIAS_MAP = Map.ofEntries(
+            Map.entry("\uC11C\uC6B8", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC"),
+            Map.entry("\uC11C\uC6B8\uC2DC", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC"),
             Map.entry("seoul", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC"),
+            Map.entry("\uBD80\uC0B0", "\uBD80\uC0B0\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uBD80\uC0B0\uC2DC", "\uBD80\uC0B0\uAD11\uC5ED\uC2DC"),
             Map.entry("busan", "\uBD80\uC0B0\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uB300\uAD6C", "\uB300\uAD6C\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uB300\uAD6C\uC2DC", "\uB300\uAD6C\uAD11\uC5ED\uC2DC"),
             Map.entry("daegu", "\uB300\uAD6C\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uC778\uCC9C", "\uC778\uCC9C\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uC778\uCC9C\uC2DC", "\uC778\uCC9C\uAD11\uC5ED\uC2DC"),
             Map.entry("incheon", "\uC778\uCC9C\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uAD11\uC8FC", "\uAD11\uC8FC\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uAD11\uC8FC\uC2DC", "\uAD11\uC8FC\uAD11\uC5ED\uC2DC"),
             Map.entry("gwangju", "\uAD11\uC8FC\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uB300\uC804", "\uB300\uC804\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uB300\uC804\uC2DC", "\uB300\uC804\uAD11\uC5ED\uC2DC"),
             Map.entry("daejeon", "\uB300\uC804\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uC6B8\uC0B0", "\uC6B8\uC0B0\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uC6B8\uC0B0\uC2DC", "\uC6B8\uC0B0\uAD11\uC5ED\uC2DC"),
             Map.entry("ulsan", "\uC6B8\uC0B0\uAD11\uC5ED\uC2DC"),
+            Map.entry("\uC138\uC885", "\uC138\uC885\uD2B9\uBCC4\uC790\uCE58\uC2DC"),
             Map.entry("sejong", "\uC138\uC885\uD2B9\uBCC4\uC790\uCE58\uC2DC")
+    );
+    private static final Map<String, String> CITY_CANONICAL_TO_ENGLISH_MAP = Map.ofEntries(
+            Map.entry("\uC11C\uC6B8\uD2B9\uBCC4\uC2DC", "Seoul"),
+            Map.entry("\uBD80\uC0B0\uAD11\uC5ED\uC2DC", "Busan"),
+            Map.entry("\uB300\uAD6C\uAD11\uC5ED\uC2DC", "Daegu"),
+            Map.entry("\uC778\uCC9C\uAD11\uC5ED\uC2DC", "Incheon"),
+            Map.entry("\uAD11\uC8FC\uAD11\uC5ED\uC2DC", "Gwangju"),
+            Map.entry("\uB300\uC804\uAD11\uC5ED\uC2DC", "Daejeon"),
+            Map.entry("\uC6B8\uC0B0\uAD11\uC5ED\uC2DC", "Ulsan"),
+            Map.entry("\uC138\uC885\uD2B9\uBCC4\uC790\uCE58\uC2DC", "Sejong")
     );
 
     private final ServiceAreaRepository serviceAreaRepository;
@@ -453,17 +479,86 @@ public class ServiceAreaService {
 
     @Transactional
     public void validateAvailableAddress(String address) {
-        AddressRegion region = resolveAddressRegion(address)
-                .orElseThrow(() -> {
-                    log.warn("Service area matching failed: reason=ADDRESS_UNRESOLVED address={}", address);
-                    return ServiceAreaUnavailableException.unresolvedAddress();
-                });
+        AddressAvailabilityEvaluation evaluation = evaluateAddressAvailability(address);
+        if (evaluation.available()) {
+            return;
+        }
+        if (evaluation.isUnresolved()) {
+            throw ServiceAreaUnavailableException.unresolvedAddress();
+        }
+        AddressRegion region = evaluation.regionOrNull();
+        if (region == null) {
+            throw ServiceAreaUnavailableException.unresolvedAddress();
+        }
+        throw ServiceAreaUnavailableException.notWhitelisted(region.city(), region.district(), region.dong());
+    }
 
-        boolean available = serviceAreaRepository.existsActiveByRegion(
+    @Transactional
+    public ServiceAreaAvailabilityResponse checkAddressAvailability(String address) {
+        AddressAvailabilityEvaluation evaluation = evaluateAddressAvailability(address);
+        if (evaluation.available()) {
+            AddressRegion region = evaluation.regionOrNull();
+            if (region == null) {
+                return new ServiceAreaAvailabilityResponse(
+                        true,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+            }
+            return new ServiceAreaAvailabilityResponse(
+                    true,
+                    null,
+                    null,
+                    region.city(),
+                    region.district(),
+                    region.dong()
+            );
+        }
+
+        if (evaluation.isUnresolved()) {
+            return new ServiceAreaAvailabilityResponse(
+                    false,
+                    "SERVICE_AREA_ADDRESS_UNRESOLVED",
+                    ServiceAreaUnavailableException.unresolvedAddress().getMessage(),
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        AddressRegion region = evaluation.regionOrNull();
+        if (region == null) {
+            return new ServiceAreaAvailabilityResponse(
+                    false,
+                    "SERVICE_AREA_ADDRESS_UNRESOLVED",
+                    ServiceAreaUnavailableException.unresolvedAddress().getMessage(),
+                    null,
+                    null,
+                    null
+            );
+        }
+        return new ServiceAreaAvailabilityResponse(
+                false,
+                "SERVICE_AREA_UNAVAILABLE",
+                ServiceAreaUnavailableException.notWhitelisted(region.city(), region.district(), region.dong()).getMessage(),
                 region.city(),
                 region.district(),
                 region.dong()
         );
+    }
+
+    private AddressAvailabilityEvaluation evaluateAddressAvailability(String address) {
+        Optional<AddressRegion> resolvedRegion = resolveAddressRegion(address);
+        if (resolvedRegion.isEmpty()) {
+            log.warn("Service area matching failed: reason=ADDRESS_UNRESOLVED address={}", address);
+            return AddressAvailabilityEvaluation.unresolved();
+        }
+
+        AddressRegion region = resolvedRegion.get();
+        boolean available = isRegionWhitelisted(region);
         if (!available) {
             log.warn(
                     "Service area matching failed: reason=NOT_WHITELISTED city={} district={} dong={} address={}",
@@ -472,8 +567,79 @@ public class ServiceAreaService {
                     region.dong(),
                     address
             );
-            throw ServiceAreaUnavailableException.notWhitelisted(region.city(), region.district(), region.dong());
+            return AddressAvailabilityEvaluation.notWhitelisted(region);
         }
+        return AddressAvailabilityEvaluation.available(region);
+    }
+
+    private boolean isRegionWhitelisted(AddressRegion region) {
+        List<String> cityCandidates = resolveCityCandidates(region.city());
+        for (String cityCandidate : cityCandidates) {
+            if (serviceAreaRepository.existsActiveByRegion(cityCandidate, region.district(), region.dong())) {
+                return true;
+            }
+
+            List<ServiceAreaEntity> areaCandidates = serviceAreaRepository.findAllByActiveTrueAndCityIgnoreCaseAndDistrictIgnoreCase(
+                    cityCandidate,
+                    region.district()
+            );
+            for (ServiceAreaEntity candidate : areaCandidates) {
+                if (isDongEquivalent(candidate.getDong(), region.dong())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private List<String> resolveCityCandidates(String city) {
+        List<String> candidates = new ArrayList<>();
+        if (!StringUtils.hasText(city)) {
+            return candidates;
+        }
+
+        String original = city.trim();
+        candidates.add(original);
+
+        String canonical = normalizeCityAlias(original);
+        if (!canonical.equalsIgnoreCase(original)) {
+            candidates.add(canonical);
+        }
+
+        String englishAlias = CITY_CANONICAL_TO_ENGLISH_MAP.get(canonical);
+        if (StringUtils.hasText(englishAlias) && candidates.stream().noneMatch(englishAlias::equalsIgnoreCase)) {
+            candidates.add(englishAlias);
+        }
+        return candidates;
+    }
+
+    private boolean isDongEquivalent(String left, String right) {
+        String normalizedLeft = normalizeComparisonToken(left);
+        String normalizedRight = normalizeComparisonToken(right);
+        if (normalizedLeft.equals(normalizedRight)) {
+            return true;
+        }
+        return stripRegionSuffix(normalizedLeft).equals(stripRegionSuffix(normalizedRight));
+    }
+
+    private String normalizeComparisonToken(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value.trim()
+                .toLowerCase()
+                .replaceAll("\\s+", "")
+                .replace("-", "");
+    }
+
+    private String stripRegionSuffix(String value) {
+        for (String suffix : DONG_SUFFIXES) {
+            String normalizedSuffix = suffix.toLowerCase().replace("-", "");
+            if (value.endsWith(normalizedSuffix)) {
+                return value.substring(0, value.length() - normalizedSuffix.length());
+            }
+        }
+        return value;
     }
 
     private String normalizeKeyword(String query) {
@@ -488,6 +654,14 @@ public class ServiceAreaService {
         if (normalized.isEmpty()) {
             return normalized;
         }
+        return normalizeCityAlias(normalized);
+    }
+
+    private String normalizeCityAlias(String city) {
+        if (!StringUtils.hasText(city)) {
+            return "";
+        }
+        String normalized = city.trim();
         String aliasKey = normalized.toLowerCase().replaceAll("\\s+", "");
         return CITY_ALIAS_MAP.getOrDefault(aliasKey, normalized);
     }
@@ -586,12 +760,69 @@ public class ServiceAreaService {
                 if (jibunAddressRegion.isPresent()) {
                     return jibunAddressRegion;
                 }
+
+                Optional<AddressRegion> regionFromAdministrativeCode = resolveAddressRegionFromAdministrativeCode(
+                        item.administrativeCode()
+                );
+                if (regionFromAdministrativeCode.isPresent()) {
+                    return regionFromAdministrativeCode;
+                }
             }
+            log.warn(
+                    "Service area matching fallback unresolved: address={} candidates={}",
+                    address,
+                    summarizeAddressSearchCandidates(response.results())
+            );
             return Optional.empty();
         } catch (AddressSearchTimeoutException | AddressSearchUnavailableException exception) {
             log.warn("Service area matching fallback unavailable: address={}", address, exception);
             throw ServiceAreaUnavailableException.matchingUnavailable();
         }
+    }
+
+    private Optional<AddressRegion> resolveAddressRegionFromAdministrativeCode(String administrativeCode) {
+        if (!StringUtils.hasText(administrativeCode)) {
+            return Optional.empty();
+        }
+
+        String normalized = administrativeCode.trim();
+        if (normalized.length() > 10) {
+            normalized = normalized.substring(0, 10);
+        }
+        if (!normalized.matches("\\d{10}")) {
+            return Optional.empty();
+        }
+
+        return serviceAreaMasterDongRepository.findById(normalized)
+                .filter(ServiceAreaMasterDongEntity::isActive)
+                .flatMap(masterDong -> normalizeRegion(
+                        masterDong.getCity(),
+                        masterDong.getDistrict(),
+                        masterDong.getDong()
+                ));
+    }
+
+    private String summarizeAddressSearchCandidates(List<AddressSearchResponse.AddressItem> items) {
+        if (items == null || items.isEmpty()) {
+            return "[]";
+        }
+
+        int max = Math.min(items.size(), 3);
+        List<String> summaries = new ArrayList<>();
+        for (int index = 0; index < max; index++) {
+            AddressSearchResponse.AddressItem item = items.get(index);
+            summaries.add(
+                    "{city=%s,district=%s,dong=%s,road=%s,jibun=%s,admCd=%s}".formatted(
+                            safeTrim(item.city()),
+                            safeTrim(item.district()),
+                            safeTrim(item.dong()),
+                            safeTrim(item.roadAddress()),
+                            safeTrim(item.jibunAddress()),
+                            safeTrim(item.administrativeCode())
+                    )
+            );
+        }
+        return summaries.toString();
     }
 
     private Optional<AddressRegion> extractAddressRegionFromText(String address) {
@@ -685,7 +916,10 @@ public class ServiceAreaService {
         if (!StringUtils.hasText(city) || !StringUtils.hasText(district) || !StringUtils.hasText(dong)) {
             return Optional.empty();
         }
-        return Optional.of(new AddressRegion(city.trim(), district.trim(), dong.trim()));
+        String normalizedCity = city.trim().replaceAll("\\s+", " ");
+        String normalizedDistrict = district.trim().replaceAll("\\s+", " ");
+        String normalizedDong = dong.trim().replaceAll("\\s+", "");
+        return Optional.of(new AddressRegion(normalizedCity, normalizedDistrict, normalizedDong));
     }
 
     private boolean hasAnySuffix(String token, List<String> suffixes) {
@@ -750,6 +984,24 @@ public class ServiceAreaService {
             return "anonymous";
         }
         return name;
+    }
+
+    private record AddressAvailabilityEvaluation(AddressRegion regionOrNull, boolean available, boolean unresolvedState) {
+        private static AddressAvailabilityEvaluation available(AddressRegion region) {
+            return new AddressAvailabilityEvaluation(region, true, false);
+        }
+
+        private static AddressAvailabilityEvaluation unresolved() {
+            return new AddressAvailabilityEvaluation(null, false, true);
+        }
+
+        private static AddressAvailabilityEvaluation notWhitelisted(AddressRegion region) {
+            return new AddressAvailabilityEvaluation(region, false, false);
+        }
+
+        private boolean isUnresolved() {
+            return unresolvedState;
+        }
     }
 
     private record AddressRegion(String city, String district, String dong) {
