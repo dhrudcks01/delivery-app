@@ -2,12 +2,19 @@ import { AxiosError } from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
+import {
+  createUserAddress,
+  deleteUserAddress,
+  getUserAddresses,
+  setPrimaryUserAddress,
+  updateUserAddress,
+} from '../api/userAddressApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
-import { loadUserAddresses, saveUserAddresses } from '../storage/userAddressStorage';
+import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { AddressItem } from '../types/address';
-import { UserAddress } from '../types/userAddress';
+import { UserAddress, UserAddressUpsertPayload } from '../types/userAddress';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ApiErrorResponse } from '../types/waste';
 
@@ -27,10 +34,6 @@ function formatAddress(item: UserAddress): string {
   return item.roadAddress || item.jibunAddress || '-';
 }
 
-function createAddressId(): string {
-  return `addr-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-}
-
 export function UserAddressManagementScreen() {
   const { me } = useAuth();
 
@@ -46,15 +49,56 @@ export function UserAddressManagementScreen() {
   const [searchResults, setSearchResults] = useState<AddressItem[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [roadAddress, setRoadAddress] = useState('');
   const [jibunAddress, setJibunAddress] = useState('');
   const [zipCode, setZipCode] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
   const [isPrimaryDraft, setIsPrimaryDraft] = useState(false);
 
-  const loadAddresses = useCallback(async () => {
+  const toUpsertPayload = useCallback((
+    payload: {
+      roadAddress: string;
+      jibunAddress: string;
+      zipCode: string;
+      detailAddress: string;
+      isPrimary: boolean;
+    },
+  ): UserAddressUpsertPayload => ({
+    roadAddress: payload.roadAddress.trim(),
+    jibunAddress: payload.jibunAddress.trim() || undefined,
+    zipCode: payload.zipCode.trim() || undefined,
+    detailAddress: payload.detailAddress.trim() || undefined,
+    isPrimary: payload.isPrimary,
+  }), []);
+
+  const migrateLegacyAddresses = useCallback(async (): Promise<boolean> => {
     if (!me?.id) {
+      return false;
+    }
+
+    const legacyAddresses = await loadLegacyUserAddresses(me.id);
+    if (legacyAddresses.length === 0) {
+      return false;
+    }
+
+    const sorted = [...legacyAddresses].sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary));
+    for (const legacy of sorted) {
+      const payload: UserAddressUpsertPayload = {
+        roadAddress: legacy.roadAddress.trim(),
+        jibunAddress: legacy.jibunAddress.trim() || undefined,
+        zipCode: legacy.zipCode.trim() || undefined,
+        detailAddress: legacy.detailAddress.trim() || undefined,
+        isPrimary: legacy.isPrimary,
+      };
+      await createUserAddress(payload);
+    }
+    await clearLegacyUserAddresses(me.id);
+    return true;
+  }, [me?.id]);
+
+  const loadAddresses = useCallback(async () => {
+    if (!me) {
       setAddresses([]);
       return;
     }
@@ -63,15 +107,25 @@ export function UserAddressManagementScreen() {
     setErrorMessage(null);
 
     try {
-      const stored = await loadUserAddresses(me.id);
-      setAddresses(stored);
+      let loaded = await getUserAddresses();
+      if (loaded.length === 0) {
+        const migrated = await migrateLegacyAddresses();
+        if (migrated) {
+          loaded = await getUserAddresses();
+          setResultMessage('기기 로컬 주소를 서버로 이전했습니다.');
+        }
+      }
+      if (loaded.length > 0 && me?.id) {
+        await clearLegacyUserAddresses(me.id);
+      }
+      setAddresses(loaded);
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
       setAddresses([]);
     } finally {
       setIsLoadingAddresses(false);
     }
-  }, [me?.id]);
+  }, [me, migrateLegacyAddresses]);
 
   useEffect(() => {
     void loadAddresses();
@@ -87,14 +141,6 @@ export function UserAddressManagementScreen() {
     setAddressQuery('');
     setSearchResults([]);
     setSearchError(null);
-  };
-
-  const persistAddresses = async (nextAddresses: UserAddress[]) => {
-    if (!me?.id) {
-      return;
-    }
-    await saveUserAddresses(me.id, nextAddresses);
-    setAddresses(nextAddresses);
   };
 
   const handleSearchAddress = async () => {
@@ -163,47 +209,20 @@ export function UserAddressManagementScreen() {
     setErrorMessage(null);
     setResultMessage(null);
 
-    const now = new Date().toISOString();
-
     try {
-      const nextAddresses = editingAddressId
-        ? addresses.map((item) => {
-            if (item.id !== editingAddressId) {
-              return isPrimaryDraft ? { ...item, isPrimary: false } : item;
-            }
-            return {
-              ...item,
-              roadAddress: roadAddress.trim(),
-              jibunAddress: jibunAddress.trim(),
-              zipCode: zipCode.trim(),
-              detailAddress: detailAddress.trim(),
-              isPrimary: isPrimaryDraft,
-              updatedAt: now,
-            };
-          })
-        : [
-            ...addresses.map((item) => ({
-              ...item,
-              isPrimary: isPrimaryDraft || addresses.length === 0 ? false : item.isPrimary,
-            })),
-            {
-              id: createAddressId(),
-              roadAddress: roadAddress.trim(),
-              jibunAddress: jibunAddress.trim(),
-              zipCode: zipCode.trim(),
-              detailAddress: detailAddress.trim(),
-              isPrimary: isPrimaryDraft || addresses.length === 0,
-              createdAt: now,
-              updatedAt: now,
-            },
-          ];
-
-      const hasPrimary = nextAddresses.some((item) => item.isPrimary);
-      const normalized = hasPrimary
-        ? nextAddresses
-        : nextAddresses.map((item, index) => ({ ...item, isPrimary: index === 0 }));
-
-      await persistAddresses(normalized);
+      const payload = toUpsertPayload({
+        roadAddress,
+        jibunAddress,
+        zipCode,
+        detailAddress,
+        isPrimary: isPrimaryDraft,
+      });
+      if (editingAddressId) {
+        await updateUserAddress(editingAddressId, payload);
+      } else {
+        await createUserAddress(payload);
+      }
+      await loadAddresses();
       setResultMessage(editingAddressId ? '주소를 수정했습니다.' : '주소를 등록했습니다.');
       resetForm();
     } catch (error) {
@@ -213,34 +232,26 @@ export function UserAddressManagementScreen() {
     }
   };
 
-  const handleSetPrimaryAddress = async (addressId: string) => {
+  const handleSetPrimaryAddress = async (addressId: number) => {
     setErrorMessage(null);
     setResultMessage(null);
 
     try {
-      const nextAddresses = addresses.map((item) => ({
-        ...item,
-        isPrimary: item.id === addressId,
-        updatedAt: item.id === addressId ? new Date().toISOString() : item.updatedAt,
-      }));
-      await persistAddresses(nextAddresses);
+      await setPrimaryUserAddress(addressId);
+      await loadAddresses();
       setResultMessage('대표 주소지를 변경했습니다.');
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     }
   };
 
-  const handleDeleteAddress = async (addressId: string) => {
+  const handleDeleteAddress = async (addressId: number) => {
     setErrorMessage(null);
     setResultMessage(null);
 
     try {
-      const filtered = addresses.filter((item) => item.id !== addressId);
-      const hasPrimary = filtered.some((item) => item.isPrimary);
-      const normalized = hasPrimary
-        ? filtered
-        : filtered.map((item, index) => ({ ...item, isPrimary: index === 0 }));
-      await persistAddresses(normalized);
+      await deleteUserAddress(addressId);
+      await loadAddresses();
       if (editingAddressId === addressId) {
         resetForm();
       }

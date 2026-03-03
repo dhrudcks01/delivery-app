@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserAddress } from '../types/userAddress';
+import { LegacyUserAddress } from '../types/userAddress';
 
 function getAddressStorageKey(userId: number): string {
   return `@delivery/user-addresses/${userId}`;
 }
 
-export async function loadUserAddresses(userId: number): Promise<UserAddress[]> {
+export async function loadLegacyUserAddresses(userId: number): Promise<LegacyUserAddress[]> {
   const raw = await AsyncStorage.getItem(getAddressStorageKey(userId));
   if (!raw) {
     return [];
@@ -17,11 +17,11 @@ export async function loadUserAddresses(userId: number): Promise<UserAddress[]> 
       return [];
     }
 
-    return parsed.filter((item): item is UserAddress => {
+    return parsed.filter((item): item is LegacyUserAddress => {
       if (typeof item !== 'object' || item === null) {
         return false;
       }
-      const address = item as Partial<UserAddress>;
+      const address = item as Partial<LegacyUserAddress>;
       return (
         typeof address.id === 'string' &&
         typeof address.roadAddress === 'string' &&
@@ -38,6 +38,6 @@ export async function loadUserAddresses(userId: number): Promise<UserAddress[]> 
   }
 }
 
-export async function saveUserAddresses(userId: number, addresses: UserAddress[]): Promise<void> {
-  await AsyncStorage.setItem(getAddressStorageKey(userId), JSON.stringify(addresses));
+export async function clearLegacyUserAddresses(userId: number): Promise<void> {
+  await AsyncStorage.removeItem(getAddressStorageKey(userId));
 }

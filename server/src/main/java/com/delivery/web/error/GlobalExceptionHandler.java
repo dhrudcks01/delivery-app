@@ -34,6 +34,7 @@ import com.delivery.servicearea.exception.ServiceAreaDeleteNotAllowedException;
 import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
+import com.delivery.useraddress.exception.UserAddressNotFoundException;
 import com.delivery.upload.exception.InvalidUploadFileException;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestAccessDeniedException;
@@ -376,6 +377,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(),
                 "SERVICE_AREA_MASTER_DONG_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(UserAddressNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserAddressNotFound(
+            UserAddressNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "USER_ADDRESS_NOT_FOUND",
                 exception.getMessage(),
                 request.getRequestURI()
         );

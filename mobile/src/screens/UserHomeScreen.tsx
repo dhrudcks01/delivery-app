@@ -5,11 +5,12 @@ import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getUserServiceAreaAvailability } from '../api/serviceAreaApi';
+import { createUserAddress, getUserAddresses } from '../api/userAddressApi';
 import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { loadUserAddresses } from '../storage/userAddressStorage';
+import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import { UserAddress } from '../types/userAddress';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
@@ -113,6 +114,30 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     }, SUCCESS_BANNER_TIMEOUT_MS);
   }, []);
 
+  const migrateLegacyAddresses = useCallback(async (): Promise<boolean> => {
+    if (!me?.id) {
+      return false;
+    }
+
+    const legacyAddresses = await loadLegacyUserAddresses(me.id);
+    if (legacyAddresses.length === 0) {
+      return false;
+    }
+
+    const sorted = [...legacyAddresses].sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary));
+    for (const legacy of sorted) {
+      await createUserAddress({
+        roadAddress: legacy.roadAddress.trim(),
+        jibunAddress: legacy.jibunAddress.trim() || undefined,
+        zipCode: legacy.zipCode.trim() || undefined,
+        detailAddress: legacy.detailAddress.trim() || undefined,
+        isPrimary: legacy.isPrimary,
+      });
+    }
+    await clearLegacyUserAddresses(me.id);
+    return true;
+  }, [me?.id]);
+
   const loadPrimaryAddress = useCallback(async () => {
     if (!me?.id) {
       setPrimaryAddress(null);
@@ -124,7 +149,16 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     setPrimaryAddressError(null);
 
     try {
-      const addresses = await loadUserAddresses(me.id);
+      let addresses = await getUserAddresses();
+      if (addresses.length === 0) {
+        const migrated = await migrateLegacyAddresses();
+        if (migrated) {
+          addresses = await getUserAddresses();
+        }
+      }
+      if (addresses.length > 0) {
+        await clearLegacyUserAddresses(me.id);
+      }
       const selected = addresses.find((item) => item.isPrimary) ?? addresses[0] ?? null;
       setPrimaryAddress(selected);
     } catch (error) {
@@ -133,7 +167,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     } finally {
       setIsLoadingPrimaryAddress(false);
     }
-  }, [me?.id]);
+  }, [me?.id, migrateLegacyAddresses]);
 
   const refreshRequests = async () => {
     setIsLoadingList(true);
