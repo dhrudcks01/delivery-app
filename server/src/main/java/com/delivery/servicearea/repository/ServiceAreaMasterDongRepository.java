@@ -31,4 +31,12 @@ public interface ServiceAreaMasterDongRepository extends JpaRepository<ServiceAr
 
     @Query("SELECT COUNT(DISTINCT CONCAT(CONCAT(m.city, '|'), m.district)) FROM ServiceAreaMasterDongEntity m")
     long countDistinctCityDistrict();
+
+    @Query("""
+            SELECT COUNT(m)
+            FROM ServiceAreaMasterDongEntity m
+            WHERE m.active = true
+              AND LOWER(m.city) = LOWER(:city)
+            """)
+    long countActiveByCity(@Param("city") String city);
 }

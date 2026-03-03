@@ -30,6 +30,7 @@ import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
 import com.delivery.servicearea.exception.InvalidServiceAreaMasterDongFileException;
+import com.delivery.servicearea.exception.ServiceAreaDeleteNotAllowedException;
 import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
@@ -389,6 +390,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.BAD_REQUEST.value(),
                 "INVALID_SERVICE_AREA_MASTER_DONG_FILE",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(ServiceAreaDeleteNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleServiceAreaDeleteNotAllowed(
+            ServiceAreaDeleteNotAllowedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "SERVICE_AREA_DELETE_NOT_ALLOWED",
                 exception.getMessage(),
                 request.getRequestURI()
         );

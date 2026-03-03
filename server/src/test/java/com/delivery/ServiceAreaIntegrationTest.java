@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -205,7 +206,7 @@ class ServiceAreaIntegrationTest {
                 .andExpect(jsonPath("$.cityCount").value(2))
                 .andExpect(jsonPath("$.districtCount").value(3))
                 .andExpect(jsonPath("$.minimumTotalCountThreshold").value(3000))
-                .andExpect(jsonPath("$.minimumCityCountThreshold").value(17))
+                .andExpect(jsonPath("$.minimumCityCountThreshold").value(16))
                 .andExpect(jsonPath("$.lowDataWarning").value(true));
     }
 
@@ -243,8 +244,11 @@ class ServiceAreaIntegrationTest {
                 .andExpect(jsonPath("$.cityCountAfterImport").value(1))
                 .andExpect(jsonPath("$.districtCountAfterImport").value(1))
                 .andExpect(jsonPath("$.minimumTotalCountThreshold").value(3000))
-                .andExpect(jsonPath("$.minimumCityCountThreshold").value(17))
-                .andExpect(jsonPath("$.lowDataWarning").value(true));
+                .andExpect(jsonPath("$.minimumCityCountThreshold").value(16))
+                .andExpect(jsonPath("$.lowDataWarning").value(true))
+                .andExpect(jsonPath("$.majorCityCoverageTarget").value(4))
+                .andExpect(jsonPath("$.majorCityCoverageMet").value(0))
+                .andExpect(jsonPath("$.missingMajorCities.length()").value(4));
 
         mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
                         .header("Authorization", "Bearer " + opsAdmin.accessToken())
@@ -256,6 +260,102 @@ class ServiceAreaIntegrationTest {
                 .andExpect(jsonPath("$.content[0].code").value("1111010100"))
                 .andExpect(jsonPath("$.content[0].dong").value("Cheongun-dong"))
                 .andExpect(jsonPath("$.content[0].active").value(true));
+    }
+
+    @Test
+    void opsAdminCanResetImportAndCoverMajorCities() throws Exception {
+        TestUser opsAdmin = createUser("service-area-master-major-cities-ops@example.com", "OPS_ADMIN");
+        insertMasterDong("9999999999", "Dummy", "Dummy", "Dummy-dong", true);
+
+        String source = """
+                1111010200\t\uC11C\uC6B8\uD2B9\uBCC4\uC2DC \uC885\uB85C\uAD6C \uC2E0\uAD50\uB3D9\tACTIVE
+                2611011000\t\uBD80\uC0B0\uAD11\uC5ED\uC2DC \uC911\uAD6C \uAD11\uBCF5\uB3D9\tACTIVE
+                2714010200\t\uB300\uAD6C\uAD11\uC5ED\uC2DC \uB3D9\uAD6C \uC2E0\uC554\uB3D9\tACTIVE
+                2817710100\t\uC778\uCC9C\uAD11\uC5ED\uC2DC \uBBF8\uCD94\uD640\uAD6C \uC6A9\uD604\uB3D9\tACTIVE
+                """;
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "master-dongs-major-cities.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                source.getBytes()
+        );
+
+        mockMvc.perform(multipart("/ops-admin/service-areas/master-dongs/import")
+                        .file(file)
+                        .param("reset", "true")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.addedCount").value(4))
+                .andExpect(jsonPath("$.updatedCount").value(0))
+                .andExpect(jsonPath("$.failedCount").value(0))
+                .andExpect(jsonPath("$.totalCountAfterImport").value(4))
+                .andExpect(jsonPath("$.majorCityCoverageTarget").value(4))
+                .andExpect(jsonPath("$.majorCityCoverageMet").value(4))
+                .andExpect(jsonPath("$.missingMajorCities.length()").value(0));
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("query", "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1));
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("query", "\uBD80\uC0B0\uAD11\uC5ED\uC2DC")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1));
+    }
+
+    @Test
+    void opsAdminCanReactivateAndDeleteInactiveServiceArea() throws Exception {
+        TestUser opsAdmin = createUser("service-area-reactivate-delete-ops@example.com", "OPS_ADMIN");
+        Long serviceAreaId = createServiceArea(opsAdmin.accessToken(), "Seoul", "Mapo-gu", "Seogyo-dong");
+
+        mockMvc.perform(delete("/ops-admin/service-areas/{serviceAreaId}", serviceAreaId)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SERVICE_AREA_DELETE_NOT_ALLOWED"));
+
+        mockMvc.perform(patch("/ops-admin/service-areas/{serviceAreaId}/deactivate", serviceAreaId)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+
+        mockMvc.perform(patch("/ops-admin/service-areas/{serviceAreaId}/reactivate", serviceAreaId)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
+        mockMvc.perform(patch("/ops-admin/service-areas/{serviceAreaId}/deactivate", serviceAreaId)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+
+        mockMvc.perform(delete("/ops-admin/service-areas/{serviceAreaId}", serviceAreaId)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isNoContent());
+
+        String recreated = mockMvc.perform(post("/ops-admin/service-areas")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "city": "Seoul",
+                                  "district": "Mapo-gu",
+                                  "dong": "Seogyo-dong"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.active").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long recreatedId = objectMapper.readTree(recreated).get("id").asLong();
+        org.assertj.core.api.Assertions.assertThat(recreatedId).isNotEqualTo(serviceAreaId);
     }
 
     private Long createServiceArea(String accessToken, String city, String district, String dong) throws Exception {

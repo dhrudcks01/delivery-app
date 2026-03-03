@@ -15,6 +15,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +52,17 @@ public class OpsAdminServiceAreaController {
         return ResponseEntity.ok(serviceAreaService.deactivate(serviceAreaId));
     }
 
+    @PatchMapping("/{serviceAreaId}/reactivate")
+    public ResponseEntity<ServiceAreaResponse> reactivate(@PathVariable Long serviceAreaId) {
+        return ResponseEntity.ok(serviceAreaService.reactivate(serviceAreaId));
+    }
+
+    @DeleteMapping("/{serviceAreaId}")
+    public ResponseEntity<Void> delete(@PathVariable Long serviceAreaId) {
+        serviceAreaService.deleteInactive(serviceAreaId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<Page<ServiceAreaResponse>> getForOps(
             @RequestParam(required = false) String query,
@@ -76,8 +88,16 @@ public class OpsAdminServiceAreaController {
 
     @PostMapping("/master-dongs/import")
     public ResponseEntity<ServiceAreaMasterDongImportResponse> importMasterDongs(
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "reset", defaultValue = "false") boolean reset
     ) {
-        return ResponseEntity.ok(serviceAreaService.importMasterDongs(file));
+        return ResponseEntity.ok(serviceAreaService.importMasterDongs(file, reset));
+    }
+
+    @PostMapping("/master-dongs/import/auto")
+    public ResponseEntity<ServiceAreaMasterDongImportResponse> importMasterDongsFromAutoSource(
+            @RequestParam(name = "reset", defaultValue = "false") boolean reset
+    ) {
+        return ResponseEntity.ok(serviceAreaService.importMasterDongsFromAutoSource(reset));
     }
 }

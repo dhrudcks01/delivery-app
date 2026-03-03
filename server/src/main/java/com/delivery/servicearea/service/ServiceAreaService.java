@@ -4,6 +4,8 @@ import com.delivery.address.dto.AddressSearchResponse;
 import com.delivery.address.exception.AddressSearchTimeoutException;
 import com.delivery.address.exception.AddressSearchUnavailableException;
 import com.delivery.address.service.AddressSearchService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
 import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongImportResponse;
@@ -13,6 +15,7 @@ import com.delivery.servicearea.dto.ServiceAreaResponse;
 import com.delivery.servicearea.entity.ServiceAreaMasterDongEntity;
 import com.delivery.servicearea.entity.ServiceAreaEntity;
 import com.delivery.servicearea.exception.InvalidServiceAreaMasterDongFileException;
+import com.delivery.servicearea.exception.ServiceAreaDeleteNotAllowedException;
 import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
@@ -23,11 +26,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -40,9 +49,10 @@ import java.util.Optional;
 public class ServiceAreaService {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceAreaService.class);
+    private static final String AUTO_IMPORT_SOURCE_URL = "https://kr-legal-dong.github.io/data/dong.json";
     private static final int ADDRESS_SEARCH_FALLBACK_LIMIT = 5;
     private static final long MASTER_DONG_MIN_TOTAL_THRESHOLD = 3000L;
-    private static final long MASTER_DONG_MIN_CITY_THRESHOLD = 17L;
+    private static final long MASTER_DONG_MIN_CITY_THRESHOLD = 16L;
     private static final String DEPRECATED_STATUS_KEYWORD = "\uD3D0\uC9C0";
     private static final Charset EUC_KR_CHARSET = Charset.forName("EUC-KR");
     private static final List<String> MASTER_DONG_SUFFIXES = List.of(
@@ -91,19 +101,30 @@ public class ServiceAreaService {
             "\uAD6C",
             "\uAD70"
     );
+    private static final List<String> MAJOR_CITY_COVERAGE_TARGETS = List.of(
+            "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC",
+            "\uBD80\uC0B0\uAD11\uC5ED\uC2DC",
+            "\uB300\uAD6C\uAD11\uC5ED\uC2DC",
+            "\uC778\uCC9C\uAD11\uC5ED\uC2DC"
+    );
 
     private final ServiceAreaRepository serviceAreaRepository;
     private final ServiceAreaMasterDongRepository serviceAreaMasterDongRepository;
     private final AddressSearchService addressSearchService;
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
 
     public ServiceAreaService(
             ServiceAreaRepository serviceAreaRepository,
             ServiceAreaMasterDongRepository serviceAreaMasterDongRepository,
-            AddressSearchService addressSearchService
+            AddressSearchService addressSearchService,
+            ObjectMapper objectMapper
     ) {
         this.serviceAreaRepository = serviceAreaRepository;
         this.serviceAreaMasterDongRepository = serviceAreaMasterDongRepository;
         this.addressSearchService = addressSearchService;
+        this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder().build();
     }
 
     @Transactional
@@ -132,7 +153,49 @@ public class ServiceAreaService {
         ServiceAreaEntity entity = serviceAreaRepository.findById(serviceAreaId)
                 .orElseThrow(ServiceAreaNotFoundException::new);
         entity.deactivate();
+        log.info(
+                "Service area state changed: action=DEACTIVATE actor={} id={} city={} district={} dong={}",
+                currentActor(),
+                entity.getId(),
+                entity.getCity(),
+                entity.getDistrict(),
+                entity.getDong()
+        );
         return toResponse(entity);
+    }
+
+    @Transactional
+    public ServiceAreaResponse reactivate(Long serviceAreaId) {
+        ServiceAreaEntity entity = serviceAreaRepository.findById(serviceAreaId)
+                .orElseThrow(ServiceAreaNotFoundException::new);
+        entity.activate();
+        log.info(
+                "Service area state changed: action=REACTIVATE actor={} id={} city={} district={} dong={}",
+                currentActor(),
+                entity.getId(),
+                entity.getCity(),
+                entity.getDistrict(),
+                entity.getDong()
+        );
+        return toResponse(entity);
+    }
+
+    @Transactional
+    public void deleteInactive(Long serviceAreaId) {
+        ServiceAreaEntity entity = serviceAreaRepository.findById(serviceAreaId)
+                .orElseThrow(ServiceAreaNotFoundException::new);
+        if (entity.isActive()) {
+            throw new ServiceAreaDeleteNotAllowedException("Active service area cannot be deleted. Deactivate first.");
+        }
+        serviceAreaRepository.delete(entity);
+        log.info(
+                "Service area state changed: action=DELETE actor={} id={} city={} district={} dong={}",
+                currentActor(),
+                entity.getId(),
+                entity.getCity(),
+                entity.getDistrict(),
+                entity.getDong()
+        );
     }
 
     @Transactional
@@ -166,7 +229,7 @@ public class ServiceAreaService {
         );
     }
 
-    public ServiceAreaMasterDongImportResponse importMasterDongs(MultipartFile file) {
+    public ServiceAreaMasterDongImportResponse importMasterDongs(MultipartFile file, boolean reset) {
         if (file == null || file.isEmpty()) {
             throw new InvalidServiceAreaMasterDongFileException("Import file is empty.");
         }
@@ -179,29 +242,73 @@ public class ServiceAreaService {
         }
 
         DecodedFile decodedFile = decodeMasterDongFile(payload);
-        Map<String, ServiceAreaMasterDongEntity> existingByCode = new HashMap<>();
-        for (ServiceAreaMasterDongEntity entity : serviceAreaMasterDongRepository.findAll()) {
-            existingByCode.put(entity.getCode(), entity);
-        }
-
-        long addedCount = 0L;
-        long updatedCount = 0L;
+        List<MasterDongImportRow> parsedRows = new ArrayList<>();
         long skippedCount = 0L;
-        long failedCount = 0L;
-
-        int lineNumber = 0;
         for (String line : decodedFile.lines()) {
-            lineNumber++;
             Optional<MasterDongImportRow> parsedRow = parseMasterDongLine(line);
             if (parsedRow.isEmpty()) {
                 skippedCount++;
                 continue;
             }
+            parsedRows.add(parsedRow.get());
+        }
+        return persistImportedMasterRows(parsedRows, skippedCount, reset, "file");
+    }
 
-            MasterDongImportRow row = parsedRow.get();
+    public ServiceAreaMasterDongImportResponse importMasterDongsFromAutoSource(boolean reset) {
+        List<AutoSourceDongItem> items = fetchAutoSourceRows();
+        List<MasterDongImportRow> parsedRows = new ArrayList<>();
+        long skippedCount = 0L;
+        for (AutoSourceDongItem item : items) {
+            String code = safeTrim(item.code());
+            String city = safeTrim(item.siName());
+            String district = safeTrim(item.guName());
+            String dong = safeTrim(item.name());
+            String status = item.active() ? "ACTIVE" : "\uD3D0\uC9C0";
+            String line = code + "\t" + city + " " + district + " " + dong + "\t" + status;
+
+            Optional<MasterDongImportRow> parsedRow = parseMasterDongLine(line);
+            if (parsedRow.isEmpty()) {
+                skippedCount++;
+                continue;
+            }
+            parsedRows.add(parsedRow.get());
+        }
+        return persistImportedMasterRows(parsedRows, skippedCount, reset, "auto-source");
+    }
+
+    private ServiceAreaMasterDongImportResponse persistImportedMasterRows(
+            List<MasterDongImportRow> rows,
+            long skippedCount,
+            boolean reset,
+            String sourceType
+    ) {
+        Map<String, ServiceAreaMasterDongEntity> existingByCode = new HashMap<>();
+        Map<String, ServiceAreaMasterDongEntity> existingByRegion = new HashMap<>();
+        if (reset) {
+            serviceAreaMasterDongRepository.deleteAllInBatch();
+            log.info("Service area master import reset executed: actor={} source={}", currentActor(), sourceType);
+        } else {
+            for (ServiceAreaMasterDongEntity entity : serviceAreaMasterDongRepository.findAll()) {
+                existingByCode.put(entity.getCode(), entity);
+                existingByRegion.put(regionKey(entity.getCity(), entity.getDistrict(), entity.getDong()), entity);
+            }
+        }
+
+        long addedCount = 0L;
+        long updatedCount = 0L;
+        long failedCount = 0L;
+        for (MasterDongImportRow row : rows) {
             try {
                 ServiceAreaMasterDongEntity existing = existingByCode.get(row.code());
                 if (existing == null) {
+                    ServiceAreaMasterDongEntity existingSameRegion = existingByRegion.get(
+                            regionKey(row.city(), row.district(), row.dong())
+                    );
+                    if (existingSameRegion != null) {
+                        skippedCount++;
+                        continue;
+                    }
                     ServiceAreaMasterDongEntity created = new ServiceAreaMasterDongEntity(
                             row.code(),
                             row.city(),
@@ -211,6 +318,7 @@ public class ServiceAreaService {
                     );
                     serviceAreaMasterDongRepository.save(created);
                     existingByCode.put(created.getCode(), created);
+                    existingByRegion.put(regionKey(created.getCity(), created.getDistrict(), created.getDong()), created);
                     addedCount++;
                     continue;
                 }
@@ -220,14 +328,17 @@ public class ServiceAreaService {
                     continue;
                 }
 
+                String previousRegionKey = regionKey(existing.getCity(), existing.getDistrict(), existing.getDong());
                 existing.sync(row.city(), row.district(), row.dong(), true);
                 serviceAreaMasterDongRepository.save(existing);
+                existingByRegion.remove(previousRegionKey);
+                existingByRegion.put(regionKey(existing.getCity(), existing.getDistrict(), existing.getDong()), existing);
                 updatedCount++;
             } catch (RuntimeException exception) {
                 failedCount++;
                 log.warn(
-                        "Service area master import failed: line={} code={} error={}",
-                        lineNumber,
+                        "Service area master import failed: source={} code={} error={}",
+                        sourceType,
                         row.code(),
                         exception.getMessage(),
                         exception
@@ -236,15 +347,29 @@ public class ServiceAreaService {
         }
 
         ServiceAreaMasterDongSummaryResponse summary = getMasterDongsSummaryForOps();
+        List<String> missingMajorCities = new ArrayList<>();
+        long majorCityCoverageMet = 0L;
+        for (String majorCity : MAJOR_CITY_COVERAGE_TARGETS) {
+            long activeCount = serviceAreaMasterDongRepository.countActiveByCity(majorCity);
+            if (activeCount > 0) {
+                majorCityCoverageMet++;
+            } else {
+                missingMajorCities.add(majorCity);
+            }
+        }
         log.info(
-                "Service area master import completed: charset={} added={} updated={} skipped={} failed={} total={} lowDataWarning={}",
-                decodedFile.charset(),
+                "Service area master import completed: actor={} source={} reset={} added={} updated={} skipped={} failed={} total={} lowDataWarning={} majorCityCoverage={}/{}",
+                currentActor(),
+                sourceType,
+                reset,
                 addedCount,
                 updatedCount,
                 skippedCount,
                 failedCount,
                 summary.totalCount(),
-                summary.lowDataWarning()
+                summary.lowDataWarning(),
+                majorCityCoverageMet,
+                MAJOR_CITY_COVERAGE_TARGETS.size()
         );
 
         return new ServiceAreaMasterDongImportResponse(
@@ -258,8 +383,42 @@ public class ServiceAreaService {
                 summary.districtCount(),
                 summary.minimumTotalCountThreshold(),
                 summary.minimumCityCountThreshold(),
-                summary.lowDataWarning()
+                summary.lowDataWarning(),
+                MAJOR_CITY_COVERAGE_TARGETS.size(),
+                majorCityCoverageMet,
+                missingMajorCities
         );
+    }
+
+    private List<AutoSourceDongItem> fetchAutoSourceRows() {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(AUTO_IMPORT_SOURCE_URL))
+                .GET()
+                .build();
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() != HttpStatus.OK.value()) {
+                throw new InvalidServiceAreaMasterDongFileException("Auto source request failed with status " + response.statusCode());
+            }
+            return objectMapper.readValue(response.body(), new TypeReference<List<AutoSourceDongItem>>() {
+            });
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new InvalidServiceAreaMasterDongFileException("Failed to load auto source data.");
+        } catch (IOException exception) {
+            throw new InvalidServiceAreaMasterDongFileException("Failed to load auto source data.");
+        }
+    }
+
+    private String safeTrim(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim();
+    }
+
+    private String regionKey(String city, String district, String dong) {
+        return city + "|" + district + "|" + dong;
     }
 
     @Transactional
@@ -328,9 +487,6 @@ public class ServiceAreaService {
         String status = parts.length >= 3 ? parts[2].trim() : "";
 
         if (!code.matches("\\d{10}")) {
-            return Optional.empty();
-        }
-        if (code.endsWith("00")) {
             return Optional.empty();
         }
         if (status.contains(DEPRECATED_STATUS_KEYWORD)) {
@@ -547,6 +703,20 @@ public class ServiceAreaService {
     }
 
     private record MasterDongImportRow(String code, String city, String district, String dong) {
+    }
+
+    private record AutoSourceDongItem(String code, String siName, String guName, String name, boolean active) {
+    }
+
+    private String currentActor() {
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            return "anonymous";
+        }
+        String name = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (!StringUtils.hasText(name)) {
+            return "anonymous";
+        }
+        return name;
     }
 
     private record AddressRegion(String city, String district, String dong) {

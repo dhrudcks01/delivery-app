@@ -56,3 +56,7 @@ app:
     enforcement-enabled: ${APP_PHONE_VERIFICATION_ENFORCEMENT_ENABLED:true}
     connect-timeout-millis: ${APP_PHONE_VERIFICATION_CONNECT_TIMEOUT_MILLIS:2000}
     read-timeout-millis: ${APP_PHONE_VERIFICATION_READ_TIMEOUT_MILLIS:3000}
+  service-area:
+    master-dong:
+      auto-import-enabled: ${APP_SERVICE_AREA_MASTER_DONG_AUTO_IMPORT_ENABLED:false}
+      auto-import-reset: ${APP_SERVICE_AREA_MASTER_DONG_AUTO_IMPORT_RESET:false}
