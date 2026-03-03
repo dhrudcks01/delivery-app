@@ -1,6 +1,7 @@
 package com.delivery.servicearea.web;
 
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
+import com.delivery.servicearea.dto.ServiceAreaMasterDongImportResponse;
 import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongSummaryResponse;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/ops-admin/service-areas")
@@ -70,5 +72,12 @@ public class OpsAdminServiceAreaController {
     @GetMapping("/master-dongs/summary")
     public ResponseEntity<ServiceAreaMasterDongSummaryResponse> getMasterDongsSummaryForOps() {
         return ResponseEntity.ok(serviceAreaService.getMasterDongsSummaryForOps());
+    }
+
+    @PostMapping("/master-dongs/import")
+    public ResponseEntity<ServiceAreaMasterDongImportResponse> importMasterDongs(
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(serviceAreaService.importMasterDongs(file));
     }
 }

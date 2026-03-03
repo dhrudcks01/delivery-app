@@ -47,6 +47,13 @@ public class ServiceAreaMasterDongEntity {
         this.active = active;
     }
 
+    public void sync(String city, String district, String dong, boolean active) {
+        this.city = Objects.requireNonNull(city);
+        this.district = Objects.requireNonNull(district);
+        this.dong = Objects.requireNonNull(dong);
+        this.active = active;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

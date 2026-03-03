@@ -6,11 +6,13 @@ import com.delivery.address.exception.AddressSearchUnavailableException;
 import com.delivery.address.service.AddressSearchService;
 import com.delivery.servicearea.dto.CreateServiceAreaRequest;
 import com.delivery.servicearea.dto.RegisterServiceAreaByCodeRequest;
+import com.delivery.servicearea.dto.ServiceAreaMasterDongImportResponse;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongResponse;
 import com.delivery.servicearea.dto.ServiceAreaMasterDongSummaryResponse;
 import com.delivery.servicearea.dto.ServiceAreaResponse;
 import com.delivery.servicearea.entity.ServiceAreaMasterDongEntity;
 import com.delivery.servicearea.entity.ServiceAreaEntity;
+import com.delivery.servicearea.exception.InvalidServiceAreaMasterDongFileException;
 import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
@@ -23,9 +25,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -35,41 +43,53 @@ public class ServiceAreaService {
     private static final int ADDRESS_SEARCH_FALLBACK_LIMIT = 5;
     private static final long MASTER_DONG_MIN_TOTAL_THRESHOLD = 3000L;
     private static final long MASTER_DONG_MIN_CITY_THRESHOLD = 17L;
+    private static final String DEPRECATED_STATUS_KEYWORD = "\uD3D0\uC9C0";
+    private static final Charset EUC_KR_CHARSET = Charset.forName("EUC-KR");
+    private static final List<String> MASTER_DONG_SUFFIXES = List.of(
+            "\uB3D9",
+            "\uC74D",
+            "\uBA74",
+            "\uAC00",
+            "\uB9AC",
+            "-dong",
+            "-eup",
+            "-myeon"
+    );
 
     private static final List<String> CITY_SUFFIXES = List.of(
-            "특별자치도",
-            "특별자치시",
-            "특별시",
-            "광역시",
+            "\uD2B9\uBCC4\uC790\uCE58\uC2DC",
+            "\uD2B9\uBCC4\uC790\uCE58\uB3C4",
+            "\uD2B9\uBCC4\uC2DC",
+            "\uAD11\uC5ED\uC2DC",
             "-si",
             "-do",
-            "시",
-            "도"
+            "\uC2DC",
+            "\uB3C4"
     );
     private static final List<String> DISTRICT_SUFFIXES = List.of(
-            "자치구",
+            "\uC790\uCE58\uAD6C",
             "-gu",
             "-gun",
-            "구",
-            "군",
-            "시"
+            "\uAD6C",
+            "\uAD70",
+            "\uC2DC"
     );
     private static final List<String> DONG_SUFFIXES = List.of(
             "-dong",
             "-eup",
             "-myeon",
-            "동",
-            "읍",
-            "면",
-            "가",
-            "리"
+            "\uB3D9",
+            "\uC74D",
+            "\uBA74",
+            "\uAC00",
+            "\uB9AC"
     );
     private static final List<String> DISTRICT_SECOND_LEVEL_SUFFIXES = List.of(
-            "자치구",
+            "\uC790\uCE58\uAD6C",
             "-gu",
             "-gun",
-            "구",
-            "군"
+            "\uAD6C",
+            "\uAD70"
     );
 
     private final ServiceAreaRepository serviceAreaRepository;
@@ -146,6 +166,102 @@ public class ServiceAreaService {
         );
     }
 
+    public ServiceAreaMasterDongImportResponse importMasterDongs(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new InvalidServiceAreaMasterDongFileException("Import file is empty.");
+        }
+
+        byte[] payload;
+        try {
+            payload = file.getBytes();
+        } catch (IOException exception) {
+            throw new InvalidServiceAreaMasterDongFileException("Failed to read import file.");
+        }
+
+        DecodedFile decodedFile = decodeMasterDongFile(payload);
+        Map<String, ServiceAreaMasterDongEntity> existingByCode = new HashMap<>();
+        for (ServiceAreaMasterDongEntity entity : serviceAreaMasterDongRepository.findAll()) {
+            existingByCode.put(entity.getCode(), entity);
+        }
+
+        long addedCount = 0L;
+        long updatedCount = 0L;
+        long skippedCount = 0L;
+        long failedCount = 0L;
+
+        int lineNumber = 0;
+        for (String line : decodedFile.lines()) {
+            lineNumber++;
+            Optional<MasterDongImportRow> parsedRow = parseMasterDongLine(line);
+            if (parsedRow.isEmpty()) {
+                skippedCount++;
+                continue;
+            }
+
+            MasterDongImportRow row = parsedRow.get();
+            try {
+                ServiceAreaMasterDongEntity existing = existingByCode.get(row.code());
+                if (existing == null) {
+                    ServiceAreaMasterDongEntity created = new ServiceAreaMasterDongEntity(
+                            row.code(),
+                            row.city(),
+                            row.district(),
+                            row.dong(),
+                            true
+                    );
+                    serviceAreaMasterDongRepository.save(created);
+                    existingByCode.put(created.getCode(), created);
+                    addedCount++;
+                    continue;
+                }
+
+                if (isSameMasterDong(existing, row)) {
+                    skippedCount++;
+                    continue;
+                }
+
+                existing.sync(row.city(), row.district(), row.dong(), true);
+                serviceAreaMasterDongRepository.save(existing);
+                updatedCount++;
+            } catch (RuntimeException exception) {
+                failedCount++;
+                log.warn(
+                        "Service area master import failed: line={} code={} error={}",
+                        lineNumber,
+                        row.code(),
+                        exception.getMessage(),
+                        exception
+                );
+            }
+        }
+
+        ServiceAreaMasterDongSummaryResponse summary = getMasterDongsSummaryForOps();
+        log.info(
+                "Service area master import completed: charset={} added={} updated={} skipped={} failed={} total={} lowDataWarning={}",
+                decodedFile.charset(),
+                addedCount,
+                updatedCount,
+                skippedCount,
+                failedCount,
+                summary.totalCount(),
+                summary.lowDataWarning()
+        );
+
+        return new ServiceAreaMasterDongImportResponse(
+                addedCount,
+                updatedCount,
+                skippedCount,
+                failedCount,
+                summary.totalCount(),
+                summary.activeCount(),
+                summary.cityCount(),
+                summary.districtCount(),
+                summary.minimumTotalCountThreshold(),
+                summary.minimumCityCountThreshold(),
+                summary.lowDataWarning()
+        );
+    }
+
     @Transactional
     public Page<ServiceAreaResponse> getForUser(String query, Pageable pageable) {
         String keyword = normalizeKeyword(query);
@@ -182,6 +298,69 @@ public class ServiceAreaService {
             return "";
         }
         return query.trim();
+    }
+
+    private DecodedFile decodeMasterDongFile(byte[] payload) {
+        String utf8 = new String(payload, StandardCharsets.UTF_8);
+        String eucKr = new String(payload, EUC_KR_CHARSET);
+
+        long utf8ReplacementCount = utf8.chars().filter(ch -> ch == '\uFFFD').count();
+        long eucKrReplacementCount = eucKr.chars().filter(ch -> ch == '\uFFFD').count();
+
+        if (utf8ReplacementCount <= eucKrReplacementCount) {
+            return new DecodedFile(utf8.lines().toList(), StandardCharsets.UTF_8.displayName());
+        }
+        return new DecodedFile(eucKr.lines().toList(), EUC_KR_CHARSET.displayName());
+    }
+
+    private Optional<MasterDongImportRow> parseMasterDongLine(String line) {
+        if (!StringUtils.hasText(line)) {
+            return Optional.empty();
+        }
+
+        String[] parts = line.split("\\t", -1);
+        if (parts.length < 2) {
+            return Optional.empty();
+        }
+
+        String code = parts[0].trim();
+        String fullAddressName = parts[1].trim();
+        String status = parts.length >= 3 ? parts[2].trim() : "";
+
+        if (!code.matches("\\d{10}")) {
+            return Optional.empty();
+        }
+        if (code.endsWith("00")) {
+            return Optional.empty();
+        }
+        if (status.contains(DEPRECATED_STATUS_KEYWORD)) {
+            return Optional.empty();
+        }
+
+        String[] nameTokens = fullAddressName.split("\\s+");
+        if (nameTokens.length < 2) {
+            return Optional.empty();
+        }
+
+        String city = nameTokens[0].trim();
+        String district = (nameTokens.length >= 3 ? nameTokens[1] : nameTokens[0]).trim();
+        String dong = nameTokens[nameTokens.length - 1].trim();
+
+        if (!StringUtils.hasText(city) || !StringUtils.hasText(district) || !StringUtils.hasText(dong)) {
+            return Optional.empty();
+        }
+        if (!hasAnySuffix(dong, MASTER_DONG_SUFFIXES)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(new MasterDongImportRow(code, city, district, dong));
+    }
+
+    private boolean isSameMasterDong(ServiceAreaMasterDongEntity existing, MasterDongImportRow row) {
+        return existing.getCity().equals(row.city())
+                && existing.getDistrict().equals(row.district())
+                && existing.getDong().equals(row.dong())
+                && existing.isActive();
     }
 
     private Optional<AddressRegion> resolveAddressRegion(String address) {
@@ -307,7 +486,7 @@ public class ServiceAreaService {
         }
 
         String next = tokens.get(districtIndex + 1);
-        if (district.toLowerCase().endsWith("시") && hasAnySuffix(next, DISTRICT_SECOND_LEVEL_SUFFIXES)) {
+        if (district.toLowerCase().endsWith("\uC2DC") && hasAnySuffix(next, DISTRICT_SECOND_LEVEL_SUFFIXES)) {
             return district + " " + next;
         }
         return district;
@@ -364,6 +543,14 @@ public class ServiceAreaService {
         );
     }
 
+    private record DecodedFile(List<String> lines, String charset) {
+    }
+
+    private record MasterDongImportRow(String code, String city, String district, String dong) {
+    }
+
     private record AddressRegion(String city, String district, String dong) {
     }
 }
+
+

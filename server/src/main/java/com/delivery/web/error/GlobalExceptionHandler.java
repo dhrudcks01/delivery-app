@@ -29,6 +29,7 @@ import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
+import com.delivery.servicearea.exception.InvalidServiceAreaMasterDongFileException;
 import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaNotFoundException;
 import com.delivery.servicearea.exception.ServiceAreaUnavailableException;
@@ -378,6 +379,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(InvalidServiceAreaMasterDongFileException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidServiceAreaMasterDongFile(
+            InvalidServiceAreaMasterDongFileException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_SERVICE_AREA_MASTER_DONG_FILE",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(ServiceAreaUnavailableException.class)

@@ -12,11 +12,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -205,6 +207,55 @@ class ServiceAreaIntegrationTest {
                 .andExpect(jsonPath("$.minimumTotalCountThreshold").value(3000))
                 .andExpect(jsonPath("$.minimumCityCountThreshold").value(17))
                 .andExpect(jsonPath("$.lowDataWarning").value(true));
+    }
+
+    @Test
+    void opsAdminCanImportMasterDongsFromSourceFile() throws Exception {
+        TestUser opsAdmin = createUser("service-area-master-import-ops@example.com", "OPS_ADMIN");
+        insertMasterDong("1111010100", "Seoul", "Jongno-gu", "Hyoja-dong", false);
+
+        String source = """
+                1111010100\tSeoul Jongno-gu Cheongun-dong\tACTIVE
+                1111010200\tSeoul Jongno-gu Singyo-dong\tACTIVE
+                1111010200\tSeoul Jongno-gu Singyo-dong\tACTIVE
+                1111010300\tSeoul Jongno-gu Gungjeong-dong\t\uD3D0\uC9C0
+                1111010000\tSeoul Jongno-gu Jongno-gu\tACTIVE
+                malformed-line
+                """;
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "master-dongs.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                source.getBytes()
+        );
+
+        mockMvc.perform(multipart("/ops-admin/service-areas/master-dongs/import")
+                        .file(file)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.addedCount").value(1))
+                .andExpect(jsonPath("$.updatedCount").value(1))
+                .andExpect(jsonPath("$.skippedCount").value(4))
+                .andExpect(jsonPath("$.failedCount").value(0))
+                .andExpect(jsonPath("$.totalCountAfterImport").value(2))
+                .andExpect(jsonPath("$.activeCountAfterImport").value(2))
+                .andExpect(jsonPath("$.cityCountAfterImport").value(1))
+                .andExpect(jsonPath("$.districtCountAfterImport").value(1))
+                .andExpect(jsonPath("$.minimumTotalCountThreshold").value(3000))
+                .andExpect(jsonPath("$.minimumCityCountThreshold").value(17))
+                .andExpect(jsonPath("$.lowDataWarning").value(true));
+
+        mockMvc.perform(get("/ops-admin/service-areas/master-dongs")
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken())
+                        .param("query", "Cheongun")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].code").value("1111010100"))
+                .andExpect(jsonPath("$.content[0].dong").value("Cheongun-dong"))
+                .andExpect(jsonPath("$.content[0].active").value(true));
     }
 
     private Long createServiceArea(String accessToken, String city, String district, String dong) throws Exception {
