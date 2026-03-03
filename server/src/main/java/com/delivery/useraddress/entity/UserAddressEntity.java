@@ -20,7 +20,7 @@ import java.util.Objects;
 @Table(name = "user_addresses")
 public class UserAddressEntity {
 
-    private static final int PRIMARY_MARKER = 1;
+    private static final byte PRIMARY_MARKER = 1;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,7 +46,7 @@ public class UserAddressEntity {
     private boolean primaryAddress;
 
     @Column(name = "primary_marker")
-    private Integer primaryMarker;
+    private Byte primaryMarker;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -133,4 +133,3 @@ public class UserAddressEntity {
         return updatedAt;
     }
 }
-
