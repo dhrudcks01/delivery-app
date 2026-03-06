@@ -141,6 +141,51 @@ class OpsAdminWasteRequestIntegrationTest {
         WasteRequestEntity updated = wasteRequestRepository.findById(request.getId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo("ASSIGNED");
         assertThat(wasteAssignmentRepository.existsByRequestId(request.getId())).isTrue();
+        assertThat(
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM waste_assignment_audit_logs WHERE request_id = ? AND action = 'ASSIGNED'",
+                        Integer.class,
+                        request.getId()
+                )
+        ).isEqualTo(1);
+    }
+
+    @Test
+    void opsAdminCanReassignAssignedWasteRequestWithoutStatusTransitionConflict() throws Exception {
+        UserEntity requester = createUser("reassign-requester@example.com", "USER");
+        UserEntity firstDriver = createUser("reassign-first-driver@example.com", "DRIVER");
+        UserEntity secondDriver = createUser("reassign-second-driver@example.com", "DRIVER");
+        WasteRequestEntity request = createWasteRequest(requester, "ASSIGNED", "?쒖슱??媛뺤꽌援?11");
+        wasteAssignmentRepository.save(new WasteAssignmentEntity(request, firstDriver));
+        String opsToken = login("reassign-ops-admin@example.com", "OPS_ADMIN");
+
+        String body = objectMapper.writeValueAsString(new AssignPayload(secondDriver.getId()));
+        mockMvc.perform(post("/ops-admin/waste-requests/{requestId}/assign", request.getId())
+                        .header("Authorization", "Bearer " + opsToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ASSIGNED"));
+
+        WasteAssignmentEntity updatedAssignment = wasteAssignmentRepository.findByRequestId(request.getId()).orElseThrow();
+        assertThat(updatedAssignment.getDriver().getId()).isEqualTo(secondDriver.getId());
+
+        assertThat(
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT COUNT(*)
+                        FROM waste_assignment_audit_logs
+                        WHERE request_id = ?
+                          AND action = 'REASSIGNED'
+                          AND from_driver_id = ?
+                          AND to_driver_id = ?
+                        """,
+                        Integer.class,
+                        request.getId(),
+                        firstDriver.getId(),
+                        secondDriver.getId()
+                )
+        ).isEqualTo(1);
     }
 
     @Test

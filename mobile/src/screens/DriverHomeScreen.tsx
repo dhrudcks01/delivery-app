@@ -1,14 +1,11 @@
-﻿import { AxiosError } from 'axios';
-import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import {
-  getMyAssignedWasteRequestDetail,
-  getMyAssignedWasteRequests,
-  measureAssignedWasteRequest,
-} from '../api/driverWasteApi';
-import { uploadImageFile } from '../api/uploadApi';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AxiosError } from 'axios';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getMyAssignedWasteRequests } from '../api/driverWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
@@ -30,40 +27,15 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
-function formatOrderNoFromRequestId(requestId: number): string {
-  return `WR-${String(requestId).padStart(6, '0')}`;
-}
-
 export function DriverHomeScreen() {
   const { me } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [isLoadingList, setIsLoadingList] = useState(false);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isMeasuring, setIsMeasuring] = useState(false);
-
   const [listError, setListError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [measureError, setMeasureError] = useState<string | null>(null);
-
   const [assignedRequests, setAssignedRequests] = useState<DriverAssignedWasteRequest[]>([]);
-  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<DriverAssignedWasteRequest | null>(null);
   const [driverFilter, setDriverFilter] = useState<DriverFilter>('ACTION_REQUIRED');
 
-  const [measuredWeightKgText, setMeasuredWeightKgText] = useState('');
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
-
-  const selectedTitle = useMemo(() => {
-    if (!selectedRequest) {
-      return '상세 요청을 선택해 주세요.';
-    }
-    return `요청 #${selectedRequest.requestId} (${toWasteStatusLabel(selectedRequest.status)})`;
-  }, [selectedRequest]);
-
-  const canMeasureSelected = selectedRequest?.status === 'ASSIGNED';
   const filteredRequests = useMemo(() => {
     if (driverFilter === 'ALL') {
       return assignedRequests;
@@ -74,142 +46,40 @@ export function DriverHomeScreen() {
     return assignedRequests.filter((request) => request.status !== 'ASSIGNED');
   }, [assignedRequests, driverFilter]);
 
-  const resetMeasureForm = () => {
-    setMeasuredWeightKgText('');
-    setPhotoUrls([]);
-    setUploadError(null);
-    setMeasureError(null);
-  };
-
-  const refreshAssignedRequests = async () => {
+  const refreshAssignedRequests = useCallback(async () => {
     setIsLoadingList(true);
     setListError(null);
-
     try {
       const data = await getMyAssignedWasteRequests();
       setAssignedRequests(data);
-      if (data.length === 0) {
-        setSelectedRequestId(null);
-        setSelectedRequest(null);
-        resetMeasureForm();
-      }
     } catch (error) {
       setListError(toErrorMessage(error));
     } finally {
       setIsLoadingList(false);
     }
-  };
-
-  const loadAssignedRequestDetail = async (requestId: number) => {
-    setIsLoadingDetail(true);
-    setDetailError(null);
-    setSelectedRequestId(requestId);
-    resetMeasureForm();
-
-    try {
-      const detail = await getMyAssignedWasteRequestDetail(requestId);
-      setSelectedRequest(detail);
-    } catch (error) {
-      setDetailError(toErrorMessage(error));
-      setSelectedRequest(null);
-    } finally {
-      setIsLoadingDetail(false);
-    }
-  };
-
-  const handlePickAndUploadPhoto = async () => {
-    if (!selectedRequestId || !canMeasureSelected) {
-      return;
-    }
-
-    setUploadError(null);
-
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setUploadError('사진 접근 권한이 필요합니다.');
-      return;
-    }
-
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (picked.canceled || picked.assets.length === 0) {
-      return;
-    }
-
-    const selectedAsset = picked.assets[0];
-    setIsUploadingPhoto(true);
-
-    try {
-      const uploadedUrl = await uploadImageFile(selectedAsset.uri, selectedAsset.fileName ?? undefined);
-      setPhotoUrls((prev) => [...prev, uploadedUrl]);
-    } catch (error) {
-      setUploadError(toErrorMessage(error));
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  const handleRemovePhoto = (index: number) => {
-    setPhotoUrls((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleMeasureComplete = async () => {
-    if (!selectedRequestId || !canMeasureSelected) {
-      return;
-    }
-
-    setMeasureError(null);
-
-    const parsedWeight = Number(measuredWeightKgText);
-    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
-      setMeasureError('무게(kg)는 0보다 큰 숫자로 입력해 주세요.');
-      return;
-    }
-
-    if (photoUrls.length === 0) {
-      setMeasureError('사진을 1장 이상 업로드해 주세요.');
-      return;
-    }
-
-    setIsMeasuring(true);
-
-    try {
-      await measureAssignedWasteRequest(selectedRequestId, {
-        measuredWeightKg: parsedWeight,
-        photoUrls,
-      });
-      await refreshAssignedRequests();
-      await loadAssignedRequestDetail(selectedRequestId);
-    } catch (error) {
-      setMeasureError(toErrorMessage(error));
-    } finally {
-      setIsMeasuring(false);
-    }
-  };
-
-  useEffect(() => {
-    void refreshAssignedRequests();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAssignedRequests();
+    }, [refreshAssignedRequests]),
+  );
+
   return (
-    <>
-      <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>DRIVER 전용 배정건</Text>
       <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>1단계. 배정 목록</Text>
-          <Pressable style={styles.ghostButton} onPress={refreshAssignedRequests}>
+          <Text style={styles.cardTitle}>배정 목록</Text>
+          <Pressable style={styles.ghostButton} onPress={() => void refreshAssignedRequests()}>
             <Text style={styles.ghostButtonText}>새로고침</Text>
           </Pressable>
         </View>
-        <Text style={styles.meta}>상태 필터</Text>
+        <Text style={styles.meta}>요청을 탭하면 상세 화면으로 이동합니다.</Text>
+
         <View style={styles.filterRow}>
           <Pressable
             style={[styles.filterChip, driverFilter === 'ACTION_REQUIRED' && styles.filterChipActive]}
@@ -223,7 +93,9 @@ export function DriverHomeScreen() {
             style={[styles.filterChip, driverFilter === 'DONE' && styles.filterChipActive]}
             onPress={() => setDriverFilter('DONE')}
           >
-            <Text style={[styles.filterChipText, driverFilter === 'DONE' && styles.filterChipTextActive]}>처리 완료</Text>
+            <Text style={[styles.filterChipText, driverFilter === 'DONE' && styles.filterChipTextActive]}>
+              처리 완료
+            </Text>
           </Pressable>
           <Pressable
             style={[styles.filterChip, driverFilter === 'ALL' && styles.filterChipActive]}
@@ -239,8 +111,8 @@ export function DriverHomeScreen() {
         {filteredRequests.map((item) => (
           <Pressable
             key={item.requestId}
-            style={[styles.listItem, selectedRequestId === item.requestId && styles.listItemActive]}
-            onPress={() => void loadAssignedRequestDetail(item.requestId)}
+            style={styles.listItem}
+            onPress={() => navigation.navigate('DriverAssignedRequestDetail', { requestId: item.requestId })}
           >
             <View style={styles.rowBetween}>
               <Text style={styles.listTitle}>#{item.requestId} {toWasteStatusLabel(item.status)}</Text>
@@ -255,103 +127,7 @@ export function DriverHomeScreen() {
           <Text style={styles.meta}>선택한 필터에 해당하는 배정 요청이 없습니다.</Text>
         )}
       </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>2단계. 배정 상세 확인</Text>
-        <Text style={styles.detailTitle}>{selectedTitle}</Text>
-
-        {isLoadingDetail && <Text style={styles.meta}>상세를 불러오는 중..</Text>}
-        {detailError && <Text style={styles.error}>{detailError}</Text>}
-
-        {selectedRequest && (
-          <View style={styles.detailBox}>
-            <Text style={styles.detailText}>주문번호: {formatOrderNoFromRequestId(selectedRequest.requestId)}</Text>
-            <Text style={styles.detailText}>주소: {selectedRequest.address}</Text>
-            <Text style={styles.detailText}>연락처: {selectedRequest.contactPhone}</Text>
-            <Text style={styles.detailText}>요청사항: {selectedRequest.note || '-'}</Text>
-            <Text style={styles.detailText}>상태: {toWasteStatusLabel(selectedRequest.status)}</Text>
-            <Text style={styles.detailText}>배정일: {formatDate(selectedRequest.assignedAt)}</Text>
-            <Text style={styles.detailText}>생성일: {formatDate(selectedRequest.createdAt)}</Text>
-            <Text style={styles.detailText}>수정일: {formatDate(selectedRequest.updatedAt)}</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>3단계. 측정 완료 처리</Text>
-        {!canMeasureSelected && (
-          <Text style={styles.meta}>기사 배정 상태 요청을 선택해야 측정 완료할 수 있습니다.</Text>
-        )}
-
-        <Text style={styles.label}>무게(kg)</Text>
-        <TextInput
-          style={styles.input}
-          value={measuredWeightKgText}
-          onChangeText={setMeasuredWeightKgText}
-          keyboardType="decimal-pad"
-          placeholder="예: 3.75"
-          placeholderTextColor="#94a3b8"
-          editable={Boolean(canMeasureSelected) && !isMeasuring}
-        />
-
-        <View style={styles.rowBetween}>
-          <Text style={styles.label}>업로드 사진 ({photoUrls.length})</Text>
-          <Pressable
-            style={[styles.ghostButton, (!canMeasureSelected || isUploadingPhoto) && styles.buttonDisabled]}
-            onPress={handlePickAndUploadPhoto}
-            disabled={!canMeasureSelected || isUploadingPhoto}
-          >
-            <Text style={styles.ghostButtonText}>{isUploadingPhoto ? '업로드 중..' : '사진 선택/업로드'}</Text>
-          </Pressable>
-        </View>
-
-        {uploadError && <Text style={styles.error}>{uploadError}</Text>}
-
-        {photoUrls.length > 0 && (
-          <View style={styles.photoGrid}>
-            {photoUrls.map((url, index) => (
-              <View key={`${url}-${index}`} style={styles.photoCard}>
-                <Pressable onPress={() => setPreviewPhotoUrl(url)}>
-                  <Image source={{ uri: url }} style={styles.photoThumb} resizeMode="cover" />
-                </Pressable>
-                <View style={styles.photoCardFooter}>
-                  <Text style={styles.photoCardLabel}>사진 {index + 1}</Text>
-                  <Pressable style={styles.removeButton} onPress={() => handleRemovePhoto(index)}>
-                    <Text style={styles.removeButtonText}>삭제</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {measureError && <Text style={styles.error}>{measureError}</Text>}
-
-        <Pressable
-          style={[styles.button, (!canMeasureSelected || isMeasuring || isUploadingPhoto) && styles.buttonDisabled]}
-          onPress={handleMeasureComplete}
-          disabled={!canMeasureSelected || isMeasuring || isUploadingPhoto}
-        >
-          <Text style={styles.buttonText}>{isMeasuring ? '측정 완료 처리 중..' : '측정 완료 처리'}</Text>
-        </Pressable>
-      </View>
-
-      </ScrollView>
-
-      <Modal
-        animationType="fade"
-        transparent
-        visible={Boolean(previewPhotoUrl)}
-        onRequestClose={() => setPreviewPhotoUrl(null)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setPreviewPhotoUrl(null)}>
-          {previewPhotoUrl && (
-            <Image source={{ uri: previewPhotoUrl }} style={styles.modalImage} resizeMode="contain" />
-          )}
-          <Text style={styles.modalHint}>탭하면 닫힙니다.</Text>
-        </Pressable>
-      </Modal>
-    </>
+    </ScrollView>
   );
 }
 
@@ -432,10 +208,6 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 2,
   },
-  listItemActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
   listTitle: {
     color: ui.colors.textStrong,
     fontWeight: '700',
@@ -453,102 +225,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  detailTitle: {
-    color: ui.colors.text,
-    fontSize: 13,
-  },
-  detailBox: {
-    gap: 4,
-  },
-  detailText: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
-  },
-  label: {
-    fontSize: 13,
-    color: ui.colors.textStrong,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
-  },
-  photoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  photoCard: {
-    width: '48%',
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f8fafc',
-  },
-  photoThumb: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#d1d5db',
-  },
-  photoCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  photoCardLabel: {
-    color: ui.colors.text,
-    fontSize: 12,
-  },
-  removeButton: {
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  removeButtonText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   error: {
     color: ui.colors.error,
-    fontSize: 13,
-  },
-  button: {
-    backgroundColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(2, 6, 23, 0.86)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 10,
-  },
-  modalImage: {
-    width: '100%',
-    height: '78%',
-  },
-  modalHint: {
-    color: '#e2e8f0',
     fontSize: 13,
   },
 });

@@ -46,6 +46,11 @@ public class WasteAssignmentEntity {
         this.assignedAt = Instant.now();
     }
 
+    public void reassign(UserEntity driver) {
+        this.driver = driver;
+        this.assignedAt = Instant.now();
+    }
+
     public Long getId() {
         return id;
     }

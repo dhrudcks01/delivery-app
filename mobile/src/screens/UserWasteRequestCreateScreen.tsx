@@ -3,13 +3,15 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createWasteRequest } from '../api/wasteApi';
 import { getUserServiceAreaAvailability } from '../api/serviceAreaApi';
 import { createUserAddress, getUserAddresses } from '../api/userAddressApi';
 import { uploadImageFile } from '../api/uploadApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
+import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
@@ -33,6 +35,35 @@ function toErrorMessage(error: unknown): string {
   return '요청 처리 중 오류가 발생했습니다.';
 }
 
+async function ensureImagePermission(): Promise<boolean> {
+  const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+  if (currentPermission.granted) {
+    return true;
+  }
+
+  const nextPermission = currentPermission.canAskAgain
+    ? await ImagePicker.requestMediaLibraryPermissionsAsync()
+    : currentPermission;
+  if (nextPermission.granted) {
+    return true;
+  }
+
+  Alert.alert(
+    '사진 권한 필요',
+    '참고사진 업로드를 위해 사진 접근 권한이 필요합니다. 설정에서 권한을 허용해 주세요.',
+    [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '설정 열기',
+        onPress: () => {
+          void Linking.openSettings();
+        },
+      },
+    ],
+  );
+  return false;
+}
+
 export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props) {
   const { me } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -54,6 +85,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   const [visitSlot, setVisitSlot] = useState<typeof VISIT_SLOTS[number]>(VISIT_SLOTS[0]);
   const [agreed, setAgreed] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
 
   const addressBuildResult = useMemo(() => {
     if (!primaryAddress) {
@@ -152,9 +184,8 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   };
 
   const pickReferencePhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('참고사진 업로드를 위해 사진 접근 권한이 필요합니다.');
+    const hasPermission = await ensureImagePermission();
+    if (!hasPermission) {
       return;
     }
 
@@ -260,7 +291,8 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   }
 
   return (
-    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} includeTopInset={includeTopInset}>
+    <>
+      <KeyboardAwareScrollScreen contentContainerStyle={styles.container} includeTopInset={includeTopInset}>
       <View style={styles.card}>
         <View style={styles.progress}>
           {STEP_TITLES.map((title, index) => (
@@ -339,12 +371,15 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
 
           <View style={styles.photoGrid}>
             {referencePhotoUrls.map((url, index) => (
-              <View key={`${url}-${index}`} style={styles.thumbWrap}>
-                <Image source={{ uri: url }} style={styles.thumb} />
-                <Pressable onPress={() => setReferencePhotoUrls((prev) => prev.filter((_, i) => i !== index))}>
-                  <Text style={styles.removeText}>삭제</Text>
-                </Pressable>
-              </View>
+              <PhotoThumbnailCard
+                key={`${url}-${index}`}
+                photoUrl={url}
+                label={`참고사진 ${index + 1}`}
+                onPress={() => setSelectedPhotoUrl(url)}
+                onRemove={() => setReferencePhotoUrls((prev) => prev.filter((_, i) => i !== index))}
+                containerStyle={styles.referencePhotoCard}
+                imageStyle={styles.referencePhotoImage}
+              />
             ))}
           </View>
 
@@ -400,7 +435,9 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
           <Text style={styles.primaryButtonText}>{step === 2 ? (isSubmitting ? '요청 중..' : '수거 요청하기') : '다음'}</Text>
         </Pressable>
       </View>
-    </KeyboardAwareScrollScreen>
+      </KeyboardAwareScrollScreen>
+      <PhotoPreviewModal photoUrl={selectedPhotoUrl} onClose={() => setSelectedPhotoUrl(null)} />
+    </>
   );
 }
 
@@ -436,9 +473,8 @@ const styles = StyleSheet.create({
     color: ui.colors.textStrong,
   },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  thumbWrap: { width: '31%', gap: 4 },
-  thumb: { width: '100%', aspectRatio: 1, borderRadius: 8, backgroundColor: '#d6e0dc' },
-  removeText: { color: ui.colors.error, fontSize: 12, fontWeight: '600' },
+  referencePhotoCard: { width: '31%' },
+  referencePhotoImage: { height: 86 },
   footer: { flexDirection: 'row', gap: 8 },
   primaryButton: {
     flex: 1,

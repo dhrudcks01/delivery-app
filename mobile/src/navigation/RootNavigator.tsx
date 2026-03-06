@@ -6,9 +6,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
+import { DriverAssignedRequestDetailScreen } from '../screens/DriverAssignedRequestDetailScreen';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
+import { OpsWasteRequestDetailScreen } from '../screens/OpsWasteRequestDetailScreen';
 import { PhoneVerificationScreen } from '../screens/PhoneVerificationScreen';
 import { ProfileSettingsScreen } from '../screens/ProfileSettingsScreen';
 import { RoleCenterScreen } from '../screens/RoleCenterScreen';
@@ -34,7 +36,9 @@ export type RootStackParamList = {
   RoleCenter: { activeRole: AppRole };
   DriverHome: undefined;
   OpsAdminHome: undefined;
+  OpsWasteRequestDetail: { requestId: number };
   SysAdminHome: undefined;
+  DriverAssignedRequestDetail: { requestId: number };
   UserAddressManagement: undefined;
   ServiceAreaBrowse: undefined;
   ServiceAreaManagement: undefined;
@@ -334,7 +338,21 @@ export function RootNavigator() {
         />
       )}
       {isAuthenticated && !isPhoneVerificationPending && <RootStack.Screen name="DriverHome" component={DriverHomeScreen} options={{ title: 'DRIVER' }} />}
+      {isAuthenticated && !isPhoneVerificationPending && (
+        <RootStack.Screen
+          name="DriverAssignedRequestDetail"
+          component={DriverAssignedRequestDetailScreen}
+          options={{ title: '배정 상세' }}
+        />
+      )}
       {isAuthenticated && !isPhoneVerificationPending && <RootStack.Screen name="OpsAdminHome" component={OpsAdminHomeScreen} options={{ title: 'OPS_ADMIN' }} />}
+      {isAuthenticated && !isPhoneVerificationPending && (
+        <RootStack.Screen
+          name="OpsWasteRequestDetail"
+          component={OpsWasteRequestDetailScreen}
+          options={{ title: '수거 요청 상세' }}
+        />
+      )}
       {isAuthenticated && !isPhoneVerificationPending && <RootStack.Screen name="SysAdminHome" component={SysAdminHomeScreen} options={{ title: 'SYS_ADMIN' }} />}
       {isAuthenticated && !isPhoneVerificationPending && (
         <RootStack.Screen

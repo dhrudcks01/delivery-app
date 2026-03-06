@@ -1,5 +1,7 @@
-﻿import { AxiosError } from 'axios';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AxiosError } from 'axios';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveDriverApplication,
@@ -7,22 +9,15 @@ import {
   rejectDriverApplication,
 } from '../api/opsAdminDriverApplicationApi';
 import {
-  assignWasteRequestForOps,
-  getDriverAssignmentCandidatesForOps,
   getFailedPaymentsForOps,
-  getOpsWasteRequestDetail,
   getOpsWasteRequests,
   retryFailedPaymentForOps,
 } from '../api/opsAdminWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
-import {
-  DriverAssignmentCandidate,
-  FailedPayment,
-  OpsWasteRequest,
-  OpsWasteRequestDetail,
-} from '../types/opsAdmin';
+import { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
@@ -44,15 +39,9 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
-function formatAmount(amount: number | null): string {
-  if (amount === null) {
-    return '미정';
-  }
-  return `${amount.toLocaleString('ko-KR')}원`;
-}
-
 export function OpsAdminHomeScreen() {
   const { me } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
   const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
@@ -65,23 +54,10 @@ export function OpsAdminHomeScreen() {
   const [selectedApplication, setSelectedApplication] = useState<DriverApplication | null>(null);
   const [latestApplicationResult, setLatestApplicationResult] = useState<DriverApplication | null>(null);
 
-  const [wasteStatusFilter, setWasteStatusFilter] = useState('');
+  const [wasteStatusFilter, setWasteStatusFilter] = useState('REQUESTED');
   const [isLoadingWasteList, setIsLoadingWasteList] = useState(false);
   const [wasteListError, setWasteListError] = useState<string | null>(null);
   const [opsWasteRequests, setOpsWasteRequests] = useState<OpsWasteRequest[]>([]);
-  const [selectedWasteRequestId, setSelectedWasteRequestId] = useState<number | null>(null);
-  const [selectedWasteRequest, setSelectedWasteRequest] = useState<OpsWasteRequestDetail | null>(null);
-  const [isLoadingWasteDetail, setIsLoadingWasteDetail] = useState(false);
-  const [wasteDetailError, setWasteDetailError] = useState<string | null>(null);
-
-  const [driverCandidateQuery, setDriverCandidateQuery] = useState('');
-  const [driverCandidates, setDriverCandidates] = useState<DriverAssignmentCandidate[]>([]);
-  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
-  const [isLoadingDriverCandidates, setIsLoadingDriverCandidates] = useState(false);
-  const [driverCandidateError, setDriverCandidateError] = useState<string | null>(null);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [assignMessage, setAssignMessage] = useState<string | null>(null);
-  const [assignError, setAssignError] = useState<string | null>(null);
 
   const [isLoadingFailedPayments, setIsLoadingFailedPayments] = useState(false);
   const [failedPaymentError, setFailedPaymentError] = useState<string | null>(null);
@@ -89,13 +65,12 @@ export function OpsAdminHomeScreen() {
   const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
   const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
 
-  const loadWasteRequests = async () => {
+  const loadWasteRequests = useCallback(async () => {
     setIsLoadingWasteList(true);
     setWasteListError(null);
-
     try {
       const response = await getOpsWasteRequests({
-        status: wasteStatusFilter.trim() || undefined,
+        status: wasteStatusFilter.trim() || 'REQUESTED',
         page: 0,
         size: 20,
       });
@@ -105,54 +80,11 @@ export function OpsAdminHomeScreen() {
     } finally {
       setIsLoadingWasteList(false);
     }
-  };
+  }, [wasteStatusFilter]);
 
-  const loadWasteRequestDetail = async (requestId: number) => {
-    setIsLoadingWasteDetail(true);
-    setWasteDetailError(null);
-    setSelectedWasteRequestId(requestId);
-
-    try {
-      const response = await getOpsWasteRequestDetail(requestId);
-      setSelectedWasteRequest(response);
-    } catch (error) {
-      setWasteDetailError(toErrorMessage(error));
-      setSelectedWasteRequest(null);
-    } finally {
-      setIsLoadingWasteDetail(false);
-    }
-  };
-
-  const loadDriverCandidates = async () => {
-    setIsLoadingDriverCandidates(true);
-    setDriverCandidateError(null);
-
-    try {
-      const response = await getDriverAssignmentCandidatesForOps({
-        query: driverCandidateQuery.trim() || undefined,
-        page: 0,
-        size: 20,
-      });
-      setDriverCandidates(response.content);
-      setSelectedDriverId((current) => {
-        if (current && response.content.some((item) => item.driverId === current)) {
-          return current;
-        }
-        return response.content[0]?.driverId ?? null;
-      });
-    } catch (error) {
-      setDriverCandidates([]);
-      setSelectedDriverId(null);
-      setDriverCandidateError(toErrorMessage(error));
-    } finally {
-      setIsLoadingDriverCandidates(false);
-    }
-  };
-
-  const loadFailedPayments = async () => {
+  const loadFailedPayments = useCallback(async () => {
     setIsLoadingFailedPayments(true);
     setFailedPaymentError(null);
-
     try {
       const response = await getFailedPaymentsForOps(0, 20);
       setFailedPayments(response.content);
@@ -161,9 +93,9 @@ export function OpsAdminHomeScreen() {
     } finally {
       setIsLoadingFailedPayments(false);
     }
-  };
+  }, []);
 
-  const loadPendingApplications = async () => {
+  const loadPendingApplications = useCallback(async () => {
     setIsLoadingApplications(true);
     setApplicationListError(null);
 
@@ -190,7 +122,7 @@ export function OpsAdminHomeScreen() {
     } finally {
       setIsLoadingApplications(false);
     }
-  };
+  }, []);
 
   const handleApproveApplication = async () => {
     if (!selectedApplicationId) {
@@ -201,7 +133,6 @@ export function OpsAdminHomeScreen() {
     setIsSubmittingApprove(true);
     setApplicationActionError(null);
     setApplicationResultMessage(null);
-
     try {
       const response = await approveDriverApplication(selectedApplicationId);
       setLatestApplicationResult(response);
@@ -223,7 +154,6 @@ export function OpsAdminHomeScreen() {
     setIsSubmittingReject(true);
     setApplicationActionError(null);
     setApplicationResultMessage(null);
-
     try {
       const response = await rejectDriverApplication(selectedApplicationId);
       setLatestApplicationResult(response);
@@ -233,32 +163,6 @@ export function OpsAdminHomeScreen() {
       setApplicationActionError(toErrorMessage(error));
     } finally {
       setIsSubmittingReject(false);
-    }
-  };
-
-  const handleAssignWasteRequest = async () => {
-    if (!selectedWasteRequestId) {
-      setAssignError('배정할 요청을 목록에서 선택해 주세요.');
-      return;
-    }
-    if (!selectedDriverId) {
-      setAssignError('배정할 기사를 검색 후 선택해 주세요.');
-      return;
-    }
-
-    setIsAssigning(true);
-    setAssignError(null);
-    setAssignMessage(null);
-
-    try {
-      const response = await assignWasteRequestForOps(selectedWasteRequestId, { driverId: selectedDriverId });
-      setAssignMessage(`요청 #${response.id} 기사 배정 완료`);
-      await loadWasteRequests();
-      await loadWasteRequestDetail(response.id);
-    } catch (error) {
-      setAssignError(toErrorMessage(error));
-    } finally {
-      setIsAssigning(false);
     }
   };
 
@@ -272,9 +176,6 @@ export function OpsAdminHomeScreen() {
       setRetryResultMessage(`요청 #${response.id} 결제 재시도 완료 (${toWasteStatusLabel(response.status)})`);
       await loadFailedPayments();
       await loadWasteRequests();
-      if (selectedWasteRequestId === wasteRequestId) {
-        await loadWasteRequestDetail(wasteRequestId);
-      }
     } catch (error) {
       setFailedPaymentError(toErrorMessage(error));
     } finally {
@@ -282,12 +183,13 @@ export function OpsAdminHomeScreen() {
     }
   };
 
-  useEffect(() => {
-    void loadPendingApplications();
-    void loadWasteRequests();
-    void loadDriverCandidates();
-    void loadFailedPayments();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      void loadPendingApplications();
+      void loadWasteRequests();
+      void loadFailedPayments();
+    }, [loadFailedPayments, loadPendingApplications, loadWasteRequests]),
+  );
 
   useEffect(() => {
     if (!selectedApplicationId) {
@@ -307,20 +209,11 @@ export function OpsAdminHomeScreen() {
       <Text style={styles.title}>OPS_ADMIN 운영 관리</Text>
       <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-      <View style={styles.statusCard}>
-        <Text style={styles.statusTitle}>화면 상태 요약</Text>
-        <Text style={styles.statusText}>
-          신청 로딩: {isLoadingApplications ? '진행 중' : '대기'} / 요청 로딩: {isLoadingWasteList ? '진행 중' : '대기'}
-        </Text>
-        <Text style={styles.statusText}>
-          실패결제 로딩: {isLoadingFailedPayments ? '진행 중' : '대기'} / 선택 요청 ID: {selectedWasteRequestId ?? '-'}
-        </Text>
-      </View>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
           <Text style={styles.cardTitle}>기사 신청 승인/반려 (OPS_ADMIN/SYS_ADMIN)</Text>
-          <Pressable style={styles.ghostButton} onPress={loadPendingApplications}>
+          <Pressable style={styles.ghostButton} onPress={() => void loadPendingApplications()}>
             <Text style={styles.ghostButtonText}>대기 목록 새로고침</Text>
           </Pressable>
         </View>
@@ -333,6 +226,7 @@ export function OpsAdminHomeScreen() {
             style={[styles.listItem, selectedApplicationId === item.id && styles.listItemActive]}
             onPress={() => {
               setSelectedApplicationId(item.id);
+              setSelectedApplication(item);
               setApplicationActionError(null);
               setApplicationResultMessage(null);
             }}
@@ -364,14 +258,14 @@ export function OpsAdminHomeScreen() {
         <View style={styles.buttonRow}>
           <Pressable
             style={[styles.button, isSubmittingApprove && styles.buttonDisabled]}
-            onPress={handleApproveApplication}
+            onPress={() => void handleApproveApplication()}
             disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
           >
             <Text style={styles.buttonText}>{isSubmittingApprove ? '승인 중..' : '승인'}</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.rejectButton, isSubmittingReject && styles.buttonDisabled]}
-            onPress={handleRejectApplication}
+            onPress={() => void handleRejectApplication()}
             disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
           >
             <Text style={styles.buttonText}>{isSubmittingReject ? '반려 중..' : '반려'}</Text>
@@ -390,18 +284,19 @@ export function OpsAdminHomeScreen() {
       <View style={styles.card}>
         <View style={styles.rowBetween}>
           <Text style={styles.cardTitle}>수거 요청 목록</Text>
-          <Pressable style={styles.ghostButton} onPress={loadWasteRequests}>
+          <Pressable style={styles.ghostButton} onPress={() => void loadWasteRequests()}>
             <Text style={styles.ghostButtonText}>새로고침</Text>
           </Pressable>
         </View>
+        <Text style={styles.meta}>기본 조회 상태는 REQUESTED 입니다. 항목을 탭하면 상세/배정 화면으로 이동합니다.</Text>
         <TextInput
           style={styles.input}
           value={wasteStatusFilter}
           onChangeText={setWasteStatusFilter}
-          placeholder="상태 필터 (예: REQUESTED, PAYMENT_FAILED)"
+          placeholder="상태 필터 (기본: REQUESTED)"
           placeholderTextColor="#94a3b8"
         />
-        <Pressable style={styles.secondaryButton} onPress={loadWasteRequests}>
+        <Pressable style={styles.secondaryButton} onPress={() => void loadWasteRequests()}>
           <Text style={styles.secondaryButtonText}>필터 적용</Text>
         </Pressable>
         {isLoadingWasteList && <Text style={styles.meta}>요청 목록 로딩 중..</Text>}
@@ -409,8 +304,8 @@ export function OpsAdminHomeScreen() {
         {opsWasteRequests.map((item) => (
           <Pressable
             key={item.id}
-            style={[styles.listItem, selectedWasteRequestId === item.id && styles.listItemActive]}
-            onPress={() => void loadWasteRequestDetail(item.id)}
+            style={styles.listItem}
+            onPress={() => navigation.navigate('OpsWasteRequestDetail', { requestId: item.id })}
           >
             <Text style={styles.listTitle}>#{item.id} {toWasteStatusLabel(item.status)}</Text>
             <Text style={styles.listSub}>{item.address}</Text>
@@ -423,84 +318,9 @@ export function OpsAdminHomeScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>요청 상세/기사 배정</Text>
-        {isLoadingWasteDetail && <Text style={styles.meta}>요청 상세 로딩 중..</Text>}
-        {wasteDetailError && <Text style={styles.error}>{wasteDetailError}</Text>}
-        {!selectedWasteRequest && !isLoadingWasteDetail && (
-          <Text style={styles.meta}>목록에서 요청을 선택해 주세요.</Text>
-        )}
-        {selectedWasteRequest && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>요청 ID: {selectedWasteRequest.id}</Text>
-            <Text style={styles.detailText}>주문번호: {selectedWasteRequest.orderNo || '-'}</Text>
-            <Text style={styles.detailText}>상태: {toWasteStatusLabel(selectedWasteRequest.status)}</Text>
-            <Text style={styles.detailText}>주소: {selectedWasteRequest.address}</Text>
-            <Text style={styles.detailText}>연락처: {selectedWasteRequest.contactPhone}</Text>
-            <Text style={styles.detailText}>배출품목: {selectedWasteRequest.disposalItems.join(', ') || '-'}</Text>
-            <Text style={styles.detailText}>수거비닐 수량: {selectedWasteRequest.bagCount}개</Text>
-            <Text style={styles.detailText}>측정무게: {selectedWasteRequest.measuredWeightKg ?? '미측정'}</Text>
-            <Text style={styles.detailText}>측정시각: {formatDate(selectedWasteRequest.measuredAt)}</Text>
-            <Text style={styles.detailText}>결제예정금액: {formatAmount(selectedWasteRequest.finalAmount)}</Text>
-            <Text style={styles.detailText}>기사 사진: {selectedWasteRequest.photos.length}장</Text>
-            {selectedWasteRequest.photos.map((photo, index) => (
-              <Text key={`${photo.url}-${index}`} style={styles.listSub}>
-                {index + 1}. [{photo.type || 'PHOTO'}] {photo.url}
-              </Text>
-            ))}
-            <Text style={styles.detailText}>배정 기사 검색</Text>
-            <View style={styles.searchRow}>
-              <TextInput
-                style={[styles.input, styles.queryInput]}
-                value={driverCandidateQuery}
-                onChangeText={setDriverCandidateQuery}
-                placeholder="기사 검색(이름/아이디)"
-                placeholderTextColor="#94a3b8"
-                editable={!isLoadingDriverCandidates}
-              />
-              <Pressable
-                style={[styles.ghostButton, isLoadingDriverCandidates && styles.buttonDisabled]}
-                onPress={() => void loadDriverCandidates()}
-                disabled={isLoadingDriverCandidates}
-              >
-                <Text style={styles.ghostButtonText}>검색</Text>
-              </Pressable>
-            </View>
-            {isLoadingDriverCandidates && <Text style={styles.meta}>기사 후보 조회 중..</Text>}
-            {driverCandidateError && <Text style={styles.error}>{driverCandidateError}</Text>}
-            {driverCandidates.map((candidate) => (
-              <Pressable
-                key={candidate.driverId}
-                style={[styles.listItem, selectedDriverId === candidate.driverId && styles.listItemActive]}
-                onPress={() => {
-                  setSelectedDriverId(candidate.driverId);
-                  setAssignError(null);
-                }}
-              >
-                <Text style={styles.listTitle}>기사 #{candidate.driverId}</Text>
-                <Text style={styles.listSub}>이름: {candidate.name}</Text>
-                <Text style={styles.listSub}>아이디: {candidate.loginId}</Text>
-              </Pressable>
-            ))}
-            {!isLoadingDriverCandidates && driverCandidates.length === 0 && (
-              <Text style={styles.meta}>검색 결과가 없습니다.</Text>
-            )}
-            {assignMessage && <Text style={styles.success}>{assignMessage}</Text>}
-            {assignError && <Text style={styles.error}>{assignError}</Text>}
-            <Pressable
-              style={[styles.button, isAssigning && styles.buttonDisabled]}
-              onPress={handleAssignWasteRequest}
-              disabled={isAssigning}
-            >
-              <Text style={styles.buttonText}>{isAssigning ? '배정 중..' : '기사 배정'}</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.card}>
         <View style={styles.rowBetween}>
           <Text style={styles.cardTitle}>결제 실패 처리</Text>
-          <Pressable style={styles.ghostButton} onPress={loadFailedPayments}>
+          <Pressable style={styles.ghostButton} onPress={() => void loadFailedPayments()}>
             <Text style={styles.ghostButtonText}>실패 목록 새로고침</Text>
           </Pressable>
         </View>
@@ -529,7 +349,6 @@ export function OpsAdminHomeScreen() {
           <Text style={styles.meta}>결제 실패 건이 없습니다.</Text>
         )}
       </View>
-
     </ScrollView>
   );
 }
@@ -549,23 +368,6 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 13,
-    color: ui.colors.text,
-  },
-  statusCard: {
-    backgroundColor: '#eef8f6',
-    borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.card,
-    padding: 12,
-    gap: 4,
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  statusText: {
-    fontSize: 12,
     color: ui.colors.text,
   },
   card: {
@@ -600,11 +402,6 @@ const styles = StyleSheet.create({
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  searchRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
@@ -651,9 +448,6 @@ const styles = StyleSheet.create({
     color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
-  },
-  queryInput: {
-    flex: 1,
   },
   listItem: {
     borderWidth: 1,

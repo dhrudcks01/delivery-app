@@ -11,6 +11,7 @@ import com.delivery.waste.dto.CreateWasteRequestRequest;
 import com.delivery.waste.dto.DriverAssignmentCandidateResponse;
 import com.delivery.waste.dto.WasteRequestDetailResponse;
 import com.delivery.waste.dto.WasteRequestResponse;
+import com.delivery.waste.entity.WasteAssignmentAuditLogEntity;
 import com.delivery.waste.entity.WasteAssignmentEntity;
 import com.delivery.waste.entity.WastePhotoEntity;
 import com.delivery.waste.entity.WasteRequestEntity;
@@ -18,6 +19,8 @@ import com.delivery.waste.entity.WasteStatusLogEntity;
 import com.delivery.waste.exception.DriverRoleRequiredException;
 import com.delivery.waste.exception.WasteRequestAccessDeniedException;
 import com.delivery.waste.exception.WasteRequestNotFoundException;
+import com.delivery.waste.exception.WasteStatusTransitionConflictException;
+import com.delivery.waste.repository.WasteAssignmentAuditLogRepository;
 import com.delivery.waste.repository.WasteAssignmentRepository;
 import com.delivery.waste.repository.WastePhotoRepository;
 import com.delivery.waste.repository.WasteRequestRepository;
@@ -49,8 +52,11 @@ public class WasteRequestService {
     private static final String MEASURED = "MEASURED";
     private static final String COMPLETED = "COMPLETED";
     private static final String PHOTO_TYPE_REFERENCE = "REFERENCE";
+    private static final String ASSIGNMENT_ACTION_ASSIGNED = "ASSIGNED";
+    private static final String ASSIGNMENT_ACTION_REASSIGNED = "REASSIGNED";
 
     private final WasteRequestRepository wasteRequestRepository;
+    private final WasteAssignmentAuditLogRepository wasteAssignmentAuditLogRepository;
     private final WasteAssignmentRepository wasteAssignmentRepository;
     private final WastePhotoRepository wastePhotoRepository;
     private final WasteStatusLogRepository wasteStatusLogRepository;
@@ -61,6 +67,7 @@ public class WasteRequestService {
 
     public WasteRequestService(
             WasteRequestRepository wasteRequestRepository,
+            WasteAssignmentAuditLogRepository wasteAssignmentAuditLogRepository,
             WasteAssignmentRepository wasteAssignmentRepository,
             WastePhotoRepository wastePhotoRepository,
             WasteStatusLogRepository wasteStatusLogRepository,
@@ -70,6 +77,7 @@ public class WasteRequestService {
             JdbcTemplate jdbcTemplate
     ) {
         this.wasteRequestRepository = wasteRequestRepository;
+        this.wasteAssignmentAuditLogRepository = wasteAssignmentAuditLogRepository;
         this.wasteAssignmentRepository = wasteAssignmentRepository;
         this.wastePhotoRepository = wastePhotoRepository;
         this.wasteStatusLogRepository = wasteStatusLogRepository;
@@ -221,17 +229,37 @@ public class WasteRequestService {
 
     @Transactional
     public WasteRequestResponse assignForOps(Long requestId, AssignWasteRequest request, String actorEmail) {
+        UserEntity actor = findUserByEmail(actorEmail);
+        WasteRequestEntity targetRequest = wasteRequestRepository.findById(requestId)
+                .orElseThrow(WasteRequestNotFoundException::new);
         UserEntity driver = userRepository.findById(request.driverId())
                 .orElseThrow(UserNotFoundException::new);
         if (!isAssignableDriver(driver)) {
             throw new DriverRoleRequiredException();
         }
 
-        WasteRequestEntity updated = wasteStatusTransitionService.transition(requestId, ASSIGNED, actorEmail);
-        if (!wasteAssignmentRepository.existsByRequestId(updated.getId())) {
-            wasteAssignmentRepository.save(new WasteAssignmentEntity(updated, driver));
+        if (REQUESTED.equals(targetRequest.getStatus())) {
+            targetRequest = wasteStatusTransitionService.transition(requestId, ASSIGNED, actorEmail);
+        } else if (!ASSIGNED.equals(targetRequest.getStatus())) {
+            throw new WasteStatusTransitionConflictException();
         }
-        return toResponse(updated);
+
+        WasteAssignmentEntity currentAssignment = wasteAssignmentRepository.findByRequestId(targetRequest.getId())
+                .orElse(null);
+        if (currentAssignment == null) {
+            wasteAssignmentRepository.save(new WasteAssignmentEntity(targetRequest, driver));
+            saveAssignmentAuditLog(targetRequest, actor, null, driver, ASSIGNMENT_ACTION_ASSIGNED);
+            return toResponse(targetRequest);
+        }
+
+        UserEntity previousDriver = currentAssignment.getDriver();
+        if (previousDriver.getId().equals(driver.getId())) {
+            return toResponse(targetRequest);
+        }
+
+        currentAssignment.reassign(driver);
+        saveAssignmentAuditLog(targetRequest, actor, previousDriver, driver, ASSIGNMENT_ACTION_REASSIGNED);
+        return toResponse(targetRequest);
     }
 
     private boolean isAssignableDriver(UserEntity user) {
@@ -368,5 +396,23 @@ public class WasteRequestService {
             return COMPLETED;
         }
         return status;
+    }
+
+    private void saveAssignmentAuditLog(
+            WasteRequestEntity request,
+            UserEntity actor,
+            UserEntity fromDriver,
+            UserEntity toDriver,
+            String action
+    ) {
+        wasteAssignmentAuditLogRepository.save(
+                new WasteAssignmentAuditLogEntity(
+                        request,
+                        actor,
+                        fromDriver,
+                        toDriver,
+                        action
+                )
+        );
     }
 }

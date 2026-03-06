@@ -1,10 +1,12 @@
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+﻿import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { AxiosError } from 'axios';
 import { useCallback, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { cancelMyWasteRequest, getMyWasteRequestDetail } from '../api/wasteApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
+import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, WasteRequestDetail } from '../types/waste';
@@ -91,7 +93,7 @@ export function UserWasteRequestDetailScreen() {
   const displayOrderNo = detail?.orderNo ?? routeOrderNo ?? '-';
   const paymentFailureNotice =
     detail?.status === 'PAYMENT_FAILED'
-      ? '결제 확인이 필요합니다. 결제수단을 확인한 뒤 다시 시도해 주세요.'
+      ? '결제가 실패했습니다. 결제수단을 확인한 뒤 다시 시도해 주세요.'
       : null;
 
   const passedStatuses = useMemo(() => {
@@ -225,16 +227,12 @@ export function UserWasteRequestDetailScreen() {
               {referencePhotos.length > 0 && (
                 <View style={styles.photoGrid}>
                   {referencePhotos.map((photo, index) => (
-                    <Pressable
+                    <PhotoThumbnailCard
                       key={`reference-${photo.url}-${index}`}
-                      style={styles.thumbnail}
+                      photoUrl={photo.url}
+                      label={`REFERENCE ${index + 1}`}
                       onPress={() => setSelectedPhotoUrl(photo.url)}
-                    >
-                      <Image source={{ uri: photo.url }} style={styles.thumbnailImage} resizeMode="cover" />
-                      <View style={styles.thumbnailMeta}>
-                        <Text style={styles.thumbnailMetaText}>REFERENCE {index + 1}</Text>
-                      </View>
-                    </Pressable>
+                    />
                   ))}
                 </View>
               )}
@@ -248,18 +246,12 @@ export function UserWasteRequestDetailScreen() {
               {driverPhotos.length > 0 && (
                 <View style={styles.photoGrid}>
                   {driverPhotos.map((photo, index) => (
-                    <Pressable
+                    <PhotoThumbnailCard
                       key={`driver-${photo.url}-${index}`}
-                      style={styles.thumbnail}
+                      photoUrl={photo.url}
+                      label={`${photo.type || 'PHOTO'} ${index + 1}`}
                       onPress={() => setSelectedPhotoUrl(photo.url)}
-                    >
-                      <Image source={{ uri: photo.url }} style={styles.thumbnailImage} resizeMode="cover" />
-                      <View style={styles.thumbnailMeta}>
-                        <Text style={styles.thumbnailMetaText}>
-                          {photo.type || 'PHOTO'} {index + 1}
-                        </Text>
-                      </View>
-                    </Pressable>
+                    />
                   ))}
                 </View>
               )}
@@ -318,20 +310,7 @@ export function UserWasteRequestDetailScreen() {
           </>
         )}
       </KeyboardAwareScrollScreen>
-
-      <Modal
-        animationType="fade"
-        transparent
-        visible={Boolean(selectedPhotoUrl)}
-        onRequestClose={() => setSelectedPhotoUrl(null)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setSelectedPhotoUrl(null)}>
-          {selectedPhotoUrl && (
-            <Image source={{ uri: selectedPhotoUrl }} style={styles.modalImage} resizeMode="contain" />
-          )}
-          <Text style={styles.modalHint}>탭하면 닫힙니다.</Text>
-        </Pressable>
-      </Modal>
+      <PhotoPreviewModal photoUrl={selectedPhotoUrl} onClose={() => setSelectedPhotoUrl(null)} />
     </>
   );
 }
@@ -443,29 +422,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  thumbnail: {
-    width: '48%',
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
-  },
-  thumbnailImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#cbd5e1',
-  },
-  thumbnailMeta: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    backgroundColor: '#f8fafc',
-  },
-  thumbnailMetaText: {
-    color: ui.colors.textStrong,
-    fontSize: 11,
-    fontWeight: '600',
-  },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -517,21 +473,5 @@ const styles = StyleSheet.create({
     color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(2, 6, 23, 0.86)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 10,
-  },
-  modalImage: {
-    width: '100%',
-    height: '78%',
-  },
-  modalHint: {
-    color: '#e2e8f0',
-    fontSize: 13,
   },
 });
