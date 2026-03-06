@@ -157,7 +157,7 @@ class DriverWasteRequestIntegrationTest {
     }
 
     @Test
-    void driverMeasureMovesToPaymentFailedWhenNoActivePaymentMethod() throws Exception {
+    void driverMeasureKeepsPaymentPendingWhenNoActivePaymentMethod() throws Exception {
         UserEntity requester = createUser("driver-measure-no-payment-requester@example.com", "USER");
         UserEntity driver = createUser("driver-measure-no-payment-driver@example.com", "DRIVER");
         WasteRequestEntity request = createAssignedRequest(requester, driver, "Seoul Gangdong 4");
@@ -172,7 +172,7 @@ class DriverWasteRequestIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PAYMENT_FAILED"))
+                .andExpect(jsonPath("$.status").value("PAYMENT_PENDING"))
                 .andExpect(jsonPath("$.finalAmount").value(2000));
 
         String paymentStatus = jdbcTemplate.queryForObject(
@@ -180,7 +180,7 @@ class DriverWasteRequestIntegrationTest {
                 String.class,
                 request.getId()
         );
-        assertThat(paymentStatus).isEqualTo("FAILED");
+        assertThat(paymentStatus).isEqualTo("PENDING");
     }
 
     @Test

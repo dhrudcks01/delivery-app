@@ -63,6 +63,7 @@ class WasteRequestIntegrationTest {
     void setUp() {
         upsertRole("USER", "General User");
         upsertRole("DRIVER", "Driver");
+        upsertRole("OPS_ADMIN", "Ops Admin");
 
         jdbcTemplate.update("DELETE FROM service_areas");
         jdbcTemplate.update("DELETE FROM service_area_master_dongs");
@@ -248,6 +249,58 @@ class WasteRequestIntegrationTest {
                 .andExpect(jsonPath("$.statusTimeline.length()").value(2))
                 .andExpect(jsonPath("$.statusTimeline[0].toStatus").value("ASSIGNED"))
                 .andExpect(jsonPath("$.statusTimeline[1].toStatus").value("MEASURED"));
+    }
+
+    @Test
+    void userAndOpsSeeDifferentStatusExposureForPaymentPending() throws Exception {
+        TestUser owner = createUserAndLogin("waste-visibility-owner@example.com", "USER", true);
+        TestUser opsAdmin = createUserAndLogin("waste-visibility-ops@example.com", "OPS_ADMIN", false);
+        UserEntity driver = createUser("waste-visibility-driver@example.com", "DRIVER", true).user();
+        Long requestId = createWasteRequest(owner.accessToken());
+
+        jdbcTemplate.update(
+                "UPDATE waste_requests SET status = 'PAYMENT_PENDING', measured_weight_kg = ?, measured_at = CURRENT_TIMESTAMP, measured_by_driver_id = ?, final_amount = ? WHERE id = ?",
+                "3.400",
+                driver.getId(),
+                3400L,
+                requestId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_status_logs (request_id, from_status, to_status, actor_user_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "REQUESTED",
+                "ASSIGNED",
+                driver.getId()
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_status_logs (request_id, from_status, to_status, actor_user_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "ASSIGNED",
+                "MEASURED",
+                driver.getId()
+        );
+        jdbcTemplate.update(
+                "INSERT INTO waste_status_logs (request_id, from_status, to_status, actor_user_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                requestId,
+                "MEASURED",
+                "PAYMENT_PENDING",
+                driver.getId()
+        );
+
+        mockMvc.perform(get("/waste-requests/{requestId}", requestId)
+                        .header("Authorization", "Bearer " + owner.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("MEASURED"))
+                .andExpect(jsonPath("$.statusTimeline.length()").value(2))
+                .andExpect(jsonPath("$.statusTimeline[0].toStatus").value("ASSIGNED"))
+                .andExpect(jsonPath("$.statusTimeline[1].toStatus").value("MEASURED"));
+
+        mockMvc.perform(get("/ops-admin/waste-requests/{requestId}", requestId)
+                        .header("Authorization", "Bearer " + opsAdmin.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAYMENT_PENDING"))
+                .andExpect(jsonPath("$.statusTimeline.length()").value(3))
+                .andExpect(jsonPath("$.statusTimeline[2].toStatus").value("PAYMENT_PENDING"));
     }
 
     @Test

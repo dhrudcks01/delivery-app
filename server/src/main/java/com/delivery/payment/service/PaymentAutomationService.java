@@ -19,11 +19,8 @@ public class PaymentAutomationService {
     private static final String STATUS_PAYMENT_PENDING = "PAYMENT_PENDING";
     private static final String STATUS_PAID = "PAID";
     private static final String STATUS_COMPLETED = "COMPLETED";
-    private static final String STATUS_PAYMENT_FAILED = "PAYMENT_FAILED";
     private static final String STATUS_PENDING = "PENDING";
     private static final String PROVIDER_TOSS = "TOSS";
-    private static final String FAILURE_CODE_UNSUPPORTED_AUTO_PAYMENT_METHOD = "UNSUPPORTED_AUTO_PAYMENT_METHOD";
-    private static final String FAILURE_MESSAGE_CARD_ONLY_AUTO_PAYMENT = "자동결제는 카드 직접 등록 수단만 지원합니다.";
 
     private final PaymentRepository paymentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -67,8 +64,6 @@ public class PaymentAutomationService {
         paymentRepository.save(payment);
 
         if (paymentMethod == null) {
-            payment.markFailure(FAILURE_CODE_UNSUPPORTED_AUTO_PAYMENT_METHOD, FAILURE_MESSAGE_CARD_ONLY_AUTO_PAYMENT);
-            wasteStatusTransitionService.transition(request.getId(), STATUS_PAYMENT_FAILED, actorEmail);
             return;
         }
 
@@ -81,3 +76,4 @@ public class PaymentAutomationService {
         return "ORDER-WR-" + requestId + "-" + UUID.randomUUID().toString().replace("-", "");
     }
 }
+

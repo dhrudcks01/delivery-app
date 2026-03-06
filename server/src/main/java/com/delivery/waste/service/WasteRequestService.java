@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class WasteRequestService {
@@ -43,6 +44,10 @@ public class WasteRequestService {
     private static final String DRIVER = "DRIVER";
     private static final String ACTIVE = "ACTIVE";
     private static final String PHONE_VERIFICATION_REQUIRED = "PHONE_VERIFICATION_REQUIRED";
+    private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
+    private static final String PAID = "PAID";
+    private static final String MEASURED = "MEASURED";
+    private static final String COMPLETED = "COMPLETED";
 
     private final WasteRequestRepository wasteRequestRepository;
     private final WasteAssignmentRepository wasteAssignmentRepository;
@@ -89,7 +94,7 @@ public class WasteRequestService {
                 request.normalizedBagCount()
         ));
         saved.assignOrderNo(WasteOrderNoPolicy.generate(saved.getId()));
-        return toResponse(saved);
+        return toUserResponse(saved);
     }
 
     @Transactional
@@ -97,7 +102,7 @@ public class WasteRequestService {
         UserEntity user = findUserByEmail(email);
         return wasteRequestRepository.findAllByUserOrderByCreatedAtDesc(user)
                 .stream()
-                .map(this::toResponse)
+                .map(this::toUserResponse)
                 .toList();
     }
 
@@ -109,13 +114,13 @@ public class WasteRequestService {
         if (!request.getUser().getId().equals(user.getId())) {
             throw new WasteRequestAccessDeniedException();
         }
-        return toDetailResponse(request, false);
+        return toDetailResponse(request, false, true);
     }
 
     @Transactional
     public WasteRequestResponse cancelMyRequest(String email, Long requestId) {
         WasteRequestEntity updated = wasteStatusTransitionService.transitionForOwner(requestId, CANCELED, email);
-        return toResponse(updated);
+        return toUserResponse(updated);
     }
 
     @Transactional
@@ -133,7 +138,7 @@ public class WasteRequestService {
     public WasteRequestDetailResponse getDetailForOps(Long requestId) {
         WasteRequestEntity request = wasteRequestRepository.findById(requestId)
                 .orElseThrow(WasteRequestNotFoundException::new);
-        return toDetailResponse(request, true);
+        return toDetailResponse(request, true, false);
     }
 
     @Transactional
@@ -262,7 +267,33 @@ public class WasteRequestService {
         );
     }
 
-    private WasteRequestDetailResponse toDetailResponse(WasteRequestEntity request, boolean includeAssignment) {
+    private WasteRequestResponse toUserResponse(WasteRequestEntity request) {
+        WasteRequestResponse raw = toResponse(request);
+        return new WasteRequestResponse(
+                raw.id(),
+                raw.orderNo(),
+                raw.userId(),
+                raw.address(),
+                raw.contactPhone(),
+                raw.note(),
+                raw.disposalItems(),
+                raw.bagCount(),
+                toUserVisibleStatus(raw.status()),
+                raw.measuredWeightKg(),
+                raw.measuredAt(),
+                raw.measuredByDriverId(),
+                raw.finalAmount(),
+                raw.currency(),
+                raw.createdAt(),
+                raw.updatedAt()
+        );
+    }
+
+    private WasteRequestDetailResponse toDetailResponse(
+            WasteRequestEntity request,
+            boolean includeAssignment,
+            boolean userView
+    ) {
         List<WastePhotoEntity> photos = wastePhotoRepository.findAllByRequestOrderByCreatedAtAsc(request);
         List<WasteStatusLogEntity> statusLogs = wasteStatusLogRepository.findByRequestOrderByCreatedAtAsc(request);
 
@@ -270,11 +301,30 @@ public class WasteRequestService {
                 ? wasteAssignmentRepository.findByRequestId(request.getId()).orElse(null)
                 : null;
 
+        List<WasteRequestDetailResponse.StatusTimelineItem> timeline = statusLogs.stream()
+                .map(log -> new WasteRequestDetailResponse.StatusTimelineItem(
+                        log.getFromStatus(),
+                        log.getToStatus(),
+                        log.getCreatedAt()
+                ))
+                .toList();
+
+        if (userView) {
+            timeline = timeline.stream()
+                    .map(item -> new WasteRequestDetailResponse.StatusTimelineItem(
+                            item.fromStatus() == null ? null : toUserVisibleStatus(item.fromStatus()),
+                            toUserVisibleStatus(item.toStatus()),
+                            item.at()
+                    ))
+                    .filter(item -> !Objects.equals(item.fromStatus(), item.toStatus()))
+                    .toList();
+        }
+
         return new WasteRequestDetailResponse(
                 request.getId(),
                 WasteOrderNoPolicy.resolve(request.getOrderNo(), request.getId()),
                 request.getUser().getId(),
-                request.getStatus(),
+                userView ? toUserVisibleStatus(request.getStatus()) : request.getStatus(),
                 request.getAddress(),
                 request.getContactPhone(),
                 request.getNote(),
@@ -292,17 +342,21 @@ public class WasteRequestService {
                 request.getMeasuredByDriver() != null ? request.getMeasuredByDriver().getId() : null,
                 request.getFinalAmount(),
                 request.getCurrency(),
-                statusLogs.stream()
-                        .map(log -> new WasteRequestDetailResponse.StatusTimelineItem(
-                                log.getFromStatus(),
-                                log.getToStatus(),
-                                log.getCreatedAt()
-                        ))
-                        .toList(),
+                timeline,
                 assignment != null ? assignment.getDriver().getId() : null,
                 assignment != null ? assignment.getAssignedAt() : null,
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
+    }
+
+    private String toUserVisibleStatus(String status) {
+        if (PAYMENT_PENDING.equals(status)) {
+            return MEASURED;
+        }
+        if (PAID.equals(status)) {
+            return COMPLETED;
+        }
+        return status;
     }
 }

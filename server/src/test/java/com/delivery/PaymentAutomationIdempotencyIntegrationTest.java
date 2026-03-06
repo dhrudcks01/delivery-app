@@ -86,14 +86,14 @@ class PaymentAutomationIdempotencyIntegrationTest {
         long secondPaymentCount = countPaymentsByWasteRequestId(request.getId());
 
         WasteRequestEntity updated = wasteRequestRepository.findById(request.getId()).orElseThrow();
-        assertThat(updated.getStatus()).isEqualTo("PAYMENT_FAILED");
+        assertThat(updated.getStatus()).isEqualTo("PAYMENT_PENDING");
         assertThat(paymentRepository.findByWasteRequestId(request.getId())).isPresent();
         assertThat(paymentRepository.findByWasteRequestId(request.getId()).orElseThrow().getStatus())
-                .isEqualTo("FAILED");
+                .isEqualTo("PENDING");
         assertThat(firstPaymentCount).isEqualTo(1L);
         assertThat(secondPaymentCount).isEqualTo(1L);
-        assertThat(firstLogs).hasSize(2);
-        assertThat(secondLogs).hasSize(2);
+        assertThat(firstLogs).hasSize(1);
+        assertThat(secondLogs).hasSize(1);
     }
 
     private UserEntity createUser(String email) {

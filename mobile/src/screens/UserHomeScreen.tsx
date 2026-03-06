@@ -14,7 +14,7 @@ import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/us
 import { ui } from '../theme/ui';
 import { UserAddress } from '../types/userAddress';
 import { ApiErrorResponse, WasteRequest } from '../types/waste';
-import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
+import { toUserWasteStatusLabel } from '../utils/wasteStatusLabel';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 
 type UserHomeSection = 'all' | 'history' | 'request-form';
@@ -420,7 +420,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
               onPress={() => navigation.navigate('WasteRequestDetail', { requestId: item.id })}
             >
               <Text style={styles.listTitle}>
-                #{item.id} {toWasteStatusLabel(item.status)}
+                #{item.id} {toUserWasteStatusLabel(item.status)}
               </Text>
               <Text style={styles.listSub}>{item.address}</Text>
               <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>

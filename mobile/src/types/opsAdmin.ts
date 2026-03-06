@@ -22,6 +22,36 @@ export type FailedPayment = {
   updatedAt: string;
 };
 
+export type PendingPayment = {
+  paymentId: number;
+  wasteRequestId: number;
+  userId: number;
+  amount: number;
+  currency: string;
+  updatedAt: string;
+};
+
+export type PendingPaymentBatchExecutePayload = {
+  wasteRequestIds?: number[];
+};
+
+export type PendingPaymentBatchExecuteResult = {
+  wasteRequestId: number;
+  paymentId: number;
+  result: 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
+  wasteStatus: string;
+  paymentStatus: string;
+  message: string | null;
+};
+
+export type PendingPaymentBatchExecuteResponse = {
+  requestedCount: number;
+  succeededCount: number;
+  failedCount: number;
+  skippedCount: number;
+  results: PendingPaymentBatchExecuteResult[];
+};
+
 export type OpsWasteListFilter = {
   status?: string;
   page?: number;

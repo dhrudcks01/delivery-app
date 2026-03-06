@@ -6,6 +6,9 @@ import {
   OpsWasteListFilter,
   OpsWasteRequest,
   OpsWasteRequestDetail,
+  PendingPayment,
+  PendingPaymentBatchExecutePayload,
+  PendingPaymentBatchExecuteResponse,
   PageResponse,
 } from '../types/opsAdmin';
 
@@ -69,6 +72,26 @@ export async function getFailedPaymentsForOps(
 export async function retryFailedPaymentForOps(wasteRequestId: number): Promise<OpsWasteRequest> {
   const response = await httpClient.post<OpsWasteRequest>(
     `/ops-admin/payments/waste-requests/${wasteRequestId}/retry`,
+  );
+  return response.data;
+}
+
+export async function getPendingPaymentsForOps(
+  page = 0,
+  size = 20,
+): Promise<PageResponse<PendingPayment>> {
+  const response = await httpClient.get<PageResponse<PendingPayment>>('/ops-admin/payments/pending', {
+    params: { page, size },
+  });
+  return response.data;
+}
+
+export async function executePendingPaymentsBatchForOps(
+  payload: PendingPaymentBatchExecutePayload = {},
+): Promise<PendingPaymentBatchExecuteResponse> {
+  const response = await httpClient.post<PendingPaymentBatchExecuteResponse>(
+    '/ops-admin/payments/pending/batch-execute',
+    payload,
   );
   return response.data;
 }

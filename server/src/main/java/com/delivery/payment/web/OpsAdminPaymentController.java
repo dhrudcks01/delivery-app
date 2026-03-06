@@ -1,6 +1,9 @@
 package com.delivery.payment.web;
 
 import com.delivery.payment.dto.FailedPaymentResponse;
+import com.delivery.payment.dto.PendingPaymentBatchExecuteRequest;
+import com.delivery.payment.dto.PendingPaymentBatchExecuteResponse;
+import com.delivery.payment.dto.PendingPaymentResponse;
 import com.delivery.payment.service.PaymentFailureHandlingService;
 import com.delivery.waste.dto.WasteRequestResponse;
 import org.springframework.data.domain.Page;
@@ -12,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,6 +34,24 @@ public class OpsAdminPaymentController {
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ResponseEntity.ok(paymentFailureHandlingService.getFailedPayments(pageable));
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<Page<PendingPaymentResponse>> getPendingPayments(
+            @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(paymentFailureHandlingService.getPendingPayments(pageable));
+    }
+
+    @PostMapping("/pending/batch-execute")
+    public ResponseEntity<PendingPaymentBatchExecuteResponse> executePendingPaymentsBatch(
+            Authentication authentication,
+            @RequestBody(required = false) PendingPaymentBatchExecuteRequest batchRequest
+    ) {
+        return ResponseEntity.ok(paymentFailureHandlingService.executePendingPaymentsBatch(
+                batchRequest,
+                authentication.getName()
+        ));
     }
 
     @PostMapping("/waste-requests/{wasteRequestId}/retry")

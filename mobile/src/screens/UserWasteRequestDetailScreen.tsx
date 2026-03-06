@@ -8,9 +8,12 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, WasteRequestDetail } from '../types/waste';
-import { toWasteStatusLabel, toWasteStatusLabelOrStart } from '../utils/wasteStatusLabel';
+import {
+  toUserWasteStatusLabel,
+  toUserWasteStatusLabelOrStart,
+} from '../utils/wasteStatusLabel';
 
-const STATUS_FLOW = ['REQUESTED', 'ASSIGNED', 'MEASURED', 'PAYMENT_PENDING', 'PAID', 'COMPLETED'] as const;
+const STATUS_FLOW = ['REQUESTED', 'ASSIGNED', 'MEASURED', 'COMPLETED'] as const;
 
 type StepState = 'done' | 'current' | 'upcoming';
 
@@ -86,6 +89,10 @@ export function UserWasteRequestDetailScreen() {
 
   const canCancel = detail?.status === 'REQUESTED';
   const displayOrderNo = detail?.orderNo ?? routeOrderNo ?? '-';
+  const paymentFailureNotice =
+    detail?.status === 'PAYMENT_FAILED'
+      ? '결제 확인이 필요합니다. 결제수단을 확인한 뒤 다시 시도해 주세요.'
+      : null;
 
   const passedStatuses = useMemo(() => {
     if (!detail) {
@@ -164,12 +171,13 @@ export function UserWasteRequestDetailScreen() {
           <>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>주문정보</Text>
-              <InfoRow label="요청상태" value={toWasteStatusLabel(detail.status)} />
+              <InfoRow label="요청상태" value={toUserWasteStatusLabel(detail.status)} />
               <InfoRow label="주소" value={detail.address} />
               <InfoRow label="연락처" value={detail.contactPhone} />
               <InfoRow label="요청사항" value={detail.note || '-'} />
               <InfoRow label="생성일시" value={formatDate(detail.createdAt)} />
               <InfoRow label="수정일시" value={formatDate(detail.updatedAt)} />
+              {paymentFailureNotice && <Text style={styles.meta}>{paymentFailureNotice}</Text>}
 
               <Pressable
                 style={[
@@ -260,7 +268,7 @@ export function UserWasteRequestDetailScreen() {
                         state === 'current' && styles.stepTextCurrent,
                       ]}
                     >
-                      {toWasteStatusLabel(status)}
+                      {toUserWasteStatusLabel(status)}
                     </Text>
                   </View>
                 );
@@ -270,7 +278,7 @@ export function UserWasteRequestDetailScreen() {
                 <View style={styles.timelineLogBox}>
                   {detail.statusTimeline.map((timeline, index) => (
                     <Text key={`${timeline.toStatus}-${timeline.at}-${index}`} style={styles.timelineLogText}>
-                      {`${toWasteStatusLabelOrStart(timeline.fromStatus)} -> ${toWasteStatusLabel(timeline.toStatus)} (${formatDate(timeline.at)})`}
+                      {`${toUserWasteStatusLabelOrStart(timeline.fromStatus)} -> ${toUserWasteStatusLabel(timeline.toStatus)} (${formatDate(timeline.at)})`}
                     </Text>
                   ))}
                 </View>

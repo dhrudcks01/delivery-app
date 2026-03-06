@@ -68,26 +68,71 @@ class OpsAdminPaymentFailureIntegrationTest {
     }
 
     @Test
-    void opsAdminCanListFailedPaymentsAndRetry() throws Exception {
-        UserEntity requester = createUser("ops-payment-user@example.com", "USER");
+    void opsAdminCanExecutePendingBatchWithPartialFailure() throws Exception {
+        UserEntity requesterSuccess = createUser("ops-payment-user-success@example.com", "USER");
+        UserEntity requesterFailure = createUser("ops-payment-user-failure@example.com", "USER");
         UserEntity driver = createUser("ops-payment-driver@example.com", "DRIVER");
         UserEntity opsAdmin = createUser("ops-payment-admin@example.com", "OPS_ADMIN");
+
+        WasteRequestEntity successRequest = createAssignedRequest(requesterSuccess, driver);
+        WasteRequestEntity failedRequest = createAssignedRequest(requesterFailure, driver);
+
+        String driverToken = login(driver.getEmail());
+        String opsToken = login(opsAdmin.getEmail());
+
+        measure(driverToken, successRequest.getId(), "4.500", "/uploads/files/pending-1.jpg");
+        measure(driverToken, failedRequest.getId(), "5.000", "/uploads/files/pending-2.jpg");
+
+        mockMvc.perform(get("/ops-admin/payments/pending")
+                        .header("Authorization", "Bearer " + opsToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.content[*].wasteRequestId").value(hasItem(successRequest.getId().intValue())))
+                .andExpect(jsonPath("$.content[*].wasteRequestId").value(hasItem(failedRequest.getId().intValue())));
+
+        createActivePaymentMethod(requesterSuccess);
+
+        String batchBody = objectMapper.writeValueAsString(new PendingBatchPayload(
+                List.of(successRequest.getId(), failedRequest.getId())
+        ));
+
+        mockMvc.perform(post("/ops-admin/payments/pending/batch-execute")
+                        .header("Authorization", "Bearer " + opsToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(batchBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requestedCount").value(2))
+                .andExpect(jsonPath("$.succeededCount").value(1))
+                .andExpect(jsonPath("$.failedCount").value(1))
+                .andExpect(jsonPath("$.skippedCount").value(0));
+
+        assertThat(readRequestStatus(successRequest.getId())).isEqualTo("COMPLETED");
+        assertThat(readPaymentStatus(successRequest.getId())).isEqualTo("SUCCEEDED");
+
+        assertThat(readRequestStatus(failedRequest.getId())).isEqualTo("PAYMENT_FAILED");
+        assertThat(readPaymentStatus(failedRequest.getId())).isEqualTo("FAILED");
+    }
+
+    @Test
+    void opsAdminCanListFailedPaymentsAndRetry() throws Exception {
+        UserEntity requester = createUser("ops-payment-retry-user@example.com", "USER");
+        UserEntity driver = createUser("ops-payment-retry-driver@example.com", "DRIVER");
+        UserEntity opsAdmin = createUser("ops-payment-retry-admin@example.com", "OPS_ADMIN");
 
         WasteRequestEntity request = createAssignedRequest(requester, driver);
         String driverToken = login(driver.getEmail());
         String opsToken = login(opsAdmin.getEmail());
 
-        String measureBody = objectMapper.writeValueAsString(new MeasurePayload(
-                new BigDecimal("4.500"),
-                List.of("/uploads/files/fail-1.jpg")
-        ));
+        measure(driverToken, request.getId(), "3.250", "/uploads/files/retry-pending.jpg");
 
-        mockMvc.perform(post("/driver/waste-requests/{requestId}/measure", request.getId())
-                        .header("Authorization", "Bearer " + driverToken)
+        String batchBody = objectMapper.writeValueAsString(new PendingBatchPayload(List.of(request.getId())));
+        mockMvc.perform(post("/ops-admin/payments/pending/batch-execute")
+                        .header("Authorization", "Bearer " + opsToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(measureBody))
+                        .content(batchBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PAYMENT_FAILED"));
+                .andExpect(jsonPath("$.requestedCount").value(1))
+                .andExpect(jsonPath("$.failedCount").value(1));
 
         mockMvc.perform(get("/ops-admin/payments/failed")
                         .header("Authorization", "Bearer " + opsToken))
@@ -102,19 +147,38 @@ class OpsAdminPaymentFailureIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
 
-        String requestStatus = jdbcTemplate.queryForObject(
+        assertThat(readRequestStatus(request.getId())).isEqualTo("COMPLETED");
+        assertThat(readPaymentStatus(request.getId())).isEqualTo("SUCCEEDED");
+    }
+
+    private void measure(String driverToken, Long requestId, String measuredWeightKg, String photoUrl) throws Exception {
+        String measureBody = objectMapper.writeValueAsString(new MeasurePayload(
+                new BigDecimal(measuredWeightKg),
+                List.of(photoUrl)
+        ));
+
+        mockMvc.perform(post("/driver/waste-requests/{requestId}/measure", requestId)
+                        .header("Authorization", "Bearer " + driverToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(measureBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAYMENT_PENDING"));
+    }
+
+    private String readRequestStatus(Long requestId) {
+        return jdbcTemplate.queryForObject(
                 "SELECT status FROM waste_requests WHERE id = ?",
                 String.class,
-                request.getId()
+                requestId
         );
-        assertThat(requestStatus).isEqualTo("COMPLETED");
+    }
 
-        String paymentStatus = jdbcTemplate.queryForObject(
+    private String readPaymentStatus(Long requestId) {
+        return jdbcTemplate.queryForObject(
                 "SELECT status FROM payments WHERE waste_request_id = ?",
                 String.class,
-                request.getId()
+                requestId
         );
-        assertThat(paymentStatus).isEqualTo("SUCCEEDED");
     }
 
     private WasteRequestEntity createAssignedRequest(UserEntity requester, UserEntity driver) {
@@ -189,5 +253,8 @@ class OpsAdminPaymentFailureIntegrationTest {
     }
 
     private record MeasurePayload(BigDecimal measuredWeightKg, List<String> photoUrls) {
+    }
+
+    private record PendingBatchPayload(List<Long> wasteRequestIds) {
     }
 }

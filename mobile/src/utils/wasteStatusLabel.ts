@@ -11,6 +11,12 @@ const WASTE_STATUS_LABELS: Record<string, string> = {
   REFUNDED: '환불 완료',
 };
 
+const USER_STATUS_OVERRIDES: Record<string, string> = {
+  PAYMENT_PENDING: '수거 완료',
+  PAID: '처리 완료',
+  PAYMENT_FAILED: '결제 확인 필요',
+};
+
 const warnedUnknownStatuses = new Set<string>();
 
 function warnUnknownStatus(status: string): void {
@@ -24,7 +30,7 @@ function warnUnknownStatus(status: string): void {
 export function toWasteStatusLabel(status: string): string {
   const normalized = status.trim();
   if (!normalized) {
-    return '알 수 없음';
+    return '상태 없음';
   }
   const label = WASTE_STATUS_LABELS[normalized];
   if (label) {
@@ -34,9 +40,30 @@ export function toWasteStatusLabel(status: string): string {
   return `알 수 없는 상태(${normalized})`;
 }
 
+export function toUserWasteStatusLabel(status: string): string {
+  const normalized = status.trim();
+  if (!normalized) {
+    return '상태 없음';
+  }
+
+  const override = USER_STATUS_OVERRIDES[normalized];
+  if (override) {
+    return override;
+  }
+
+  return toWasteStatusLabel(normalized);
+}
+
 export function toWasteStatusLabelOrStart(status: string | null | undefined): string {
   if (!status) {
     return '시작';
   }
   return toWasteStatusLabel(status);
+}
+
+export function toUserWasteStatusLabelOrStart(status: string | null | undefined): string {
+  if (!status) {
+    return '시작';
+  }
+  return toUserWasteStatusLabel(status);
 }

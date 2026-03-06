@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
@@ -17,4 +19,8 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
     Optional<PaymentEntity> findByProviderOrderId(String providerOrderId);
 
     Page<PaymentEntity> findAllByStatusOrderByUpdatedAtDesc(String status, Pageable pageable);
+
+    List<PaymentEntity> findAllByStatusAndWasteRequestIdIn(String status, Collection<Long> wasteRequestIds);
+
+    List<PaymentEntity> findAllByStatusOrderByUpdatedAtAsc(String status);
 }
