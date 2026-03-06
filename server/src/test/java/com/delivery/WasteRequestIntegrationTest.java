@@ -252,6 +252,41 @@ class WasteRequestIntegrationTest {
     }
 
     @Test
+    void createRequestStoresReferencePhotosAndReturnsInDetail() throws Exception {
+        TestUser user = createUserAndLogin("waste-reference-photo@example.com", "USER", true);
+
+        String createResponse = mockMvc.perform(post("/waste-requests")
+                        .header("Authorization", "Bearer " + user.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "address": "Seoul Mapo-gu Seogyo-dong Worldcup-ro 1",
+                                  "note": "reference included",
+                                  "disposalItems": ["GENERAL"],
+                                  "bagCount": 1,
+                                  "referencePhotoUrls": [
+                                    "/uploads/files/reference-1.jpg",
+                                    "/uploads/files/reference-2.jpg"
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long requestId = objectMapper.readTree(createResponse).get("id").asLong();
+
+        mockMvc.perform(get("/waste-requests/{requestId}", requestId)
+                        .header("Authorization", "Bearer " + user.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.photos.length()").value(2))
+                .andExpect(jsonPath("$.photos[0].url").value("/uploads/files/reference-1.jpg"))
+                .andExpect(jsonPath("$.photos[0].type").value("REFERENCE"))
+                .andExpect(jsonPath("$.photos[1].url").value("/uploads/files/reference-2.jpg"))
+                .andExpect(jsonPath("$.photos[1].type").value("REFERENCE"));
+    }
+
+    @Test
     void userAndOpsSeeDifferentStatusExposureForPaymentPending() throws Exception {
         TestUser owner = createUserAndLogin("waste-visibility-owner@example.com", "USER", true);
         TestUser opsAdmin = createUserAndLogin("waste-visibility-ops@example.com", "OPS_ADMIN", false);

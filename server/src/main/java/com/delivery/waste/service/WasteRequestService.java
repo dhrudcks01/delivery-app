@@ -48,6 +48,7 @@ public class WasteRequestService {
     private static final String PAID = "PAID";
     private static final String MEASURED = "MEASURED";
     private static final String COMPLETED = "COMPLETED";
+    private static final String PHOTO_TYPE_REFERENCE = "REFERENCE";
 
     private final WasteRequestRepository wasteRequestRepository;
     private final WasteAssignmentRepository wasteAssignmentRepository;
@@ -94,6 +95,15 @@ public class WasteRequestService {
                 request.normalizedBagCount()
         ));
         saved.assignOrderNo(WasteOrderNoPolicy.generate(saved.getId()));
+
+        List<WastePhotoEntity> referencePhotos = request.normalizedReferencePhotoUrls()
+                .stream()
+                .map(url -> new WastePhotoEntity(saved, url, PHOTO_TYPE_REFERENCE))
+                .toList();
+        if (!referencePhotos.isEmpty()) {
+            wastePhotoRepository.saveAll(referencePhotos);
+        }
+
         return toUserResponse(saved);
     }
 

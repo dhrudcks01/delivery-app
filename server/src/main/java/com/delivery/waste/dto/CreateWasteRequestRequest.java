@@ -15,7 +15,9 @@ public record CreateWasteRequestRequest(
         @Schema(description = "Disposal item list", example = "[\"GENERAL\", \"RECYCLE\"]")
         List<@NotBlank @Size(max = 100) String> disposalItems,
         @Schema(description = "Requested bag count", example = "2")
-        @Min(0) Integer bagCount
+        @Min(0) Integer bagCount,
+        @Schema(description = "Reference photo URL list", example = "[\"/uploads/files/ref-1.jpg\"]")
+        List<@NotBlank @Size(max = 1000) String> referencePhotoUrls
 ) {
 
     public List<String> normalizedDisposalItems() {
@@ -24,5 +26,9 @@ public record CreateWasteRequestRequest(
 
     public int normalizedBagCount() {
         return bagCount == null ? 0 : bagCount;
+    }
+
+    public List<String> normalizedReferencePhotoUrls() {
+        return referencePhotoUrls == null ? List.of() : referencePhotoUrls;
     }
 }

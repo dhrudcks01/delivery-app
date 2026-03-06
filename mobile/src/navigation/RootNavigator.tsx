@@ -17,6 +17,7 @@ import { ServiceAreaManagementScreen } from '../screens/ServiceAreaManagementScr
 import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
 import { UserAddressManagementScreen } from '../screens/UserAddressManagementScreen';
+import { UserWasteRequestCreateScreen } from '../screens/UserWasteRequestCreateScreen';
 import { UserHomeScreen } from '../screens/UserHomeScreen';
 import { UserPaymentManagementScreen } from '../screens/UserPaymentManagementScreen';
 import { UserWasteRequestDetailScreen } from '../screens/UserWasteRequestDetailScreen';
@@ -241,7 +242,7 @@ function AppTabsScreen() {
         options={{ title: TAB_TO_LABEL.RequestTab, headerShown: false }}
         children={() =>
           hasUserRole
-            ? <UserHomeScreen section="request-form" includeTopInset />
+            ? <UserWasteRequestCreateScreen includeTopInset />
             : (
               <HeaderlessScreenContainer>
                 <UserRoleGuideScreen

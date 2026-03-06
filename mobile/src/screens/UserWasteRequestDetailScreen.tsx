@@ -106,6 +106,14 @@ export function UserWasteRequestDetailScreen() {
   }, [detail]);
 
   const disposalItems = useMemo(() => detail?.disposalItems ?? [], [detail]);
+  const referencePhotos = useMemo(
+    () => detail?.photos.filter((photo) => photo.type === 'REFERENCE') ?? [],
+    [detail],
+  );
+  const driverPhotos = useMemo(
+    () => detail?.photos.filter((photo) => photo.type !== 'REFERENCE') ?? [],
+    [detail],
+  );
 
   const loadDetail = useCallback(async () => {
     setIsLoading(true);
@@ -210,15 +218,38 @@ export function UserWasteRequestDetailScreen() {
             </View>
 
             <View style={styles.section}>
+              <Text style={styles.sectionTitle}>참고 사진</Text>
+              {referencePhotos.length === 0 && (
+                <Text style={styles.meta}>등록된 참고 사진이 없습니다.</Text>
+              )}
+              {referencePhotos.length > 0 && (
+                <View style={styles.photoGrid}>
+                  {referencePhotos.map((photo, index) => (
+                    <Pressable
+                      key={`reference-${photo.url}-${index}`}
+                      style={styles.thumbnail}
+                      onPress={() => setSelectedPhotoUrl(photo.url)}
+                    >
+                      <Image source={{ uri: photo.url }} style={styles.thumbnailImage} resizeMode="cover" />
+                      <View style={styles.thumbnailMeta}>
+                        <Text style={styles.thumbnailMetaText}>REFERENCE {index + 1}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={styles.section}>
               <Text style={styles.sectionTitle}>기사 사진</Text>
-              {detail.photos.length === 0 && (
+              {driverPhotos.length === 0 && (
                 <Text style={styles.meta}>등록된 기사 사진이 없습니다.</Text>
               )}
-              {detail.photos.length > 0 && (
+              {driverPhotos.length > 0 && (
                 <View style={styles.photoGrid}>
-                  {detail.photos.map((photo, index) => (
+                  {driverPhotos.map((photo, index) => (
                     <Pressable
-                      key={`${photo.url}-${index}`}
+                      key={`driver-${photo.url}-${index}`}
                       style={styles.thumbnail}
                       onPress={() => setSelectedPhotoUrl(photo.url)}
                     >

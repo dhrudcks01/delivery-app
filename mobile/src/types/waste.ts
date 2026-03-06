@@ -1,6 +1,9 @@
 export type CreateWasteRequestPayload = {
   address: string;
   note?: string;
+  disposalItems?: string[];
+  bagCount?: number;
+  referencePhotoUrls?: string[];
 };
 
 export type WasteRequest = {
@@ -24,7 +27,7 @@ export type WasteRequest = {
 
 export type WasteRequestPhoto = {
   url: string;
-  type: string;
+  type: string | null;
   createdAt: string | null;
 };
 

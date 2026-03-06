@@ -1,7 +1,7 @@
 ﻿import { AxiosError } from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   getMyAssignedWasteRequestDetail,
   getMyAssignedWasteRequests,
@@ -54,6 +54,7 @@ export function DriverHomeScreen() {
 
   const [measuredWeightKgText, setMeasuredWeightKgText] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
   const selectedTitle = useMemo(() => {
     if (!selectedRequest) {
@@ -195,7 +196,8 @@ export function DriverHomeScreen() {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <>
+      <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>DRIVER 전용 배정건</Text>
       <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
@@ -305,16 +307,23 @@ export function DriverHomeScreen() {
 
         {uploadError && <Text style={styles.error}>{uploadError}</Text>}
 
-        {photoUrls.map((url, index) => (
-          <View key={`${url}-${index}`} style={styles.photoRow}>
-            <Text style={styles.photoText} numberOfLines={1}>
-              {index + 1}. {url}
-            </Text>
-            <Pressable style={styles.removeButton} onPress={() => handleRemovePhoto(index)}>
-              <Text style={styles.removeButtonText}>삭제</Text>
-            </Pressable>
+        {photoUrls.length > 0 && (
+          <View style={styles.photoGrid}>
+            {photoUrls.map((url, index) => (
+              <View key={`${url}-${index}`} style={styles.photoCard}>
+                <Pressable onPress={() => setPreviewPhotoUrl(url)}>
+                  <Image source={{ uri: url }} style={styles.photoThumb} resizeMode="cover" />
+                </Pressable>
+                <View style={styles.photoCardFooter}>
+                  <Text style={styles.photoCardLabel}>사진 {index + 1}</Text>
+                  <Pressable style={styles.removeButton} onPress={() => handleRemovePhoto(index)}>
+                    <Text style={styles.removeButtonText}>삭제</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
           </View>
-        ))}
+        )}
 
         {measureError && <Text style={styles.error}>{measureError}</Text>}
 
@@ -327,7 +336,22 @@ export function DriverHomeScreen() {
         </Pressable>
       </View>
 
-    </ScrollView>
+      </ScrollView>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={Boolean(previewPhotoUrl)}
+        onRequestClose={() => setPreviewPhotoUrl(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setPreviewPhotoUrl(null)}>
+          {previewPhotoUrl && (
+            <Image source={{ uri: previewPhotoUrl }} style={styles.modalImage} resizeMode="contain" />
+          )}
+          <Text style={styles.modalHint}>탭하면 닫힙니다.</Text>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -452,19 +476,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: ui.colors.textStrong,
   },
-  photoRow: {
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoCard: {
+    width: '48%',
+    borderWidth: 1,
+    borderColor: ui.colors.cardBorder,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#f8fafc',
+  },
+  photoThumb: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#d1d5db',
+  },
+  photoCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
-  photoText: {
-    flex: 1,
+  photoCardLabel: {
     color: ui.colors.text,
     fontSize: 12,
   },
@@ -496,5 +534,21 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(2, 6, 23, 0.86)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    gap: 10,
+  },
+  modalImage: {
+    width: '100%',
+    height: '78%',
+  },
+  modalHint: {
+    color: '#e2e8f0',
+    fontSize: 13,
   },
 });
