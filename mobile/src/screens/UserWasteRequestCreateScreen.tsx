@@ -25,7 +25,11 @@ type Code = 'GENERAL' | 'BOX';
 
 const STEP_TITLES = ['수거 품목 선택', '특이사항 입력', '신청 정보 확인'] as const;
 const SPECIAL_OPTIONS = ['전용 비닐 외 다른 비닐 사용', '문 앞이 아닌 곳에 배출', '날카로운 물건 배출'] as const;
-const VISIT_SLOTS = ['오늘 밤 (22:00~06:00)', '내일 밤 (22:00~06:00)'] as const;
+const VISIT_SCHEDULE_NOTICE = '해당 날 밤 10시 ~ 다음날 아침 6시 사이 방문';
+const DISPOSAL_ITEM_LABEL: Record<Code, string> = {
+  GENERAL: '혼합 쓰레기',
+  BOX: '택배 박스',
+};
 const SERVICE_AREA_UNAVAILABLE_MESSAGE = '서비스 지역이 아닙니다.';
 
 function toErrorMessage(error: unknown): string {
@@ -85,7 +89,6 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   const [options, setOptions] = useState<string[]>([]);
   const [referencePhotoUrls, setReferencePhotoUrls] = useState<string[]>([]);
   const [note, setNote] = useState('');
-  const [visitSlot, setVisitSlot] = useState<typeof VISIT_SLOTS[number]>(VISIT_SLOTS[0]);
   const [agreed, setAgreed] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
@@ -101,6 +104,14 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   const selectedDisposalCodes = useMemo(
     () => (Object.entries(counts).filter(([, value]) => value > 0).map(([key]) => key) as Code[]),
     [counts],
+  );
+  const selectedDisposalItemSummaries = useMemo(
+    () => selectedDisposalCodes.map((code) => `${DISPOSAL_ITEM_LABEL[code]} ${counts[code]}개`),
+    [selectedDisposalCodes, counts],
+  );
+  const selectedSpecialOptionSummaries = useMemo(
+    () => (options.length > 0 ? options : ['선택 없음']),
+    [options],
   );
 
   const isPhoneVerified = Boolean(me?.phoneNumber && me?.phoneVerifiedAt);
@@ -262,7 +273,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
       const composedNote = [
         note.trim() ? `[요청사항]\n${note.trim()}` : '',
         options.length > 0 ? `[특이사항]\n- ${options.join('\n- ')}` : '',
-        `[방문일정]\n${visitSlot}`,
+        `[방문일정]\n${VISIT_SCHEDULE_NOTICE}`,
       ]
         .filter(Boolean)
         .join('\n\n');
@@ -470,23 +481,34 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
 
       {step === 2 && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>방문일정</Text>
-          {VISIT_SLOTS.map((slot) => (
-            <Pressable
-              key={slot}
-              style={[styles.option, visitSlot === slot && styles.optionSelected]}
-              onPress={() => setVisitSlot(slot)}
-            >
-              <Text style={styles.meta}>{slot}</Text>
-            </Pressable>
-          ))}
+          <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>방문일정</Text>
+            <Text style={styles.summaryValueStrong}>{VISIT_SCHEDULE_NOTICE}</Text>
+          </View>
 
-          <Text style={styles.sectionTitle}>주소</Text>
-          <Text style={styles.meta}>{addressBuildResult?.ok ? addressBuildResult.address : '대표 주소지를 설정해 주세요.'}</Text>
-          {serviceAreaError && <Text style={styles.error}>{serviceAreaError}</Text>}
+          <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>주소</Text>
+            <Text style={styles.summaryValue}>{addressBuildResult?.ok ? addressBuildResult.address : '대표 주소지를 설정해 주세요.'}</Text>
+            {serviceAreaError && <Text style={styles.error}>{serviceAreaError}</Text>}
+          </View>
 
-          <Text style={styles.sectionTitle}>결제수단</Text>
-          <Text style={styles.meta}>카드 자동결제</Text>
+          <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>신청정보</Text>
+            <Text style={styles.summaryLabel}>수거 품목</Text>
+            {selectedDisposalItemSummaries.map((item) => (
+              <Text key={item} style={styles.summaryBulletText}>• {item}</Text>
+            ))}
+
+            <Text style={styles.summaryLabel}>배출 특이사항</Text>
+            {selectedSpecialOptionSummaries.map((item) => (
+              <Text key={item} style={styles.summaryBulletText}>• {item}</Text>
+            ))}
+          </View>
+
+          <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>결제수단</Text>
+            <Text style={styles.summaryValue}>카드 자동결제</Text>
+          </View>
 
           <Pressable style={styles.rowBetween} onPress={() => setAgreed((prev) => !prev)}>
             <Text style={styles.meta}>유의사항을 확인했습니다.</Text>
@@ -534,8 +556,36 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: '#f97316' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   counter: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  option: { borderWidth: 1, borderColor: '#dce7e2', borderRadius: 10, padding: 10 },
-  optionSelected: { borderColor: ui.colors.primary, backgroundColor: '#eef8f6' },
+  summarySection: {
+    borderWidth: 1,
+    borderColor: '#d8e5e1',
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    backgroundColor: '#ffffff',
+  },
+  summaryValue: {
+    color: ui.colors.textStrong,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  summaryValueStrong: {
+    color: '#0f766e',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
+  summaryLabel: {
+    marginTop: 4,
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  summaryBulletText: {
+    color: ui.colors.textStrong,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   optionChoice: {
     borderWidth: 1,
     borderColor: '#a7bcb5',
