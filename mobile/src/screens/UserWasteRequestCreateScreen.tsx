@@ -26,6 +26,7 @@ type Code = 'GENERAL' | 'BOX';
 const STEP_TITLES = ['수거 품목 선택', '특이사항 입력', '신청 정보 확인'] as const;
 const SPECIAL_OPTIONS = ['전용 비닐 외 다른 비닐 사용', '문 앞이 아닌 곳에 배출', '날카로운 물건 배출'] as const;
 const VISIT_SLOTS = ['오늘 밤 (22:00~06:00)', '내일 밤 (22:00~06:00)'] as const;
+const SERVICE_AREA_UNAVAILABLE_MESSAGE = '서비스 지역이 아닙니다.';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -75,7 +76,9 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
 
   const [primaryAddress, setPrimaryAddress] = useState<UserAddress | null>(null);
   const [isServiceAreaAvailable, setIsServiceAreaAvailable] = useState<boolean | null>(null);
+  const [isCheckingServiceArea, setIsCheckingServiceArea] = useState(false);
   const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
+  const [serviceAreaRetryKey, setServiceAreaRetryKey] = useState(0);
 
   const [counts, setCounts] = useState<Record<Code, number>>({ GENERAL: 1, BOX: 0 });
   const [bagCount, setBagCount] = useState(1);
@@ -100,6 +103,10 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   );
 
   const isPhoneVerified = Boolean(me?.phoneNumber && me?.phoneVerifiedAt);
+  const isServiceAreaBlocked = isServiceAreaAvailable === false;
+  const requiresServiceAreaCheck = Boolean(addressBuildResult?.ok);
+  const canStartRequest = !requiresServiceAreaCheck
+    || (isServiceAreaAvailable === true && !isCheckingServiceArea && !serviceAreaError);
 
   const migrateLegacyAddresses = useCallback(async () => {
     if (!me?.id) {
@@ -146,34 +153,45 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   );
 
   useEffect(() => {
-    if (!started || !addressBuildResult?.ok) {
+    if (!addressBuildResult?.ok) {
       setIsServiceAreaAvailable(null);
+      setIsCheckingServiceArea(false);
       setServiceAreaError(null);
       return;
     }
 
     let cancelled = false;
     void (async () => {
+      setIsCheckingServiceArea(true);
+      setServiceAreaError(null);
       try {
         const response = await getUserServiceAreaAvailability(addressBuildResult.address);
         if (cancelled) {
           return;
         }
         setIsServiceAreaAvailable(response.available);
-        setServiceAreaError(response.available ? null : (response.message ?? '서비스 가능 지역이 아닙니다.'));
+        if (response.reasonCode === 'SERVICE_AREA_ADDRESS_UNRESOLVED') {
+          setServiceAreaError(response.message ?? '대표 주소지의 동 정보를 확인할 수 없습니다. 주소를 다시 확인해 주세요.');
+          return;
+        }
+        setServiceAreaError(null);
       } catch {
         if (cancelled) {
           return;
         }
         setIsServiceAreaAvailable(null);
         setServiceAreaError('서비스 가능 지역 확인에 실패했습니다.');
+      } finally {
+        if (!cancelled) {
+          setIsCheckingServiceArea(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [addressBuildResult, started]);
+  }, [addressBuildResult, serviceAreaRetryKey]);
 
   const adjustCount = (code: Code, delta: number) => {
     setCounts((prev) => ({ ...prev, [code]: Math.max(0, prev[code] + delta) }));
@@ -217,6 +235,10 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
     }
     if (!isPhoneVerified) {
       setError('휴대폰 본인인증 완료 후 신청할 수 있습니다.');
+      return;
+    }
+    if (isServiceAreaBlocked) {
+      setError(SERVICE_AREA_UNAVAILABLE_MESSAGE);
       return;
     }
     if (isServiceAreaAvailable !== true) {
@@ -282,7 +304,33 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
         <View style={styles.card}>
           <Text style={styles.title}>수거 요청</Text>
           <Text style={styles.meta}>수거 품목, 특이사항/참고사진, 신청 정보 확인 순서로 진행됩니다.</Text>
-          <Pressable style={styles.primaryButton} onPress={() => setStarted(true)}>
+          {isCheckingServiceArea && (
+            <Text style={styles.meta}>서비스 가능 여부를 확인 중입니다.</Text>
+          )}
+          {serviceAreaError && (
+            <>
+              <Text style={styles.error}>{serviceAreaError}</Text>
+              <Pressable style={styles.retryButton} onPress={() => setServiceAreaRetryKey((prev) => prev + 1)}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </>
+          )}
+          {isServiceAreaBlocked && !isCheckingServiceArea && !serviceAreaError && (
+            <>
+              <View style={styles.guardBox}>
+                <Text style={styles.guardTitle}>{SERVICE_AREA_UNAVAILABLE_MESSAGE}</Text>
+                <Text style={styles.guardDescription}>현재 대표 주소지는 신청 가능한 지역이 아닙니다.</Text>
+              </View>
+              <Pressable style={styles.ghostButton} onPress={() => navigation.navigate('ServiceAreaBrowse')}>
+                <Text style={styles.ghostButtonText}>서비스 지역 살펴보기</Text>
+              </Pressable>
+            </>
+          )}
+          <Pressable
+            style={[styles.primaryButton, !canStartRequest && styles.primaryButtonDisabled]}
+            onPress={() => setStarted(true)}
+            disabled={!canStartRequest}
+          >
             <Text style={styles.primaryButtonText}>수거 요청 시작</Text>
           </Pressable>
         </View>
@@ -483,6 +531,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
+  primaryButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
   primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   ghostButton: {
     flex: 1,
@@ -493,4 +544,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ghostButtonText: { color: ui.colors.text, fontSize: 14, fontWeight: '700' },
+  retryButton: {
+    borderRadius: ui.radius.control,
+    borderWidth: 1,
+    borderColor: ui.colors.error,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#fff5f5',
+  },
+  retryButtonText: {
+    color: ui.colors.error,
+    fontWeight: '700',
+  },
+  guardBox: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#fff1f2',
+    gap: 4,
+  },
+  guardTitle: {
+    color: '#b91c1c',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  guardDescription: {
+    color: '#7f1d1d',
+    fontSize: 13,
+  },
 });
