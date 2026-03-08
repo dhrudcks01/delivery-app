@@ -88,6 +88,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   const [visitSlot, setVisitSlot] = useState<typeof VISIT_SLOTS[number]>(VISIT_SLOTS[0]);
   const [agreed, setAgreed] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
 
   const addressBuildResult = useMemo(() => {
@@ -202,8 +203,10 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   };
 
   const pickReferencePhoto = async () => {
+    setPhotoUploadError(null);
     const hasPermission = await ensureImagePermission();
     if (!hasPermission) {
+      setPhotoUploadError('사진 접근 권한이 필요합니다. 설정에서 권한을 허용한 뒤 다시 시도해 주세요.');
       return;
     }
 
@@ -220,7 +223,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
       const uploadedUrl = await uploadImageFile(picked.assets[0].uri, picked.assets[0].fileName ?? undefined);
       setReferencePhotoUrls((prev) => [...prev, uploadedUrl]);
     } catch (uploadError) {
-      setError(toErrorMessage(uploadError));
+      setPhotoUploadError(toErrorMessage(uploadError));
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -400,15 +403,29 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
       {step === 1 && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>특이사항</Text>
-          {SPECIAL_OPTIONS.map((option) => (
-            <Pressable
-              key={option}
-              style={[styles.option, options.includes(option) && styles.optionSelected]}
-              onPress={() => toggleOption(option)}
-            >
-              <Text style={styles.meta}>{option}</Text>
-            </Pressable>
-          ))}
+          {SPECIAL_OPTIONS.map((option) => {
+            const selected = options.includes(option);
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="checkbox"
+                accessibilityLabel={`${option} 선택`}
+                accessibilityState={{ checked: selected }}
+                hitSlop={8}
+                style={[styles.optionChoice, selected && styles.optionChoiceSelected]}
+                onPress={() => toggleOption(option)}
+              >
+                <Text style={[styles.optionChoiceText, selected && styles.optionChoiceTextSelected]}>
+                  {option}
+                </Text>
+                <View style={[styles.optionBadge, selected && styles.optionBadgeSelected]}>
+                  <Text style={[styles.optionBadgeText, selected && styles.optionBadgeTextSelected]}>
+                    {selected ? '선택됨' : '미선택'}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
 
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>참고사진 ({referencePhotoUrls.length})</Text>
@@ -416,6 +433,14 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
               <Text style={styles.ghostButtonText}>{isUploadingPhoto ? '업로드 중..' : '사진 추가'}</Text>
             </Pressable>
           </View>
+          {photoUploadError && (
+            <View style={styles.photoErrorWrap}>
+              <Text style={styles.error}>{photoUploadError}</Text>
+              <Pressable style={styles.retryButton} disabled={isUploadingPhoto} onPress={() => void pickReferencePhoto()}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          )}
 
           <View style={styles.photoGrid}>
             {referencePhotoUrls.map((url, index) => (
@@ -511,6 +536,54 @@ const styles = StyleSheet.create({
   counter: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   option: { borderWidth: 1, borderColor: '#dce7e2', borderRadius: 10, padding: 10 },
   optionSelected: { borderColor: ui.colors.primary, backgroundColor: '#eef8f6' },
+  optionChoice: {
+    borderWidth: 1,
+    borderColor: '#a7bcb5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  optionChoiceSelected: {
+    borderColor: '#0f766e',
+    backgroundColor: '#e6fffa',
+  },
+  optionChoiceText: {
+    color: ui.colors.textStrong,
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  optionChoiceTextSelected: {
+    color: '#0f766e',
+    fontWeight: '700',
+  },
+  optionBadge: {
+    minWidth: 62,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#94a3b8',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  optionBadgeSelected: {
+    borderColor: '#0f766e',
+    backgroundColor: '#ccfbf1',
+  },
+  optionBadgeText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  optionBadgeTextSelected: {
+    color: '#115e59',
+  },
   noteInput: {
     borderWidth: 1,
     borderColor: '#cad9d3',
@@ -521,6 +594,9 @@ const styles = StyleSheet.create({
     color: ui.colors.textStrong,
   },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoErrorWrap: {
+    gap: 8,
+  },
   referencePhotoCard: { width: '31%' },
   referencePhotoImage: { height: 86 },
   footer: { flexDirection: 'row', gap: 8 },

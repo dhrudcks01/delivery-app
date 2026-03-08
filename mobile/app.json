@@ -7,6 +7,14 @@
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "참고사진 업로드를 위해 사진 접근 권한이 필요합니다."
+        }
+      ]
     ]
   }
 }

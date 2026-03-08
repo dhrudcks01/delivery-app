@@ -81,7 +81,7 @@ class UploadIntegrationTest {
     }
 
     @Test
-    void userCannotUploadFile() throws Exception {
+    void userCanUploadFileAndGetDownloadUrl() throws Exception {
         String userToken = login(createUser("upload-user@example.com", "USER").getEmail());
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -90,10 +90,19 @@ class UploadIntegrationTest {
                 "png-data".getBytes()
         );
 
-        mockMvc.perform(multipart("/uploads")
+        String uploadResponse = mockMvc.perform(multipart("/uploads")
                         .file(file)
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.url").value(org.hamcrest.Matchers.startsWith("/uploads/files/")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String url = objectMapper.readTree(uploadResponse).get("url").asText();
+        mockMvc.perform(get(url)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk());
     }
 
     @Test

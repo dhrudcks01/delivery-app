@@ -54,7 +54,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/register", "/auth/login", "/auth/refresh").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/user/profile").hasAnyRole("USER", "DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/uploads/files/**").authenticated()
-                .requestMatchers("/uploads").hasAnyRole("DRIVER", "OPS_ADMIN", "SYS_ADMIN")
+                .requestMatchers("/uploads").hasAnyRole("USER", "DRIVER", "OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/sys-admin/users/ops-admin-grant-candidates").hasAnyRole("OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/sys-admin/users/*/roles/ops-admin").hasAnyRole("OPS_ADMIN", "SYS_ADMIN")
                 .requestMatchers("/sys-admin/**").hasRole("SYS_ADMIN")
