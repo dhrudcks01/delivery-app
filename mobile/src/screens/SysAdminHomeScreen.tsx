@@ -17,7 +17,9 @@ import {
   revokeOpsAdminRole,
 } from '../api/sysAdminRoleApi';
 import { useAuth } from '../auth/AuthContext';
+import { Card } from '../components/Card';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { SectionHeader } from '../components/SectionHeader';
 import { ui } from '../theme/ui';
 import { RoleApplication } from '../types/roleApplication';
 import { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../types/opsAdmin';
@@ -409,13 +411,17 @@ export function SysAdminHomeScreen() {
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" includeTopInset>
       <View style={styles.screenContainer}>
-        <View style={styles.headerCard}>
-          <Text style={styles.badge}>SYS_ADMIN</Text>
-          <Text style={styles.title}>운영 권한 관리</Text>
-          <Text style={styles.description}>신청 승인/반려와 역할 부여를 한 화면에서 처리합니다.</Text>
+        <Card style={styles.headerCard}>
+          <SectionHeader
+            badge="SYS_ADMIN"
+            title="운영 권한 관리"
+            description="신청 승인/반려와 역할 부여를 한 화면에서 처리합니다."
+            titleStyle={styles.title}
+            descriptionStyle={styles.description}
+          />
           <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
           <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-        </View>
+        </Card>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryItem}>

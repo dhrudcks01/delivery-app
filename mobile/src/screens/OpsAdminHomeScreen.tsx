@@ -14,7 +14,10 @@ import {
   retryFailedPaymentForOps,
 } from '../api/opsAdminWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { Card } from '../components/Card';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { SectionHeader } from '../components/SectionHeader';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
@@ -238,13 +241,17 @@ export function OpsAdminHomeScreen() {
       includeTopInset
     >
       <View style={styles.screenContainer}>
-        <View style={styles.headerCard}>
-          <Text style={styles.badge}>OPS_ADMIN</Text>
-          <Text style={styles.title}>운영 관리</Text>
-          <Text style={styles.description}>기사 신청 승인, 수거 요청 조회, 결제 실패 재시도를 관리합니다.</Text>
+        <Card style={styles.headerCard}>
+          <SectionHeader
+            badge="OPS_ADMIN"
+            title="운영 관리"
+            description="기사 신청 승인, 수거 요청 조회, 결제 실패 재시도를 관리합니다."
+            titleStyle={styles.title}
+            descriptionStyle={styles.description}
+          />
           <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
           <Text style={styles.caption}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-        </View>
+        </Card>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryItem}>
@@ -418,13 +425,12 @@ export function OpsAdminHomeScreen() {
               <Text style={styles.quickChipText}>PAYMENT_FAILED</Text>
             </Pressable>
           </View>
-          <Pressable
-            style={[styles.primaryButton, isLoadingWasteList && styles.buttonDisabled]}
+          <PrimaryButton
+            label="필터 적용"
             onPress={() => void loadWasteRequests()}
             disabled={isLoadingWasteList}
-          >
-            <Text style={styles.primaryButtonText}>필터 적용</Text>
-          </Pressable>
+            style={styles.primaryActionButton}
+          />
 
           {isLoadingWasteList && (
             <View style={styles.loadingGroup}>
@@ -889,6 +895,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 14,
+  },
+  primaryActionButton: {
+    width: '100%',
   },
   dangerButton: {
     flex: 1,

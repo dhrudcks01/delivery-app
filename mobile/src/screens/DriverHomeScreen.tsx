@@ -2,10 +2,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getMyAssignedWasteRequests } from '../api/driverWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { Card } from '../components/Card';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { ScreenState } from '../components/ScreenState';
+import { SecondaryButton } from '../components/SecondaryButton';
+import { SectionHeader } from '../components/SectionHeader';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
 import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
@@ -99,15 +103,15 @@ export function DriverHomeScreen() {
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} includeTopInset>
       <View style={styles.screenContainer}>
-        <View style={styles.headerCard}>
+        <Card style={styles.headerCard}>
           <Text style={styles.badge}>DRIVER</Text>
           <Text style={styles.title}>배정 수거 요청</Text>
           <Text style={styles.description}>배정 목록을 확인하고 요청별 상세 화면에서 측정 입력을 진행합니다.</Text>
           <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
           <Text style={styles.caption}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-        </View>
+        </Card>
 
-        <View style={styles.summaryCard}>
+        <Card style={styles.summaryCard}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>전체 배정</Text>
             <Text style={styles.summaryValue}>{assignedRequests.length}건</Text>
@@ -116,18 +120,24 @@ export function DriverHomeScreen() {
             <Text style={styles.summaryLabel}>처리 필요</Text>
             <Text style={styles.summaryValueWarn}>{actionRequiredCount}건</Text>
           </View>
-          <Pressable
-            style={[styles.secondaryButtonCompact, isLoadingList && styles.buttonDisabled]}
+          <SecondaryButton
+            label={isLoadingList ? '새로고침 중...' : '새로고침'}
             onPress={() => void refreshAssignedRequests()}
             disabled={isLoadingList}
-          >
-            <Text style={styles.secondaryButtonCompactText}>{isLoadingList ? '새로고침 중...' : '새로고침'}</Text>
-          </Pressable>
-        </View>
+            tone="neutral"
+            minHeight={40}
+            style={styles.secondaryButtonCompact}
+            textStyle={styles.secondaryButtonCompactText}
+          />
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>배정 목록</Text>
-          <Text style={styles.caption}>요청 카드를 눌러 상세 화면으로 이동하면 측정 입력/처리 완료를 진행할 수 있습니다.</Text>
+        <Card style={styles.card}>
+          <SectionHeader
+            title="배정 목록"
+            description="요청 카드를 눌러 상세 화면으로 이동하면 측정 입력/처리 완료를 진행할 수 있습니다."
+            titleStyle={styles.sectionTitle}
+            descriptionStyle={styles.caption}
+          />
 
           <View style={styles.filterRow}>
             <Pressable
@@ -157,39 +167,29 @@ export function DriverHomeScreen() {
           </View>
 
           {isLoadingList && (
-            <View style={styles.loadingGroup}>
-              <View style={styles.loadingCard}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.loadingText}>배정 목록을 불러오는 중입니다...</Text>
-              </View>
-              <View style={styles.skeletonCard}>
-                <View style={styles.skeletonLineShort} />
-                <View style={styles.skeletonLineLong} />
-                <View style={styles.skeletonLineLong} />
-              </View>
-              <View style={styles.skeletonCard}>
-                <View style={styles.skeletonLineShort} />
-                <View style={styles.skeletonLineLong} />
-                <View style={styles.skeletonLineLong} />
-              </View>
-            </View>
+            <ScreenState
+              variant="loading"
+              title="배정 목록을 불러오는 중입니다"
+              description="잠시만 기다려 주세요."
+            />
           )}
 
           {!isLoadingList && listError && (
-            <View style={styles.errorCard}>
-              <Text style={styles.errorText}>{listError}</Text>
-              <Pressable style={styles.retryButton} onPress={() => void refreshAssignedRequests()}>
-                <Text style={styles.retryButtonText}>다시 시도</Text>
-              </Pressable>
-            </View>
+            <ScreenState
+              variant="error"
+              title="배정 목록을 불러오지 못했습니다"
+              description={listError}
+              actionLabel="다시 시도"
+              onAction={() => void refreshAssignedRequests()}
+            />
           )}
 
           {!isLoadingList && !listError && filteredRequests.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>[]</Text>
-              <Text style={styles.emptyTitle}>선택한 필터에 해당하는 배정 요청이 없습니다</Text>
-              <Text style={styles.emptyDescription}>필터를 변경하거나 새로고침 후 다시 확인해 주세요.</Text>
-            </View>
+            <ScreenState
+              variant="empty"
+              title="선택한 필터에 해당하는 배정 요청이 없습니다"
+              description="필터를 변경하거나 새로고침 후 다시 확인해 주세요."
+            />
           )}
 
           {!isLoadingList && !listError && filteredRequests.length > 0 && (
@@ -235,7 +235,7 @@ export function DriverHomeScreen() {
               })}
             </View>
           )}
-        </View>
+        </Card>
       </View>
     </KeyboardAwareScrollScreen>
   );

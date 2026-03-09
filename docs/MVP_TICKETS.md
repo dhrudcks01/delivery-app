@@ -1854,7 +1854,7 @@
 - `docs/UI_SYSTEM.md`의 핵심 토큰(Primary/Success/Warning/Error/Background/Border)과 충돌하지 않도록 정렬한다.
 - 토큰 변경 후 주요 화면(홈/신청/이용내역/내정보/운영 상세) 시각 회귀를 iOS/Android에서 수동 검증한다.
 
-### [ ] T-0587 공통 UI 컴포넌트 계층 도입(Card/Button/SectionHeader/State)
+### [x] T-0587 공통 UI 컴포넌트 계층 도입(Card/Button/SectionHeader/State)
 **Goal**
 - 중복되는 카드/버튼/섹션헤더/상태(Loading/Empty/Error) UI를 공통 컴포넌트로 추출해 화면 간 일관성을 강화한다.
 
