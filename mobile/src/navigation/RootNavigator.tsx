@@ -166,6 +166,10 @@ function renderHomeTabIcon({ color, size }: { color: string; size: number }) {
   return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>⌂</Text>;
 }
 
+function renderRequestTabIcon({ color, size }: { color: string; size: number }) {
+  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 3, 13) }]}>✚</Text>;
+}
+
 function TabProfileScreen({
   loginId,
   roles,
@@ -352,7 +356,11 @@ function AppTabsScreen() {
       />
       <AppTabs.Screen
         name="RequestTab"
-        options={{ title: TAB_TO_LABEL.RequestTab, headerShown: false }}
+        options={{
+          title: TAB_TO_LABEL.RequestTab,
+          headerShown: false,
+          tabBarIcon: renderRequestTabIcon,
+        }}
         children={() =>
           hasUserRole
             ? <UserWasteRequestCreateScreen includeTopInset />
