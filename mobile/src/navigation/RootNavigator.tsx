@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -162,21 +163,45 @@ function TabHomeScreen({
   );
 }
 
-function renderHomeTabIcon({ color, size }: { color: string; size: number }) {
-  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>⌂</Text>;
+type TabBarIconProps = {
+  color: string;
+  size: number;
+  focused: boolean;
+};
+
+type TabIconName =
+  | 'home'
+  | 'home-outline'
+  | 'add-circle'
+  | 'add-circle-outline'
+  | 'list'
+  | 'list-outline'
+  | 'person-circle'
+  | 'person-circle-outline';
+
+const TAB_ICON_NAMES: Record<AppTabName, { active: TabIconName; inactive: TabIconName }> = {
+  HomeTab: { active: 'home', inactive: 'home-outline' },
+  RequestTab: { active: 'add-circle', inactive: 'add-circle-outline' },
+  HistoryTab: { active: 'list', inactive: 'list-outline' },
+  ProfileTab: { active: 'person-circle', inactive: 'person-circle-outline' },
+};
+
+function renderTabIcon(tabName: AppTabName) {
+  const names = TAB_ICON_NAMES[tabName];
+  return ({ color, size, focused }: TabBarIconProps) => (
+    <Ionicons
+      name={focused ? names.active : names.inactive}
+      size={Math.max(size, 19)}
+      color={color}
+      style={styles.tabBarIcon}
+    />
+  );
 }
 
-function renderRequestTabIcon({ color, size }: { color: string; size: number }) {
-  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 3, 13) }]}>✚</Text>;
-}
-
-function renderHistoryTabIcon({ color, size }: { color: string; size: number }) {
-  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>≣</Text>;
-}
-
-function renderProfileTabIcon({ color, size }: { color: string; size: number }) {
-  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>☺</Text>;
-}
+const renderHomeTabIcon = renderTabIcon('HomeTab');
+const renderRequestTabIcon = renderTabIcon('RequestTab');
+const renderHistoryTabIcon = renderTabIcon('HistoryTab');
+const renderProfileTabIcon = renderTabIcon('ProfileTab');
 
 function TabProfileScreen({
   loginId,
@@ -311,7 +336,7 @@ function AppTabsScreen() {
 
   const sharedTabOptions = {
     headerTitleAlign: 'center' as const,
-    tabBarShowIcon: false,
+    tabBarShowIcon: true,
     tabBarHideOnKeyboard: true,
     tabBarActiveTintColor: '#2563EB',
     tabBarInactiveTintColor: '#64748B',
@@ -651,10 +676,8 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 20,
   },
-  homeTabIcon: {
-    fontWeight: '700',
+  tabBarIcon: {
     textAlign: 'center',
-    includeFontPadding: false,
   },
   profileContainer: {
     padding: 16,
