@@ -1549,7 +1549,7 @@
 - Empty/Loading/Error 상태 문구 및 배치 규칙을 UI_SYSTEM에 맞춰 정리한다.
 - iOS/Android에서 키보드 가림 없는 입력 UX를 확인한다.
 
-### [ ] T-0560 SignupScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0560 SignupScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 회원가입 화면의 입력 폼/에러/CTA 구성을 UI_SYSTEM 기준으로 리팩토링한다.
 

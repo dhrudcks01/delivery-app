@@ -1,16 +1,9 @@
-import { useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
-import { RootStackParamList } from '../navigation/RootNavigator';
-import { ui } from '../theme/ui';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type SignupScreenProps = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
@@ -21,6 +14,9 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  const displayNameInputRef = useRef<TextInput | null>(null);
+  const passwordInputRef = useRef<TextInput | null>(null);
+
   const handleSignup = async () => {
     const trimmedIdentifier = identifier.trim();
     const trimmedDisplayName = displayName.trim();
@@ -30,6 +26,7 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
       setFormError('아이디, 이름, 비밀번호를 모두 입력해 주세요.');
       return;
     }
+
     if (trimmedPassword.length < 8) {
       setFormError('비밀번호는 8자 이상 입력해 주세요.');
       return;
@@ -44,148 +41,203 @@ export function SignupScreen({ navigation }: SignupScreenProps) {
   };
 
   return (
-    <KeyboardAwareScrollScreen
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.hero}>
-        <Text style={styles.badge}>아이디 회원가입</Text>
-        <Text style={styles.title}>가입 후 바로 시작하세요</Text>
-        <Text style={styles.description}>회원가입 성공 시 자동 로그인되어 역할 화면으로 이동합니다.</Text>
-      </View>
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.badge}>아이디 회원가입</Text>
+          <Text style={styles.title}>회원가입</Text>
+          <Text style={styles.description}>기본 정보 입력 후 바로 서비스를 시작할 수 있어요.</Text>
+        </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>아이디</Text>
-        <TextInput
-          style={styles.input}
-          value={identifier}
-          onChangeText={setIdentifier}
-          autoCapitalize="none"
-          keyboardType="default"
-          placeholder="아이디"
-          placeholderTextColor="#94a3b8"
-        />
+        <View style={styles.contentCard}>
+          <Text style={styles.sectionTitle}>가입 정보</Text>
 
-        <Text style={styles.label}>이름</Text>
-        <TextInput
-          style={styles.input}
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="홍길동"
-          placeholderTextColor="#94a3b8"
-        />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>아이디</Text>
+            <TextInput
+              style={styles.input}
+              value={identifier}
+              onChangeText={setIdentifier}
+              autoCapitalize="none"
+              keyboardType="default"
+              placeholder="아이디를 입력해 주세요"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="next"
+              onSubmitEditing={() => displayNameInputRef.current?.focus()}
+              blurOnSubmit={false}
+            />
+          </View>
 
-        <Text style={styles.label}>비밀번호</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="비밀번호(8자 이상)"
-          placeholderTextColor="#94a3b8"
-          onSubmitEditing={handleSignup}
-        />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>이름</Text>
+            <TextInput
+              ref={displayNameInputRef}
+              style={styles.input}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="이름을 입력해 주세요"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
+              blurOnSubmit={false}
+            />
+          </View>
 
-        {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>비밀번호</Text>
+            <TextInput
+              ref={passwordInputRef}
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="비밀번호(8자 이상)"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="done"
+              onSubmitEditing={handleSignup}
+            />
+          </View>
 
-        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSignup}>
-          <Text style={styles.buttonText}>{isLoading ? '가입 중...' : '회원가입'}</Text>
-        </Pressable>
+          {(formError || errorMessage) && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{formError ?? errorMessage}</Text>
+            </View>
+          )}
 
-        <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.linkText}>이미 계정이 있나요? 로그인으로 이동</Text>
-        </Pressable>
+          <Pressable
+            style={[styles.primaryButton, isLoading && styles.primaryButtonDisabled]}
+            disabled={isLoading}
+            onPress={handleSignup}
+          >
+            {isLoading && <ActivityIndicator size="small" color="#ffffff" />}
+            <Text style={styles.primaryButtonText}>{isLoading ? '가입 중...' : '회원가입'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.footer}>
+          <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.secondaryButtonText}>기존 계정으로 로그인</Text>
+          </Pressable>
+        </View>
       </View>
     </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+    backgroundColor: '#f9fafb',
+    paddingHorizontal: 16,
     paddingVertical: 24,
-    gap: 14,
   },
-  hero: {
-    backgroundColor: '#e6f4f2',
-    borderRadius: ui.radius.card,
+  screenContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 24,
+  },
+  headerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#b7dfd9',
+    borderColor: '#e5e7eb',
     padding: 16,
-    gap: 8,
+    gap: 12,
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ccfbf1',
-    color: '#134e4a',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     fontSize: 12,
     fontWeight: '700',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: '#0f172a',
   },
   description: {
     fontSize: 14,
-    color: ui.colors.text,
+    color: '#334155',
   },
-  form: {
-    backgroundColor: ui.colors.card,
-    borderRadius: ui.radius.card,
+  contentCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
+    borderColor: '#e5e7eb',
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  fieldGroup: {
+    gap: 8,
   },
   label: {
     fontSize: 14,
-    color: ui.colors.textStrong,
-    marginBottom: 6,
+    color: '#0f172a',
     fontWeight: '600',
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
+    fontSize: 14,
+  },
+  errorCard: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: ui.colors.textStrong,
-    marginBottom: 12,
-    backgroundColor: '#ffffff',
   },
-  error: {
-    marginBottom: 12,
-    color: ui.colors.error,
+  errorText: {
+    color: '#dc2626',
     fontSize: 13,
   },
-  button: {
-    marginTop: 6,
-    borderRadius: ui.radius.control,
-    paddingVertical: 12,
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: ui.colors.primary,
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#2563eb',
   },
-  buttonDisabled: {
-    opacity: 0.65,
+  primaryButtonDisabled: {
+    opacity: 0.7,
   },
-  buttonText: {
+  primaryButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
-  linkButton: {
-    marginTop: 12,
+  footer: {
+    gap: 12,
+  },
+  secondaryButton: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
   },
-  linkText: {
-    color: ui.colors.primary,
+  secondaryButtonText: {
+    color: '#334155',
+    fontSize: 14,
     fontWeight: '700',
-    fontSize: 13,
   },
 });
