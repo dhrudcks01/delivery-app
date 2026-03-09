@@ -1681,7 +1681,7 @@
 - Empty/Loading/Error 상태를 공통 패턴으로 제공한다.
 - iOS/Android에서 배정 목록/상세 이동 흐름을 수동 검증한다.
 
-### [ ] T-0572 DriverAssignedRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0572 DriverAssignedRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - DRIVER 배정 상세 화면의 입력/사진/완료 액션 UI를 UI_SYSTEM 기준으로 정렬한다.
 
