@@ -1725,6 +1725,53 @@
 - Empty/Loading/Error 상태를 공통 컴포넌트 패턴으로 구현한다.
 - iOS/Android에서 승인/반려/목록 갱신 흐름을 수동 검증한다.
 
+### [ ] T-0576 AppTabs 하단 탭바(UI_SYSTEM) 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 하단 탭 버튼(홈/신청/이용내역/내정보)의 시각 규칙을 UI_SYSTEM 기준으로 통일해 탭 네비게이션 일관성을 높인다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `AppTabs.Navigator`/`screenOptions`/`tabBar` 스타일
+- 탭 라우팅 이름, 권한 분기, 이동 동선은 변경하지 않는다.
+- 탭 버튼 높이/패딩/레이블 타이포/활성-비활성 컬러를 UI_SYSTEM(Color/Type/Button 규칙)으로 정렬한다.
+- iOS 안전영역(하단 인셋)과 Android 제스처 영역에서 탭 버튼이 잘리지 않도록 조정한다.
+- iOS/Android에서 탭 전환(홈↔신청↔이용내역↔내정보) 수동 검증을 완료한다.
+
+### [ ] T-0577 TabHomeScreen(USER 홈 탭) UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- USER 권한 기준 `홈` 탭 화면(`TabHomeScreen`)의 정보 배치와 카드 UI를 UI_SYSTEM 기준으로 정리한다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `TabHomeScreen`
+- 권한 표시/메타 정보/안내 문구/탭 정책 텍스트 내용과 로직은 변경하지 않는다.
+- 화면 구조를 `Header + Summary Card + Guide Card` 패턴으로 재구성하고 spacing 8px grid를 준수한다.
+- 버튼/카드/텍스트 스타일을 UI_SYSTEM Color/Typography 규칙으로 통일한다.
+- Empty/Loading/Error 상태가 필요한 경우(데이터 미존재/권한 미확인) 공통 패턴으로만 표현한다.
+- iOS/Android에서 USER 계정 홈 탭 진입 시 레이아웃 깨짐 없이 표시되는지 수동 검증한다.
+
+### [ ] T-0578 TabProfileScreen(내정보 탭) UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- `내정보` 탭(`TabProfileScreen`)의 메뉴/정보카드 UI를 UI_SYSTEM 기준으로 통일해 탐색성을 개선한다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `TabProfileScreen`
+- 주소관리/결제수단/권한신청/설정 이동 로직 및 조건(`hasUserRole`)은 변경하지 않는다.
+- 로그인 정보/권한 정보/휴대폰 인증정보/메뉴 버튼을 카드 섹션으로 분리해 정보 계층을 명확히 한다.
+- 메뉴 버튼 스타일을 Primary/Secondary 규격으로 정렬하고 터치 영역 최소 44px를 보장한다.
+- Empty/Loading/Error 상태가 필요한 경우 공통 패턴으로 처리한다.
+- iOS/Android에서 내정보 탭 진입 및 각 메뉴 이동 수동 검증을 완료한다.
+
+### [ ] T-0579 ProfileSettingsScreen 프로필/인증정보 표시 정합성 UI 수정(기능 변경 금지)
+**Goal**
+- 설정 화면에서 프로필 정보와 인증정보가 어색하게 보이는 UI 문제를 정리해 정보 가독성과 정합성을 개선한다.
+
+**DoD**
+- 대상: `mobile/src/screens/ProfileSettingsScreen.tsx`
+- 프로필/인증 정보 조회 로직, 권한 조건, API 호출 계약은 변경하지 않는다.
+- 프로필 정보와 인증정보 섹션을 명확히 분리하고 라벨/값 정렬 규칙을 통일한다.
+- 잘못된 항목 배치/중복 노출/빈값 표현(`-`) 불일치를 UI 레벨에서 수정한다.
+- 상태 배지/캡션/본문 타이포를 UI_SYSTEM 규칙에 맞춰 재정렬한다.
+- iOS/Android에서 설정 화면 진입 시 프로필/인증 정보가 동일 규칙으로 표시되는지 수동 검증한다.
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
