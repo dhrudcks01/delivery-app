@@ -1648,7 +1648,7 @@
 - Empty/Loading/Error 상태를 공통 패턴으로 정리한다.
 - iOS/Android에서 설정 메뉴 이동 동작 회귀 없음을 확인한다.
 
-### [ ] T-0569 ServiceAreaBrowseScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0569 ServiceAreaBrowseScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 서비스 가능지역 안내 화면의 검색/목록/안내 UI를 UI_SYSTEM 기준으로 개선한다.
 
