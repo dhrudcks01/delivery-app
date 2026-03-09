@@ -170,6 +170,10 @@ function renderRequestTabIcon({ color, size }: { color: string; size: number }) 
   return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 3, 13) }]}>✚</Text>;
 }
 
+function renderHistoryTabIcon({ color, size }: { color: string; size: number }) {
+  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>≣</Text>;
+}
+
 function TabProfileScreen({
   loginId,
   roles,
@@ -376,7 +380,11 @@ function AppTabsScreen() {
       />
       <AppTabs.Screen
         name="HistoryTab"
-        options={{ title: TAB_TO_LABEL.HistoryTab, headerShown: false }}
+        options={{
+          title: TAB_TO_LABEL.HistoryTab,
+          headerShown: false,
+          tabBarIcon: renderHistoryTabIcon,
+        }}
         children={() =>
           hasUserRole
             ? <UserHomeScreen section="history" includeTopInset />
