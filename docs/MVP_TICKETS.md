@@ -1571,7 +1571,7 @@
 - 로딩 스켈레톤/오류/재시도 버튼을 UI 규격에 맞게 제공한다.
 - iOS/Android에서 인증 성공/실패/취소 시 UI 회귀가 없는지 검증한다.
 
-### [ ] T-0562 UserHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0562 UserHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - USER 홈/이용내역 화면의 목록/카드/빈상태를 UI_SYSTEM 기준으로 통일한다.
 

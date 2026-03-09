@@ -1,5 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,9 +10,8 @@ import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
-import { ui } from '../theme/ui';
-import { UserAddress } from '../types/userAddress';
-import { ApiErrorResponse, WasteRequest } from '../types/waste';
+import type { UserAddress } from '../types/userAddress';
+import type { ApiErrorResponse, WasteRequest } from '../types/waste';
 import { toUserWasteStatusLabel } from '../utils/wasteStatusLabel';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 
@@ -24,8 +22,21 @@ type UserHomeScreenProps = {
   includeTopInset?: boolean;
 };
 
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0f172a',
+  text: '#334155',
+  caption: '#64748b',
+};
+
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
-const PRIMARY_ADDRESS_MISSING_MESSAGE = '대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.';
+const PRIMARY_ADDRESS_MISSING_MESSAGE = 'Primary address is missing. Add one in Profile > Address management.';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -36,9 +47,9 @@ function toErrorMessage(error: unknown): string {
     if (!error.response) {
       return 'Network is unavailable. Please check your connection and try again.';
     }
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
+    return apiError?.message ?? 'An error occurred while processing your request.';
   }
-  return '요청 처리 중 오류가 발생했습니다.';
+  return 'An error occurred while processing your request.';
 }
 
 function formatDate(dateTime: string | null): string {
@@ -46,6 +57,19 @@ function formatDate(dateTime: string | null): string {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
+}
+
+function getStatusBadgeStyle(status: WasteRequest['status']) {
+  if (status === 'COMPLETED' || status === 'PAID') {
+    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
+  }
+  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
+    return { container: styles.badgeError, text: styles.badgeErrorText };
+  }
+  if (status === 'REQUESTED' || status === 'ASSIGNED' || status === 'MEASURED' || status === 'PAYMENT_PENDING') {
+    return { container: styles.badgeWarning, text: styles.badgeWarningText };
+  }
+  return { container: styles.badgeNeutral, text: styles.badgeNeutralText };
 }
 
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
@@ -94,6 +118,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
         ?? (primaryAddress && primaryAddressBuildResult && !primaryAddressBuildResult.ok
           ? primaryAddressBuildResult.message
           : null));
+
   const isServiceAreaBlocked = isServiceAreaAvailable === false;
   const canSubmitRequest =
     canUsePrimaryAddress
@@ -134,6 +159,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
         isPrimary: legacy.isPrimary,
       });
     }
+
     await clearLegacyUserAddresses(me.id);
     return true;
   }, [me?.id]);
@@ -141,7 +167,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
   const loadPrimaryAddress = useCallback(async () => {
     if (!me?.id) {
       setPrimaryAddress(null);
-      setPrimaryAddressError('사용자 정보를 확인할 수 없습니다.');
+      setPrimaryAddressError('Unable to read user profile.');
       return;
     }
 
@@ -193,18 +219,18 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
       if (response.reasonCode === 'SERVICE_AREA_ADDRESS_UNRESOLVED') {
         setServiceAreaCheckError(
-          response.message ?? '대표 주소지의 동 정보를 확인할 수 없습니다. 주소를 다시 확인해 주세요.',
+          response.message ?? 'Could not resolve district information from the primary address.',
         );
         return;
       }
 
       if (!response.available && unavailableAlertAddressRef.current !== address) {
-        Alert.alert('서비스 지역이 아니예요!');
+        Alert.alert('This address is outside the service area.');
         unavailableAlertAddressRef.current = address;
       }
     } catch {
       setIsServiceAreaAvailable(null);
-      setServiceAreaCheckError('서비스 가능 지역 확인에 실패했습니다. 다시 시도해 주세요.');
+      setServiceAreaCheckError('Failed to verify service area. Please try again.');
     } finally {
       setIsCheckingServiceArea(false);
     }
@@ -212,22 +238,22 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   const handleCreate = async () => {
     if (!primaryAddress) {
-      setSubmitError('대표 주소지가 없습니다. 내정보 주소관리에서 먼저 등록해 주세요.');
+      setSubmitError('Primary address is missing. Add one in Profile > Address management.');
       return;
     }
     if (!primaryAddressBuildResult || !primaryAddressBuildResult.ok) {
       setSubmitError(
         primaryAddressBuildResult?.message
-          ?? '대표 주소지 정보가 올바르지 않습니다. 주소관리에서 주소를 다시 저장해 주세요.',
+          ?? 'Primary address data is invalid. Please save the address again.',
       );
       return;
     }
     if (!isPhoneVerified) {
-      setSubmitError('휴대폰 본인인증 완료 후 신청할 수 있습니다.');
+      setSubmitError('Phone verification is required before creating a request.');
       return;
     }
     if (isServiceAreaAvailable !== true) {
-      setSubmitError('서비스 지역이 아니예요!');
+      setSubmitError('This address is outside the service area.');
       return;
     }
 
@@ -242,9 +268,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
       setNote('');
       showSubmitSuccessMessage(
-        created.orderNo
-          ? `Request created. OrderNo: ${created.orderNo}`
-          : 'Request created successfully.',
+        created.orderNo ? `Request created. OrderNo: ${created.orderNo}` : 'Request created.',
       );
       navigation.navigate('WasteRequestDetail', {
         requestId: created.id,
@@ -262,12 +286,15 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
     void refreshRequests();
   }, []);
 
-  useEffect(() => () => {
-    if (successTimerRef.current) {
-      clearTimeout(successTimerRef.current);
-      successTimerRef.current = null;
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -289,112 +316,133 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   return (
     <KeyboardAwareScrollScreen
-      contentContainerStyle={styles.container}
+      contentContainerStyle={styles.screen}
       keyboardShouldPersistTaps="handled"
       includeTopInset={includeTopInset}
     >
-      <Text style={styles.title}>USER 수거 요청</Text>
-      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-      <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+      <View style={styles.headerCard}>
+        <Text style={styles.title}>My Pickup Requests</Text>
+        <Text style={styles.description}>Track your request status and usage history in one place.</Text>
+        <Text style={styles.caption}>Login ID: {me?.loginId ?? me?.email ?? '-'}</Text>
+        <Text style={styles.caption}>Roles: {me?.roles.join(', ') ?? '-'}</Text>
+      </View>
 
       {showRequestForm && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>요청 생성</Text>
-          <Text style={styles.meta}>주소는 내정보 주소관리에서 지정한 대표 주소지를 자동 사용합니다.</Text>
+          <Text style={styles.sectionTitle}>Create Request</Text>
+          <Text style={styles.bodyText}>Primary address is loaded from Profile / Address management.</Text>
 
-          <Text style={styles.label}>대표 주소지</Text>
-          {isLoadingPrimaryAddress && <Text style={styles.meta}>대표 주소지를 불러오는 중입니다.</Text>}
+          <Text style={styles.label}>Primary Address</Text>
+          {isLoadingPrimaryAddress && (
+            <View style={styles.skeletonCard}>
+              <View style={styles.skeletonLineShort} />
+              <View style={styles.skeletonLineLong} />
+            </View>
+          )}
+
           {primaryAddress && (
-            <View style={styles.addressBox}>
-              <Text style={styles.addressTitle}>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>
                 {primaryAddressBuildResult?.ok
                   ? primaryAddressBuildResult.address
                   : primaryAddress.roadAddress || primaryAddress.jibunAddress || '-'}
               </Text>
-              <Text style={styles.addressSub}>우편번호: {primaryAddress.zipCode || '-'}</Text>
-              <Text style={styles.addressSub}>지번: {primaryAddress.jibunAddress || '-'}</Text>
+              <Text style={styles.infoMeta}>Zip: {primaryAddress.zipCode || '-'}</Text>
+              <Text style={styles.infoMeta}>Jibun: {primaryAddress.jibunAddress || '-'}</Text>
             </View>
           )}
-          {primaryAddressIssueMessage && <Text style={styles.error}>{primaryAddressIssueMessage}</Text>}
+
+          {primaryAddressIssueMessage && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{primaryAddressIssueMessage}</Text>
+            </View>
+          )}
+
           {shouldShowAddressManagementCta && (
-            <Pressable style={styles.retryButton} onPress={() => navigation.navigate('UserAddressManagement')}>
-              <Text style={styles.retryButtonText}>주소관리로 이동</Text>
+            <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('UserAddressManagement')}>
+              <Text style={styles.secondaryButtonText}>Open Address Management</Text>
             </Pressable>
           )}
 
-          <Text style={styles.meta}>
-            연락처는 인증된 휴대폰 번호가 자동 적용됩니다: {me?.phoneNumber ?? '-'}
-          </Text>
-          {!isPhoneVerified && (
-            <Text style={styles.error}>휴대폰 본인인증 완료 후 신청할 수 있습니다.</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Contact</Text>
+            <Text style={styles.infoMeta}>Verified phone number is applied automatically.</Text>
+            <Text style={styles.infoMeta}>{me?.phoneNumber ?? '-'}</Text>
+            {!isPhoneVerified && <Text style={styles.errorText}>Phone verification is required.</Text>}
+          </View>
+
+          {isCheckingServiceArea && <Text style={styles.caption}>Checking service area availability...</Text>}
+
+          {serviceAreaCheckError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{serviceAreaCheckError}</Text>
+            </View>
           )}
 
-          {isCheckingServiceArea && (
-            <Text style={styles.meta}>서비스 가능 여부를 확인 중입니다.</Text>
-          )}
           {serviceAreaCheckError && (
-            <>
-              <Text style={styles.error}>{serviceAreaCheckError}</Text>
-              <Pressable
-                style={styles.retryButton}
-                onPress={() => {
-                  if (primaryRequestAddress) {
-                    void checkServiceAreaAvailability(primaryRequestAddress);
-                  }
-                }}
-              >
-                <Text style={styles.retryButtonText}>다시 시도</Text>
-              </Pressable>
-            </>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={() => {
+                if (primaryRequestAddress) {
+                  void checkServiceAreaAvailability(primaryRequestAddress);
+                }
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Retry</Text>
+            </Pressable>
           )}
 
           {isServiceAreaBlocked && !isCheckingServiceArea && !serviceAreaCheckError && (
-            <View style={styles.guardBox}>
-              <Text style={styles.guardTitle}>서비스 지역이 아니예요!</Text>
-              <Text style={styles.guardDescription}>현재 대표 주소지는 신청 가능한 지역이 아닙니다.</Text>
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>Service area blocked</Text>
+              <Text style={styles.warningText}>Current primary address is outside our service area.</Text>
             </View>
           )}
 
           {(isServiceAreaBlocked || !isPhoneVerified) && (
-            <Pressable
-              style={styles.ghostButton}
-              onPress={() => navigation.navigate('ServiceAreaBrowse')}
-            >
-              <Text style={styles.ghostButtonText}>서비스 지역 살펴보기</Text>
+            <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('ServiceAreaBrowse')}>
+              <Text style={styles.secondaryButtonText}>Browse Service Area</Text>
             </Pressable>
           )}
 
           {canSubmitRequest && (
             <>
-              <Text style={styles.label}>요청사항(선택)</Text>
+              <Text style={styles.label}>Note (optional)</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={note}
                 onChangeText={setNote}
                 multiline
-                placeholder="요청사항"
+                placeholder="Enter optional note"
                 placeholderTextColor="#94a3b8"
                 returnKeyType="done"
+                maxLength={300}
               />
 
               {submitSuccessMessage && (
-                <View style={styles.successBanner}>
-                  <Text style={styles.successBannerText}>{submitSuccessMessage}</Text>
+                <View style={styles.successCard}>
+                  <Text style={styles.successText}>{submitSuccessMessage}</Text>
                 </View>
               )}
-              {submitError && <Text style={styles.error}>{submitError}</Text>}
+
+              {submitError && (
+                <View style={styles.errorCard}>
+                  <Text style={styles.errorText}>{submitError}</Text>
+                </View>
+              )}
+
               {submitError && !isSubmitting && (
-                <Pressable style={styles.retryButton} onPress={handleCreate}>
-                  <Text style={styles.retryButtonText}>Retry</Text>
+                <Pressable style={styles.secondaryButton} onPress={handleCreate}>
+                  <Text style={styles.secondaryButtonText}>Retry</Text>
                 </Pressable>
               )}
 
               <Pressable
-                style={[styles.button, (isSubmitting || !canSubmitRequest) && styles.buttonDisabled]}
+                style={[styles.primaryButton, (isSubmitting || !canSubmitRequest) && styles.buttonDisabled]}
                 onPress={handleCreate}
                 disabled={isSubmitting || !canSubmitRequest}
               >
-                <Text style={styles.buttonText}>{isSubmitting ? '생성 중..' : '수거 요청 생성'}</Text>
+                <Text style={styles.primaryButtonText}>{isSubmitting ? 'Creating...' : 'Create Pickup Request'}</Text>
               </Pressable>
             </>
           )}
@@ -404,30 +452,54 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       {showHistory && (
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>요청/이용 내역</Text>
-            <Pressable style={styles.ghostButton} onPress={refreshRequests}>
-              <Text style={styles.ghostButtonText}>새로고침</Text>
+            <Text style={styles.sectionTitle}>Request History</Text>
+            <Pressable style={styles.secondaryButtonCompact} onPress={refreshRequests}>
+              <Text style={styles.secondaryButtonCompactText}>Refresh</Text>
             </Pressable>
           </View>
 
-          {isLoadingList && <Text style={styles.meta}>목록을 불러오는 중..</Text>}
-          {listError && <Text style={styles.error}>{listError}</Text>}
+          {isLoadingList && (
+            <View style={styles.listSkeletonGroup}>
+              <View style={styles.skeletonListItem} />
+              <View style={styles.skeletonListItem} />
+              <View style={styles.skeletonListItem} />
+            </View>
+          )}
 
-          {requests.map((item) => (
-            <Pressable
-              key={item.id}
-              style={styles.listItem}
-              onPress={() => navigation.navigate('WasteRequestDetail', { requestId: item.id })}
-            >
-              <Text style={styles.listTitle}>
-                #{item.id} {toUserWasteStatusLabel(item.status)}
-              </Text>
-              <Text style={styles.listSub}>{item.address}</Text>
-              <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
-            </Pressable>
-          ))}
+          {listError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{listError}</Text>
+            </View>
+          )}
 
-          {!isLoadingList && requests.length === 0 && <Text style={styles.meta}>생성된 요청이 없습니다.</Text>}
+          {!isLoadingList && requests.length === 0 && (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>No requests yet</Text>
+              <Text style={styles.emptyDescription}>Your pickup requests will appear here.</Text>
+            </View>
+          )}
+
+          {requests.map((item) => {
+            const badgeStyle = getStatusBadgeStyle(item.status);
+
+            return (
+              <Pressable
+                key={item.id}
+                style={styles.requestCard}
+                onPress={() => navigation.navigate('WasteRequestDetail', { requestId: item.id })}
+              >
+                <View style={styles.rowBetween}>
+                  <Text style={styles.requestTitle}>#{item.id}</Text>
+                  <View style={[styles.statusBadge, badgeStyle.container]}>
+                    <Text style={[styles.statusBadgeText, badgeStyle.text]}>{toUserWasteStatusLabel(item.status)}</Text>
+                  </View>
+                </View>
+                <Text style={styles.requestAddress}>{item.address}</Text>
+                <Text style={styles.requestDate}>{formatDate(item.createdAt)}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       )}
     </KeyboardAwareScrollScreen>
@@ -435,157 +507,284 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     padding: 16,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+    backgroundColor: colors.background,
+    gap: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
-  },
-  card: {
-    backgroundColor: ui.colors.card,
+  headerCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
     gap: 8,
   },
-  cardTitle: {
-    fontSize: 16,
+  title: {
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
+  },
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
+  },
+  card: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  bodyText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
   },
   label: {
-    fontSize: 13,
-    color: ui.colors.textStrong,
-    marginTop: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textStrong,
   },
-  input: {
+  infoCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  addressBox: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    gap: 3,
-  },
-  addressTitle: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  addressSub: {
-    color: ui.colors.text,
-    fontSize: 12,
-  },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
-  },
-  guardBox: {
-    borderWidth: 1,
-    borderColor: '#f5c2c7',
-    backgroundColor: '#fff5f5',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 12,
     gap: 4,
   },
-  guardTitle: {
-    color: '#b91c1c',
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  infoMeta: {
+    fontSize: 12,
+    color: colors.caption,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    minHeight: 96,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: colors.textStrong,
+    textAlignVertical: 'top',
+    backgroundColor: '#ffffff',
+    fontSize: 14,
+  },
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },
-  guardDescription: {
-    color: '#7f1d1d',
+  secondaryButton: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  secondaryButtonCompact: {
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  secondaryButtonCompactText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  warningCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    backgroundColor: '#fffbeb',
+    padding: 12,
+    gap: 4,
+  },
+  warningTitle: {
+    color: '#92400e',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  warningText: {
+    color: '#b45309',
     fontSize: 12,
   },
-  successBanner: {
-    backgroundColor: '#e8f7ee',
+  successCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#6cbf8f',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    borderColor: '#86efac',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  successBannerText: {
-    color: '#1f5134',
+  successText: {
+    color: colors.success,
     fontSize: 13,
     fontWeight: '600',
   },
-  retryButton: {
+  errorCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.error,
-    borderRadius: ui.radius.control,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: '#fff5f5',
   },
-  retryButtonText: {
-    color: ui.colors.error,
-    fontWeight: '700',
-  },
-  button: {
-    backgroundColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.65,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontWeight: '700',
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
   },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
-  ghostButton: {
+  requestCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 12,
+    gap: 6,
   },
-  ghostButtonText: {
-    color: ui.colors.text,
+  requestTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textStrong,
+  },
+  requestAddress: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  requestDate: {
     fontSize: 12,
-    fontWeight: '600',
+    color: colors.caption,
   },
-  listItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 2,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  listTitle: {
-    color: ui.colors.textStrong,
+  statusBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
   },
-  listSub: {
-    color: ui.colors.text,
-    fontSize: 12,
+  badgeSuccess: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeSuccessText: {
+    color: '#166534',
+  },
+  badgeWarning: {
+    backgroundColor: '#fef3c7',
+  },
+  badgeWarningText: {
+    color: '#92400e',
+  },
+  badgeError: {
+    backgroundColor: '#fee2e2',
+  },
+  badgeErrorText: {
+    color: '#991b1b',
+  },
+  badgeNeutral: {
+    backgroundColor: '#e2e8f0',
+  },
+  badgeNeutralText: {
+    color: '#334155',
+  },
+  emptyStateCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyIcon: {
+    fontSize: 16,
+    color: colors.caption,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  emptyDescription: {
+    fontSize: 13,
+    color: colors.caption,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  listSkeletonGroup: {
+    gap: 10,
+  },
+  skeletonListItem: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    height: 76,
+  },
+  skeletonCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    gap: 8,
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '50%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '78%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
   },
 });
