@@ -1,20 +1,26 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { AxiosError } from 'axios';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../auth/AuthContext';
-import { PhoneVerificationStartResponse } from '../types/auth';
-import { ui } from '../theme/ui';
+import type { PhoneVerificationStartResponse } from '../types/auth';
 
 const PORTONE_BROWSER_SDK_URL = 'https://cdn.portone.io/v2/browser-sdk.js';
 const PORTONE_REDIRECT_URL = 'https://delivery-mobile.local/phone-verification/callback';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0f172a',
+  text: '#334155',
+  caption: '#64748b',
+};
 
 type VerificationSession = PhoneVerificationStartResponse & {
   redirectUrl: string;
@@ -67,9 +73,7 @@ function parseVerificationError(error: unknown): ParsedVerificationError {
 
   const data = (error.response?.data as ApiErrorResponse | undefined) ?? undefined;
   const requestIdHeader = error.response?.headers?.['x-request-id'];
-  const requestId = typeof requestIdHeader === 'string'
-    ? requestIdHeader
-    : data?.requestId;
+  const requestId = typeof requestIdHeader === 'string' ? requestIdHeader : data?.requestId;
 
   return {
     code: data?.code,
@@ -129,7 +133,7 @@ function buildPhoneVerificationHtml(session: VerificationSession): string {
   </head>
   <body>
     <div class="box">
-      <p class="title">휴대폰 본인인증을 진행하고 있어요.</p>
+      <p class="title">휴대폰 본인인증을 진행하고 있어요</p>
       <p class="desc">인증 창이 열리지 않으면 이전 화면으로 돌아가 다시 시도해 주세요.</p>
     </div>
 
@@ -170,33 +174,27 @@ function resolvePhoneVerificationErrorMessage(error: unknown): string {
   const parsed = parseVerificationError(error);
 
   if (!(error instanceof AxiosError)) {
-    return withRequestIdMessage('휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
+    return withRequestIdMessage('본인인증 확인에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
   }
 
   const code = parsed.code;
   if (code === 'PHONE_VERIFICATION_NOT_COMPLETED') {
-    return withRequestIdMessage(
-      '본인인증이 아직 완료되지 않았습니다. 인증 완료 후 다시 시도해 주세요.',
-      parsed.requestId,
-    );
+    return withRequestIdMessage('본인인증이 아직 완료되지 않았습니다. 인증 완료 후 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_CANCELED') {
     return withRequestIdMessage('본인인증이 취소되었습니다. 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_FAILED') {
-    return withRequestIdMessage('본인인증에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
+    return withRequestIdMessage('본인인증이 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_TIMEOUT') {
     return withRequestIdMessage('본인인증 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', parsed.requestId);
   }
   if (code === 'PHONE_VERIFICATION_UNAVAILABLE') {
-    return withRequestIdMessage(
-      '본인인증 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
-      parsed.requestId,
-    );
+    return withRequestIdMessage('본인인증 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', parsed.requestId);
   }
 
-  return withRequestIdMessage('휴대폰 인증 확인에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
+  return withRequestIdMessage('본인인증 확인에 실패했습니다. 다시 시도해 주세요.', parsed.requestId);
 }
 
 export function PhoneVerificationScreen() {
@@ -350,43 +348,70 @@ export function PhoneVerificationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.container}>
-        <Text style={styles.title}>휴대폰 본인인증이 필요해요</Text>
-        <Text style={styles.description}>
-          본인인증이 완료되기 전까지 앱 기능을 사용할 수 없습니다.
-        </Text>
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>휴대폰 본인인증</Text>
+          <Text style={styles.description}>본인인증이 완료되어야 서비스를 계속 사용할 수 있습니다.</Text>
+        </View>
 
         {!session && (
-          <Pressable
-            style={[styles.primaryButton, isStarting && styles.buttonDisabled]}
-            onPress={() => {
-              void handleStartVerification();
-            }}
-            disabled={isStarting}
-          >
-            <Text style={styles.primaryButtonText}>{isStarting ? '인증 준비 중...' : '휴대폰 인증 시작'}</Text>
-          </Pressable>
+          <View style={styles.contentCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.sectionTitle}>인증 시작</Text>
+              {isStarting && (
+                <View style={[styles.statusBadge, styles.warningBadge]}>
+                  <Text style={styles.warningBadgeText}>준비 중</Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.bodyText}>버튼을 눌러 PortOne 본인인증을 시작해 주세요.</Text>
+
+            {isStarting ? (
+              <View style={styles.skeletonCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+              </View>
+            ) : (
+              <Pressable
+                style={[styles.primaryButton, isStarting && styles.buttonDisabled]}
+                onPress={() => {
+                  void handleStartVerification();
+                }}
+                disabled={isStarting}
+              >
+                <Text style={styles.primaryButtonText}>본인인증 시작</Text>
+              </Pressable>
+            )}
+          </View>
         )}
 
         {session && (
-          <View style={styles.webViewCard}>
-            <View style={styles.webViewHeader}>
-              <Text style={styles.webViewTitle}>포트원(다날) 본인인증</Text>
-              {(isStarting || isCompleting) && <ActivityIndicator size="small" color={ui.colors.primary} />}
+          <View style={styles.contentCardLarge}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.sectionTitle}>인증 진행</Text>
+              <View style={[styles.statusBadge, isCompleting ? styles.warningBadge : styles.successBadge]}>
+                <Text style={isCompleting ? styles.warningBadgeText : styles.successBadgeText}>
+                  {isCompleting ? '확인 중' : '진행 중'}
+                </Text>
+              </View>
             </View>
 
-            <WebView
-              source={{ html: webViewHtml }}
-              originWhitelist={['*']}
-              javaScriptEnabled
-              domStorageEnabled
-              setSupportMultipleWindows={false}
-              onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
-              onNavigationStateChange={(event) => handleNavigationStateChange(event.url)}
-              onError={handleWebViewError}
-              onHttpError={handleWebViewHttpError}
-              style={styles.webView}
-            />
+            <View style={styles.webViewFrame}>
+              <WebView
+                source={{ html: webViewHtml }}
+                originWhitelist={['*']}
+                javaScriptEnabled
+                domStorageEnabled
+                setSupportMultipleWindows={false}
+                onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
+                onNavigationStateChange={(event) => handleNavigationStateChange(event.url)}
+                onError={handleWebViewError}
+                onHttpError={handleWebViewHttpError}
+                style={styles.webView}
+              />
+            </View>
 
             <View style={styles.actionRow}>
               <Pressable
@@ -396,6 +421,7 @@ export function PhoneVerificationScreen() {
                 }}
                 disabled={isCompleting}
               >
+                {isCompleting && <ActivityIndicator size="small" color={colors.primary} />}
                 <Text style={styles.secondaryButtonText}>인증 완료 확인</Text>
               </Pressable>
 
@@ -406,16 +432,22 @@ export function PhoneVerificationScreen() {
           </View>
         )}
 
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        {errorMessage && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
 
-        <Pressable
-          style={styles.logoutButton}
-          onPress={() => {
-            void signOut();
-          }}
-        >
-          <Text style={styles.logoutButtonText}>로그아웃</Text>
-        </Pressable>
+        <View style={styles.footer}>
+          <Pressable
+            style={styles.ghostButton}
+            onPress={() => {
+              void signOut();
+            }}
+          >
+            <Text style={styles.ghostButtonText}>로그아웃</Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -424,106 +456,194 @@ export function PhoneVerificationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: ui.colors.screen,
+    backgroundColor: colors.background,
   },
-  container: {
+  screenContainer: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+    gap: 24,
+    backgroundColor: colors.background,
+  },
+  headerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 8,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
   },
   description: {
     fontSize: 14,
     lineHeight: 20,
-    color: ui.colors.text,
+    color: colors.text,
   },
-  webViewCard: {
-    flex: 1,
+  contentCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    backgroundColor: ui.colors.card,
-    overflow: 'hidden',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 12,
   },
-  webViewHeader: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: ui.colors.cardBorder,
+  contentCardLarge: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 12,
+    minHeight: 420,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
-  webViewTitle: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  bodyText: {
     fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  successBadge: {
+    backgroundColor: '#dcfce7',
+  },
+  successBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: colors.success,
+  },
+  warningBadge: {
+    backgroundColor: '#fef3c7',
+  },
+  warningBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#b45309',
+  },
+  skeletonCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '42%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '72%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  webViewFrame: {
+    flex: 1,
+    minHeight: 320,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
   },
   webView: {
     flex: 1,
-    minHeight: 360,
     backgroundColor: '#ffffff',
   },
   actionRow: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
+    gap: 12,
   },
   primaryButton: {
-    borderRadius: ui.radius.control,
-    backgroundColor: ui.colors.primary,
-    paddingVertical: 12,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
   secondaryButton: {
-    borderRadius: ui.radius.control,
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-    paddingVertical: 11,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   secondaryButtonText: {
-    color: ui.colors.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
   retryTextButton: {
     alignItems: 'center',
-    paddingVertical: 4,
+    justifyContent: 'center',
+    minHeight: 44,
   },
   retryText: {
-    color: ui.colors.primary,
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '700',
   },
   buttonDisabled: {
-    opacity: 0.65,
+    opacity: 0.7,
+  },
+  errorCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   errorText: {
-    color: ui.colors.error,
+    color: colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
-  logoutButton: {
+  footer: {
+    gap: 12,
+  },
+  ghostButton: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
   },
-  logoutButtonText: {
-    color: ui.colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
+  ghostButtonText: {
+    color: colors.caption,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

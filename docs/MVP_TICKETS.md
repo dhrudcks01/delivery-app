@@ -1560,7 +1560,7 @@
 - 로딩/에러 상태의 버튼 비활성 및 메시지 위치를 일관화한다.
 - iOS/Android에서 입력 완료 흐름과 스크롤 동작을 수동 검증한다.
 
-### [ ] T-0561 PhoneVerificationScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0561 PhoneVerificationScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 본인인증 화면을 UI_SYSTEM 기준으로 정리해 상태 표시와 재시도 동선을 명확히 한다.
 
