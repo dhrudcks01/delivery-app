@@ -1659,7 +1659,7 @@
 - Empty/Loading/Error 상태를 UI_SYSTEM 표준으로 정리한다.
 - iOS/Android에서 검색/상세 이동/뒤로가기 동작을 수동 검증한다.
 
-### [ ] T-0570 ServiceAreaManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0570 ServiceAreaManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 서비스 신청지역 관리 화면의 선택/등록/상태 표시 UI를 UI_SYSTEM 기준으로 정리한다.
 

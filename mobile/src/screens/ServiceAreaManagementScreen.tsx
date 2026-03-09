@@ -1,6 +1,6 @@
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   createOpsServiceAreaByCode,
   deleteOpsServiceArea,
@@ -11,7 +11,6 @@ import {
 } from '../api/serviceAreaApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { useAuth } from '../auth/AuthContext';
-import { ui } from '../theme/ui';
 import { ApiErrorResponse } from '../types/waste';
 import { ServiceArea, ServiceAreaMasterDong } from '../types/serviceArea';
 
@@ -26,6 +25,19 @@ const CITY_ALIAS_BY_NORMALIZED: Record<string, string> = {
   daejeon: '대전광역시',
   ulsan: '울산광역시',
   sejong: '세종특별자치시',
+};
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
 };
 
 function toErrorMessage(error: unknown): string {
@@ -72,6 +84,10 @@ function toAreaKey(city: string, district: string, dong: string): string {
 
 function formatAreaLabel(area: Pick<ServiceArea, 'city' | 'district' | 'dong'>): string {
   return `${area.city} ${area.district} ${area.dong}`.trim();
+}
+
+function formatDateTime(dateTime: string): string {
+  return new Date(dateTime).toLocaleString();
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -504,322 +520,458 @@ export function ServiceAreaManagementScreen() {
 
   if (!canManage) {
     return (
-      <KeyboardAwareScrollScreen contentContainerStyle={styles.container}>
-        <Text style={styles.title}>서비스 신청지역</Text>
-        <View style={styles.card}>
-          <Text style={styles.errorText}>접근 권한이 없습니다.</Text>
-          <Text style={styles.meta}>OPS_ADMIN 또는 SYS_ADMIN 권한이 필요합니다.</Text>
+      <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} includeTopInset>
+        <View style={styles.screenContainer}>
+          <View style={styles.headerCard}>
+            <Text style={styles.badge}>운영 설정</Text>
+            <Text style={styles.title}>서비스 신청지역</Text>
+            <Text style={styles.description}>서비스 신청지역 등록/조회/상태 변경을 관리합니다.</Text>
+          </View>
+          <View style={styles.noPermissionCard}>
+            <Text style={styles.errorText}>접근 권한이 없습니다.</Text>
+            <Text style={styles.caption}>OPS_ADMIN 또는 SYS_ADMIN 권한이 필요합니다.</Text>
+          </View>
         </View>
       </KeyboardAwareScrollScreen>
     );
   }
 
   return (
-    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>서비스 신청지역</Text>
-      <Text style={styles.meta}>OPS_ADMIN/SYS_ADMIN 권한으로 서비스 지역을 관리합니다.</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>선택형 지역 등록 (시/구/동 트리)</Text>
-        <Text style={styles.meta}>텍스트 직접 입력 대신 행정구역 마스터에서 선택해 등록합니다.</Text>
-
-        <Text style={styles.sectionTitle}>1) 시/도 선택</Text>
-        <View style={styles.inlineRow}>
-          <TextInput
-            style={[styles.input, styles.inlineInput]}
-            value={citySearchInput}
-            onChangeText={setCitySearchInput}
-            placeholder="시/도 검색어 (예: 서울)"
-            placeholderTextColor="#94a3b8"
-            returnKeyType="search"
-            onSubmitEditing={() => void handleCitySearch()}
-          />
-          <Pressable style={styles.inlineButton} onPress={() => void handleCitySearch()} disabled={isCityLoading}>
-            <Text style={styles.inlineButtonText}>{isCityLoading ? '조회중' : '조회'}</Text>
-          </Pressable>
-        </View>
-        <View style={styles.optionWrap}>
-          {cityOptions.map((city) => (
-            <Pressable
-              key={city}
-              style={[styles.optionChip, selectedCity === city && styles.optionChipActive]}
-              onPress={() => handleSelectCity(city)}
-            >
-              <Text style={[styles.optionChipText, selectedCity === city && styles.optionChipTextActive]}>{city}</Text>
-            </Pressable>
-          ))}
+    <KeyboardAwareScrollScreen
+      contentContainerStyle={styles.screen}
+      keyboardShouldPersistTaps="handled"
+      includeTopInset
+    >
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.badge}>운영 설정</Text>
+          <Text style={styles.title}>서비스 신청지역</Text>
+          <Text style={styles.description}>OPS_ADMIN/SYS_ADMIN 권한으로 서비스 신청지역을 등록하고 상태를 관리합니다.</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>2) 시/군/구 선택</Text>
-        <View style={styles.inlineRow}>
-          <TextInput
-            style={[styles.input, styles.inlineInput]}
-            value={districtSearchInput}
-            onChangeText={setDistrictSearchInput}
-            placeholder={selectedCity ? '시/군/구 검색어 (예: 마포)' : '먼저 시/도를 선택해 주세요.'}
-            placeholderTextColor="#94a3b8"
-            editable={!!selectedCity}
-            returnKeyType="search"
-            onSubmitEditing={() => void handleDistrictSearch()}
-          />
-          <Pressable
-            style={[styles.inlineButton, !selectedCity && styles.buttonDisabled]}
-            onPress={() => void handleDistrictSearch()}
-            disabled={!selectedCity || isDistrictLoading}
-          >
-            <Text style={styles.inlineButtonText}>{isDistrictLoading ? '조회중' : '조회'}</Text>
-          </Pressable>
-        </View>
-        <View style={styles.optionWrap}>
-          {districtOptions.map((district) => (
-            <Pressable
-              key={`${selectedCity ?? 'city'}-${district}`}
-              style={[styles.optionChip, selectedDistrict === district && styles.optionChipActive]}
-              onPress={() => handleSelectDistrict(district)}
-            >
-              <Text style={[styles.optionChipText, selectedDistrict === district && styles.optionChipTextActive]}>
-                {district}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Pressable
-          style={[
-            styles.bulkButton,
-            (!selectedDistrict || isBulkSelecting || isSubmitting) && styles.buttonDisabled,
-          ]}
-          onPress={() => void handleAddDistrictAllDongs()}
-          disabled={!selectedDistrict || isBulkSelecting || isSubmitting}
-        >
-          <Text style={styles.bulkButtonText}>
-            {isBulkSelecting ? '구 전체 동 불러오는 중..' : '선택한 구 전체 동 추가'}
-          </Text>
-        </Pressable>
-
-        <Text style={styles.sectionTitle}>3) 동 선택 (다중 선택)</Text>
-        <View style={styles.inlineRow}>
-          <TextInput
-            style={[styles.input, styles.inlineInput]}
-            value={dongSearchInput}
-            onChangeText={setDongSearchInput}
-            placeholder={selectedDistrict ? '동 검색어 (예: 서교)' : '먼저 시/군/구를 선택해 주세요.'}
-            placeholderTextColor="#94a3b8"
-            editable={!!selectedDistrict}
-            returnKeyType="search"
-            onSubmitEditing={() => void handleDongSearch()}
-          />
-          <Pressable
-            style={[styles.inlineButton, !selectedDistrict && styles.buttonDisabled]}
-            onPress={() => void handleDongSearch()}
-            disabled={!selectedDistrict || isDongLoading || isSubmitting}
-          >
-            <Text style={styles.inlineButtonText}>{isDongLoading ? '조회중' : '조회'}</Text>
-          </Pressable>
-        </View>
-        <View style={styles.listWrap}>
-          {dongOptions.map((item) => {
-            const isSelected = selectedDongMap.has(item.code);
-            return (
-              <Pressable
-                key={item.code}
-                style={[styles.listItem, isSelected && styles.listItemSelected]}
-                onPress={() => toggleDongSelection(item)}
-              >
-                <Text style={styles.listTitle}>{item.dong}</Text>
-                <Text style={styles.listSub}>{item.code}</Text>
-                <Text style={[styles.pickText, isSelected && styles.pickTextSelected]}>
-                  {isSelected ? '선택됨' : '선택'}
-                </Text>
-              </Pressable>
-            );
-          })}
-          {dongOptions.length === 0 && <Text style={styles.meta}>조회된 동이 없습니다.</Text>}
-        </View>
-
-        <Text style={styles.meta}>선택된 동: {selectedDongList.length}건</Text>
-        <View style={styles.optionWrap}>
-          {selectedDongList.map((item) => (
-            <Pressable key={`selected-${item.code}`} style={styles.selectedChip} onPress={() => removeSelectedDong(item.code)}>
-              <Text style={styles.selectedChipText}>{formatAreaLabel(item)} (해제)</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.actionRow}>
-          <Pressable
-            style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
-            onPress={() => void handleRegisterSelected()}
-            disabled={isSubmitting || isBulkSelecting}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isSubmitting ? '등록 중..' : `선택 지역 등록 (${selectedDongList.length})`}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
-            onPress={clearSelectedDongs}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.secondaryButtonText}>선택 초기화</Text>
-          </Pressable>
-        </View>
-        {isSubmitting && (
-          <Text style={styles.meta}>
-            {isRetrySubmitting
-              ? `실패 건 재시도 중입니다. (${submittingTargetCount}건)`
-              : `대량 등록 처리 중입니다. (${submittingTargetCount}건)`}
-          </Text>
-        )}
-        {failedRegistrationTargets.length > 0 && !isSubmitting && (
-          <View style={styles.retryWrap}>
-            <Text style={styles.warningText}>실패 {failedRegistrationTargets.length}건이 남아 있습니다.</Text>
-            <Pressable style={styles.retryButton} onPress={() => void handleRetryFailedRegistrations()}>
-              <Text style={styles.retryButtonText}>실패 건 재시도</Text>
-            </Pressable>
+        {resultMessage && (
+          <View style={styles.successCard}>
+            <Text style={styles.successText}>{resultMessage}</Text>
           </View>
         )}
-      </View>
+        {errorMessage && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>등록 지역 조회/비활성화</Text>
-        <TextInput
-          style={styles.input}
-          value={queryInput}
-          onChangeText={setQueryInput}
-          placeholder="검색어(시/구/동)"
-          placeholderTextColor="#94a3b8"
-          returnKeyType="search"
-          onSubmitEditing={handleSearch}
-        />
-        <View style={styles.filterRow}>
-          <Pressable
-            style={[styles.filterChip, activeFilter === 'ALL' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('ALL')}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'ALL' && styles.filterChipTextActive]}>전체</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.filterChip, activeFilter === 'ACTIVE' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('ACTIVE')}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'ACTIVE' && styles.filterChipTextActive]}>활성</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.filterChip, activeFilter === 'INACTIVE' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('INACTIVE')}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'INACTIVE' && styles.filterChipTextActive]}>
-              비활성
-            </Text>
-          </Pressable>
-        </View>
-        <View style={styles.actionRow}>
-          <Pressable style={styles.primaryButton} onPress={handleSearch}>
-            <Text style={styles.primaryButtonText}>검색</Text>
-          </Pressable>
-          <Pressable style={styles.secondaryButton} onPress={handleReset}>
-            <Text style={styles.secondaryButtonText}>초기화</Text>
-          </Pressable>
-        </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>선택형 지역 등록 (시/구/동 트리)</Text>
+          <Text style={styles.caption}>행정구역 마스터를 검색해 동을 선택하고 등록합니다.</Text>
 
-        {appliedQuery ? <Text style={styles.meta}>검색어: {appliedQuery}</Text> : <Text style={styles.meta}>전체 지역</Text>}
-        <Text style={styles.meta}>총 {totalCount}건</Text>
-        {resultMessage && <Text style={styles.successText}>{resultMessage}</Text>}
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-        {isLoading && <Text style={styles.meta}>서비스 신청지역 목록을 불러오는 중입니다.</Text>}
-        {!isLoading && areas.length === 0 && <Text style={styles.meta}>조회된 서비스 신청지역이 없습니다.</Text>}
-
-        {!isLoading && areas.length > 0 && (
-          <View style={styles.listWrap}>
-            {areas.map((area) => (
-              <View key={area.id} style={styles.listItem}>
-                <Text style={styles.listTitle}>{formatAreaLabel(area)}</Text>
-                <Text style={styles.listSub}>상태: {area.active ? '활성' : '비활성'}</Text>
-                <Text style={styles.listSub}>업데이트: {new Date(area.updatedAt).toLocaleString()}</Text>
-                {area.active && (
-                  <Pressable
-                    style={[styles.deactivateButton, updatingAreaId === area.id && styles.buttonDisabled]}
-                    onPress={() => void handleDeactivate(area.id)}
-                    disabled={updatingAreaId !== null || deletingAreaId !== null}
-                  >
-                    <Text style={styles.deactivateButtonText}>
-                      {updatingAreaId === area.id ? '처리 중..' : '비활성화'}
-                    </Text>
-                  </Pressable>
-                )}
-                {!area.active && (
-                  <View style={styles.actionRow}>
-                    <Pressable
-                      style={[styles.reactivateButton, updatingAreaId === area.id && styles.buttonDisabled]}
-                      onPress={() => void handleReactivate(area.id)}
-                      disabled={updatingAreaId !== null || deletingAreaId !== null}
-                    >
-                      <Text style={styles.reactivateButtonText}>
-                        {updatingAreaId === area.id ? '처리 중..' : '재활성화'}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.deleteButton, deletingAreaId === area.id && styles.buttonDisabled]}
-                      onPress={() => void handleDeleteInactive(area.id)}
-                      disabled={updatingAreaId !== null || deletingAreaId !== null}
-                    >
-                      <Text style={styles.deleteButtonText}>
-                        {deletingAreaId === area.id ? '처리 중..' : '삭제'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
+          <Text style={styles.fieldLabel}>1) 시/도 선택</Text>
+          <View style={styles.inlineRow}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              value={citySearchInput}
+              onChangeText={setCitySearchInput}
+              placeholder="시/도 검색어 (예: 서울)"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="search"
+              onSubmitEditing={() => void handleCitySearch()}
+            />
+            <Pressable
+              style={[styles.inlineButton, isCityLoading && styles.buttonDisabled]}
+              onPress={() => void handleCitySearch()}
+              disabled={isCityLoading}
+            >
+              <Text style={styles.inlineButtonText}>{isCityLoading ? '조회 중' : '조회'}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.chipWrap}>
+            {cityOptions.map((city) => (
+              <Pressable
+                key={city}
+                style={[styles.chip, selectedCity === city && styles.chipActive]}
+                onPress={() => handleSelectCity(city)}
+              >
+                <Text style={[styles.chipText, selectedCity === city && styles.chipTextActive]}>{city}</Text>
+              </Pressable>
             ))}
           </View>
-        )}
+
+          <Text style={styles.fieldLabel}>2) 시/군/구 선택</Text>
+          <View style={styles.inlineRow}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              value={districtSearchInput}
+              onChangeText={setDistrictSearchInput}
+              placeholder={selectedCity ? '시/군/구 검색어 (예: 마포)' : '먼저 시/도를 선택해 주세요.'}
+              placeholderTextColor="#94a3b8"
+              editable={!!selectedCity}
+              returnKeyType="search"
+              onSubmitEditing={() => void handleDistrictSearch()}
+            />
+            <Pressable
+              style={[styles.inlineButton, (!selectedCity || isDistrictLoading) && styles.buttonDisabled]}
+              onPress={() => void handleDistrictSearch()}
+              disabled={!selectedCity || isDistrictLoading}
+            >
+              <Text style={styles.inlineButtonText}>{isDistrictLoading ? '조회 중' : '조회'}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.chipWrap}>
+            {districtOptions.map((district) => (
+              <Pressable
+                key={`${selectedCity ?? 'city'}-${district}`}
+                style={[styles.chip, selectedDistrict === district && styles.chipActive]}
+                onPress={() => handleSelectDistrict(district)}
+              >
+                <Text style={[styles.chipText, selectedDistrict === district && styles.chipTextActive]}>
+                  {district}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            style={[
+              styles.bulkButton,
+              (!selectedDistrict || isBulkSelecting || isSubmitting) && styles.buttonDisabled,
+            ]}
+            onPress={() => void handleAddDistrictAllDongs()}
+            disabled={!selectedDistrict || isBulkSelecting || isSubmitting}
+          >
+            <Text style={styles.bulkButtonText}>
+              {isBulkSelecting ? '구 전체 동 불러오는 중...' : '선택한 구 전체 동 추가'}
+            </Text>
+          </Pressable>
+
+          <Text style={styles.fieldLabel}>3) 동 선택 (다중 선택)</Text>
+          <View style={styles.inlineRow}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              value={dongSearchInput}
+              onChangeText={setDongSearchInput}
+              placeholder={selectedDistrict ? '동 검색어 (예: 서교)' : '먼저 시/군/구를 선택해 주세요.'}
+              placeholderTextColor="#94a3b8"
+              editable={!!selectedDistrict}
+              returnKeyType="search"
+              onSubmitEditing={() => void handleDongSearch()}
+            />
+            <Pressable
+              style={[styles.inlineButton, (!selectedDistrict || isDongLoading || isSubmitting) && styles.buttonDisabled]}
+              onPress={() => void handleDongSearch()}
+              disabled={!selectedDistrict || isDongLoading || isSubmitting}
+            >
+              <Text style={styles.inlineButtonText}>{isDongLoading ? '조회 중' : '조회'}</Text>
+            </Pressable>
+          </View>
+
+          {isDongLoading && (
+            <View style={styles.loadingGroup}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>동 목록을 불러오는 중입니다...</Text>
+              </View>
+              <View style={styles.skeletonCard}>
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+              </View>
+            </View>
+          )}
+
+          {!isDongLoading && dongOptions.length === 0 && (
+            <View style={styles.emptyInlineCard}>
+              <Text style={styles.caption}>조회된 동이 없습니다.</Text>
+            </View>
+          )}
+
+          {!isDongLoading && dongOptions.length > 0 && (
+            <View style={styles.listWrap}>
+              {dongOptions.map((item) => {
+                const isSelected = selectedDongMap.has(item.code);
+                return (
+                  <Pressable
+                    key={item.code}
+                    style={[styles.listItem, isSelected && styles.listItemSelected]}
+                    onPress={() => toggleDongSelection(item)}
+                  >
+                    <Text style={styles.listTitle}>{item.dong}</Text>
+                    <Text style={styles.listSub}>{item.code}</Text>
+                    <Text style={[styles.pickText, isSelected && styles.pickTextSelected]}>
+                      {isSelected ? '선택됨' : '선택'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          <View style={styles.selectedCountRow}>
+            <Text style={styles.caption}>선택된 동</Text>
+            <View style={styles.infoBadge}>
+              <Text style={styles.infoBadgeText}>{selectedDongList.length}건</Text>
+            </View>
+          </View>
+          <View style={styles.chipWrap}>
+            {selectedDongList.map((item) => (
+              <Pressable
+                key={`selected-${item.code}`}
+                style={styles.selectedChip}
+                onPress={() => removeSelectedDong(item.code)}
+              >
+                <Text style={styles.selectedChipText}>{formatAreaLabel(item)} (해제)</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.actionRow}>
+            <Pressable
+              style={[styles.primaryButton, (isSubmitting || isBulkSelecting) && styles.buttonDisabled]}
+              onPress={() => void handleRegisterSelected()}
+              disabled={isSubmitting || isBulkSelecting}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isSubmitting ? '등록 중...' : `선택 지역 등록 (${selectedDongList.length})`}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
+              onPress={clearSelectedDongs}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.secondaryButtonText}>선택 초기화</Text>
+            </Pressable>
+          </View>
+
+          {isSubmitting && (
+            <View style={styles.progressCard}>
+              <Text style={styles.progressText}>
+                {isRetrySubmitting
+                  ? `실패 건 재시도 중입니다. (${submittingTargetCount}건)`
+                  : `대량 등록 처리 중입니다. (${submittingTargetCount}건)`}
+              </Text>
+            </View>
+          )}
+
+          {failedRegistrationTargets.length > 0 && !isSubmitting && (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningText}>실패 {failedRegistrationTargets.length}건이 남아 있습니다.</Text>
+              <Pressable style={styles.retryButton} onPress={() => void handleRetryFailedRegistrations()}>
+                <Text style={styles.retryButtonText}>실패 건 재시도</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>등록 지역 조회/상태 관리</Text>
+          <Text style={styles.caption}>검색 후 활성/비활성 상태를 변경하거나 비활성 항목을 삭제합니다.</Text>
+
+          <TextInput
+            style={styles.input}
+            value={queryInput}
+            onChangeText={setQueryInput}
+            placeholder="검색어(시/구/동)"
+            placeholderTextColor="#94a3b8"
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+          />
+
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, activeFilter === 'ALL' && styles.filterChipActive]}
+              onPress={() => setActiveFilter('ALL')}
+            >
+              <Text style={[styles.filterChipText, activeFilter === 'ALL' && styles.filterChipTextActive]}>전체</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, activeFilter === 'ACTIVE' && styles.filterChipActive]}
+              onPress={() => setActiveFilter('ACTIVE')}
+            >
+              <Text style={[styles.filterChipText, activeFilter === 'ACTIVE' && styles.filterChipTextActive]}>활성</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, activeFilter === 'INACTIVE' && styles.filterChipActive]}
+              onPress={() => setActiveFilter('INACTIVE')}
+            >
+              <Text style={[styles.filterChipText, activeFilter === 'INACTIVE' && styles.filterChipTextActive]}>
+                비활성
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.actionRow}>
+            <Pressable
+              style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+              onPress={handleSearch}
+              disabled={isLoading}
+            >
+              <Text style={styles.primaryButtonText}>검색</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.secondaryButton, isLoading && styles.buttonDisabled]}
+              onPress={handleReset}
+              disabled={isLoading}
+            >
+              <Text style={styles.secondaryButtonText}>초기화</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.caption}>{appliedQuery ? `검색어: ${appliedQuery}` : '전체 지역'}</Text>
+            <View style={styles.infoBadge}>
+              <Text style={styles.infoBadgeText}>{totalCount}건</Text>
+            </View>
+          </View>
+
+          {isLoading && (
+            <View style={styles.loadingGroup}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>서비스 신청지역 목록을 불러오는 중입니다...</Text>
+              </View>
+              <View style={styles.skeletonCard}>
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+              </View>
+              <View style={styles.skeletonCard}>
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+              </View>
+            </View>
+          )}
+
+          {!isLoading && areas.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>조회된 서비스 신청지역이 없습니다</Text>
+              <Text style={styles.emptyDescription}>검색어 또는 필터를 조정한 뒤 다시 조회해 주세요.</Text>
+            </View>
+          )}
+
+          {!isLoading && areas.length > 0 && (
+            <View style={styles.listWrap}>
+              {areas.map((area) => (
+                <View key={area.id} style={styles.listItem}>
+                  <View style={styles.selectedCountRow}>
+                    <Text style={styles.listTitle}>{formatAreaLabel(area)}</Text>
+                    <View style={[styles.statusBadge, area.active ? styles.statusActiveBadge : styles.statusInactiveBadge]}>
+                      <Text style={[styles.statusBadgeText, area.active ? styles.statusActiveText : styles.statusInactiveText]}>
+                        {area.active ? '활성' : '비활성'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.listSub}>업데이트: {formatDateTime(area.updatedAt)}</Text>
+
+                  {area.active && (
+                    <Pressable
+                      style={[styles.dangerButton, updatingAreaId === area.id && styles.buttonDisabled]}
+                      onPress={() => void handleDeactivate(area.id)}
+                      disabled={updatingAreaId !== null || deletingAreaId !== null}
+                    >
+                      <Text style={styles.dangerButtonText}>
+                        {updatingAreaId === area.id ? '처리 중...' : '비활성화'}
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  {!area.active && (
+                    <View style={styles.actionRow}>
+                      <Pressable
+                        style={[styles.reactivateButton, updatingAreaId === area.id && styles.buttonDisabled]}
+                        onPress={() => void handleReactivate(area.id)}
+                        disabled={updatingAreaId !== null || deletingAreaId !== null}
+                      >
+                        <Text style={styles.reactivateButtonText}>
+                          {updatingAreaId === area.id ? '처리 중...' : '재활성화'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.dangerButton, deletingAreaId === area.id && styles.buttonDisabled]}
+                        onPress={() => void handleDeleteInactive(area.id)}
+                        disabled={updatingAreaId !== null || deletingAreaId !== null}
+                      >
+                        <Text style={styles.dangerButtonText}>
+                          {deletingAreaId === area.id ? '처리 중...' : '삭제'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
     </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+  screen: {
+    flexGrow: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
+  screenContainer: {
+    gap: 16,
   },
-  meta: {
-    color: ui.colors.text,
-    fontSize: 13,
-  },
-  sectionTitle: {
-    marginTop: 4,
-    color: ui.colors.textStrong,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  card: {
-    backgroundColor: ui.colors.card,
+  headerCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
-  cardTitle: {
-    fontSize: 16,
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textStrong,
+  },
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    color: colors.textStrong,
+    fontWeight: '600',
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    color: colors.textStrong,
     backgroundColor: '#ffffff',
+    fontSize: 14,
   },
   inlineRow: {
     flexDirection: 'row',
@@ -830,65 +982,86 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inlineButton: {
-    borderRadius: ui.radius.control,
-    paddingVertical: 10,
+    height: 48,
+    borderRadius: 12,
     paddingHorizontal: 14,
     alignItems: 'center',
-    backgroundColor: ui.colors.primary,
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
   },
   inlineButtonText: {
     color: '#ffffff',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 14,
   },
   bulkButton: {
-    borderRadius: ui.radius.control,
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#0f766e',
-    paddingVertical: 10,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
     alignItems: 'center',
-    backgroundColor: '#ecfeff',
+    justifyContent: 'center',
   },
   bulkButtonText: {
-    color: '#0f766e',
+    color: '#1d4ed8',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 14,
   },
-  optionWrap: {
+  chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  optionChip: {
+  chip: {
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
+    borderColor: colors.border,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: '#ffffff',
   },
-  optionChipActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
+  chipActive: {
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
   },
-  optionChipText: {
-    color: ui.colors.text,
+  chipText: {
+    color: colors.text,
     fontSize: 12,
     fontWeight: '600',
   },
-  optionChipTextActive: {
-    color: ui.colors.primary,
+  chipTextActive: {
+    color: '#1d4ed8',
+  },
+  selectedCountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoBadge: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  infoBadgeText: {
+    fontSize: 12,
+    color: '#1d4ed8',
+    fontWeight: '700',
   },
   selectedChip: {
     borderRadius: 999,
-    backgroundColor: '#ecfeff',
+    backgroundColor: '#eff6ff',
     borderWidth: 1,
-    borderColor: '#67e8f9',
+    borderColor: '#bfdbfe',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   selectedChipText: {
-    color: '#155e75',
+    color: '#1d4ed8',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -898,24 +1071,25 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     flex: 1,
+    height: 44,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.control,
-    paddingVertical: 8,
+    borderColor: colors.border,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#ffffff',
   },
   filterChipActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
   },
   filterChipText: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: ui.colors.primary,
+    color: '#1d4ed8',
   },
   actionRow: {
     flexDirection: 'row',
@@ -923,62 +1097,172 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    borderRadius: ui.radius.control,
-    paddingVertical: 10,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: ui.colors.primary,
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
   },
   primaryButtonText: {
     color: '#ffffff',
     fontWeight: '700',
+    fontSize: 14,
   },
   secondaryButton: {
     flex: 1,
-    borderRadius: ui.radius.control,
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    paddingVertical: 10,
+    borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#ffffff',
   },
   secondaryButtonText: {
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
     fontWeight: '700',
+    fontSize: 14,
   },
   buttonDisabled: {
-    opacity: 0.65,
+    opacity: 0.7,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingGroup: {
+    gap: 8,
+  },
+  loadingCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#1d4ed8',
+    fontWeight: '600',
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '34%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '78%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  emptyInlineCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#ffffff',
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  emptyIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.caption,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  successCard: {
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    padding: 12,
   },
   successText: {
-    color: ui.colors.success,
+    color: colors.success,
     fontSize: 13,
+    lineHeight: 18,
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 12,
   },
   errorText: {
-    color: ui.colors.error,
+    color: colors.error,
     fontSize: 13,
+    lineHeight: 18,
   },
-  retryWrap: {
+  progressCard: {
     borderWidth: 1,
-    borderColor: ui.colors.warningBorder,
-    backgroundColor: ui.colors.warningBg,
-    borderRadius: ui.radius.control,
-    padding: 10,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    borderRadius: 12,
+    padding: 12,
+  },
+  progressText: {
+    color: '#1d4ed8',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  warningCard: {
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
+    padding: 12,
     gap: 8,
   },
   warningText: {
-    color: ui.colors.warningText,
+    color: '#b45309',
     fontSize: 13,
     fontWeight: '600',
   },
   retryButton: {
-    borderRadius: ui.radius.control,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: ui.colors.warningBorder,
+    borderColor: '#fde68a',
     backgroundColor: '#ffffff',
-    paddingVertical: 9,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   retryButtonText: {
-    color: ui.colors.warningText,
+    color: '#b45309',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -987,73 +1271,96 @@ const styles = StyleSheet.create({
   },
   listItem: {
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
     gap: 4,
     backgroundColor: '#ffffff',
   },
   listItemSelected: {
-    borderColor: '#22c55e',
+    borderColor: '#86efac',
     backgroundColor: '#f0fdf4',
   },
   listTitle: {
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
     fontSize: 14,
     fontWeight: '700',
   },
   listSub: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 12,
   },
   pickText: {
-    color: ui.colors.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
   },
   pickTextSelected: {
-    color: '#15803d',
+    color: colors.success,
   },
-  deactivateButton: {
-    marginTop: 4,
-    borderRadius: ui.radius.control,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#b91c1c',
-    paddingVertical: 8,
-    alignItems: 'center',
-    backgroundColor: '#fff1f2',
   },
-  deactivateButtonText: {
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statusActiveBadge: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+  },
+  statusInactiveBadge: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  statusActiveText: {
+    color: colors.success,
+  },
+  statusInactiveText: {
+    color: '#b45309',
+  },
+  dangerButton: {
+    flex: 1,
+    height: 44,
+    marginTop: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
+  },
+  dangerButtonText: {
+    fontSize: 13,
     color: '#b91c1c',
     fontWeight: '700',
   },
   reactivateButton: {
     flex: 1,
+    height: 44,
     marginTop: 4,
-    borderRadius: ui.radius.control,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#0f766e',
-    paddingVertical: 8,
+    borderColor: '#bfdbfe',
     alignItems: 'center',
-    backgroundColor: '#ecfeff',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
   },
   reactivateButtonText: {
-    color: '#0f766e',
+    color: '#1d4ed8',
+    fontSize: 13,
     fontWeight: '700',
   },
-  deleteButton: {
-    flex: 1,
-    marginTop: 4,
-    borderRadius: ui.radius.control,
+  noPermissionCard: {
     borderWidth: 1,
-    borderColor: '#b91c1c',
-    paddingVertical: 8,
-    alignItems: 'center',
-    backgroundColor: '#fff1f2',
-  },
-  deleteButtonText: {
-    color: '#b91c1c',
-    fontWeight: '700',
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
   },
 });
