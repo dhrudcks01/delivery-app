@@ -1582,7 +1582,7 @@
 - Empty/Loading/Error 상태를 공통 컴포넌트 기반으로 정리한다.
 - iOS/Android에서 홈 섹션 전환 및 스크롤 UX를 수동 검증한다.
 
-### [ ] T-0563 UserWasteRequestCreateScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0563 UserWasteRequestCreateScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - USER 수거신청 생성 화면의 3단계 UI를 UI_SYSTEM 기준으로 리팩토링한다.
 
