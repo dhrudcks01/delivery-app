@@ -1703,7 +1703,7 @@
 - Empty/Loading/Error 상태와 재시도 CTA를 공통 패턴으로 제공한다.
 - iOS/Android에서 목록 필터/상세 진입 흐름을 수동 검증한다.
 
-### [ ] T-0574 OpsWasteRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0574 OpsWasteRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - OPS_ADMIN 수거요청 상세 화면의 배정/재배정/상태 정보 UI를 UI_SYSTEM 기준으로 정리한다.
 

@@ -2,19 +2,32 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { AxiosError } from 'axios';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   assignWasteRequestForOps,
   getDriverAssignmentCandidatesForOps,
   getOpsWasteRequestDetail,
 } from '../api/opsAdminWasteApi';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { ui } from '../theme/ui';
 import { DriverAssignmentCandidate, OpsWasteRequestDetail } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
-import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
+import { toWasteStatusLabel, toWasteStatusLabelOrStart } from '../utils/wasteStatusLabel';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -39,6 +52,43 @@ function formatAmount(amount: number | null): string {
     return '미정';
   }
   return `${amount.toLocaleString('ko-KR')}원`;
+}
+
+function formatWeight(weight: number | null): string {
+  if (weight === null) {
+    return '미측정';
+  }
+  return `${weight} kg`;
+}
+
+function getStatusBadgeStyle(status: string) {
+  if (status === 'COMPLETED' || status === 'PAID' || status === 'PICKED_UP') {
+    return { container: styles.statusBadgeSuccess, text: styles.statusBadgeSuccessText };
+  }
+  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
+    return { container: styles.statusBadgeError, text: styles.statusBadgeErrorText };
+  }
+  if (status === 'REQUESTED' || status === 'ASSIGNED' || status === 'PAYMENT_PENDING') {
+    return { container: styles.statusBadgeWarning, text: styles.statusBadgeWarningText };
+  }
+  return { container: styles.statusBadgeNeutral, text: styles.statusBadgeNeutralText };
+}
+
+function InfoRow({
+  label,
+  value,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={[styles.infoValue, multiline && styles.infoValueMultiline]}>{value}</Text>
+    </View>
+  );
 }
 
 export function OpsWasteRequestDetailScreen() {
@@ -67,6 +117,10 @@ export function OpsWasteRequestDetailScreen() {
     [selectedWasteRequest],
   );
   const isReassignMode = selectedWasteRequest?.status === 'ASSIGNED' && selectedWasteRequest.driverId !== null;
+  const statusBadgeStyle = useMemo(
+    () => getStatusBadgeStyle(selectedWasteRequest?.status ?? 'REQUESTED'),
+    [selectedWasteRequest?.status],
+  );
 
   const loadWasteRequestDetail = useCallback(async () => {
     setIsLoadingWasteDetail(true);
@@ -149,164 +203,315 @@ export function OpsWasteRequestDetailScreen() {
 
   return (
     <>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>수거 요청 상세</Text>
-            <Pressable style={styles.ghostButton} onPress={() => void loadWasteRequestDetail()}>
-              <Text style={styles.ghostButtonText}>새로고침</Text>
-            </Pressable>
+      <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+        <View style={styles.screenContainer}>
+          <View style={styles.headerCard}>
+            <Text style={styles.badge}>OPS_ADMIN 상세</Text>
+            <Text style={styles.title}>수거 요청 상세</Text>
+            <Text style={styles.description}>요청 #{requestId}의 배정/재배정 상태를 관리합니다.</Text>
           </View>
-          {isLoadingWasteDetail && <Text style={styles.meta}>요청 상세 로딩 중..</Text>}
-          {wasteDetailError && <Text style={styles.error}>{wasteDetailError}</Text>}
-          {!selectedWasteRequest && !isLoadingWasteDetail && (
-            <Text style={styles.meta}>요청 정보를 불러오지 못했습니다.</Text>
-          )}
+
+          <View style={styles.card}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>요청 정보</Text>
+              <Pressable
+                style={[styles.secondaryButtonCompact, isLoadingWasteDetail && styles.buttonDisabled]}
+                onPress={() => void loadWasteRequestDetail()}
+                disabled={isLoadingWasteDetail}
+              >
+                <Text style={styles.secondaryButtonCompactText}>
+                  {isLoadingWasteDetail ? '새로고침 중...' : '새로고침'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {isLoadingWasteDetail && !selectedWasteRequest && (
+              <View style={styles.loadingGroup}>
+                <View style={styles.loadingCard}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.loadingText}>요청 상세 정보를 불러오는 중입니다...</Text>
+                </View>
+                <View style={styles.skeletonCard}>
+                  <View style={styles.skeletonLineShort} />
+                  <View style={styles.skeletonLineLong} />
+                  <View style={styles.skeletonLineLong} />
+                </View>
+              </View>
+            )}
+
+            {wasteDetailError && (
+              <View style={styles.errorCard}>
+                <Text style={styles.errorText}>{wasteDetailError}</Text>
+                <Pressable style={styles.retryButton} onPress={() => void loadWasteRequestDetail()}>
+                  <Text style={styles.retryButtonText}>다시 시도</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {!isLoadingWasteDetail && !wasteDetailError && !selectedWasteRequest && (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyIcon}>[]</Text>
+                <Text style={styles.emptyTitle}>요청 상세를 찾을 수 없습니다</Text>
+                <Text style={styles.emptyDescription}>잠시 후 다시 시도하거나 목록에서 요청을 다시 선택해 주세요.</Text>
+              </View>
+            )}
+
+            {selectedWasteRequest && (
+              <View style={styles.infoGroup}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.infoLabel}>상태</Text>
+                  <View style={[styles.statusBadge, statusBadgeStyle.container]}>
+                    <Text style={[styles.statusBadgeText, statusBadgeStyle.text]}>
+                      {toWasteStatusLabel(selectedWasteRequest.status)}
+                    </Text>
+                  </View>
+                </View>
+                <InfoRow label="요청 ID" value={String(selectedWasteRequest.id)} />
+                <InfoRow label="주문번호" value={selectedWasteRequest.orderNo || '-'} />
+                <InfoRow label="주소" value={selectedWasteRequest.address} multiline />
+                <InfoRow label="연락처" value={selectedWasteRequest.contactPhone} />
+                <InfoRow
+                  label="배출 품목"
+                  value={selectedWasteRequest.disposalItems.length > 0 ? selectedWasteRequest.disposalItems.join(', ') : '-'}
+                  multiline
+                />
+                <InfoRow label="수거비닐 수량" value={`${selectedWasteRequest.bagCount}개`} />
+                <InfoRow label="측정 무게" value={formatWeight(selectedWasteRequest.measuredWeightKg)} />
+                <InfoRow label="측정 시각" value={formatDate(selectedWasteRequest.measuredAt)} />
+                <InfoRow label="결제 예정 금액" value={formatAmount(selectedWasteRequest.finalAmount)} />
+                <InfoRow label="현재 배정 기사 ID" value={selectedWasteRequest.driverId?.toString() ?? '-'} />
+                <InfoRow label="배정 시각" value={formatDate(selectedWasteRequest.assignedAt)} />
+                <InfoRow label="생성일시" value={formatDate(selectedWasteRequest.createdAt)} />
+                <InfoRow label="수정일시" value={formatDate(selectedWasteRequest.updatedAt)} />
+              </View>
+            )}
+          </View>
+
           {selectedWasteRequest && (
-            <View style={styles.resultBox}>
-              <Text style={styles.detailText}>요청 ID: {selectedWasteRequest.id}</Text>
-              <Text style={styles.detailText}>주문번호: {selectedWasteRequest.orderNo || '-'}</Text>
-              <Text style={styles.detailText}>상태: {toWasteStatusLabel(selectedWasteRequest.status)}</Text>
-              <Text style={styles.detailText}>주소: {selectedWasteRequest.address}</Text>
-              <Text style={styles.detailText}>연락처: {selectedWasteRequest.contactPhone}</Text>
-              <Text style={styles.detailText}>배출품목: {selectedWasteRequest.disposalItems.join(', ') || '-'}</Text>
-              <Text style={styles.detailText}>수거비닐 수량: {selectedWasteRequest.bagCount}개</Text>
-              <Text style={styles.detailText}>측정무게: {selectedWasteRequest.measuredWeightKg ?? '미측정'}</Text>
-              <Text style={styles.detailText}>측정시각: {formatDate(selectedWasteRequest.measuredAt)}</Text>
-              <Text style={styles.detailText}>결제예정금액: {formatAmount(selectedWasteRequest.finalAmount)}</Text>
-              <Text style={styles.detailText}>현재 배정 기사 ID: {selectedWasteRequest.driverId ?? '-'}</Text>
-              <Text style={styles.detailText}>배정시각: {formatDate(selectedWasteRequest.assignedAt)}</Text>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>상태 로그</Text>
+              {selectedWasteRequest.statusTimeline.length === 0 ? (
+                <View style={styles.emptyInlineCard}>
+                  <Text style={styles.caption}>등록된 상태 로그가 없습니다.</Text>
+                </View>
+              ) : (
+                <View style={styles.timelineLogBox}>
+                  {selectedWasteRequest.statusTimeline.map((timeline, index) => (
+                    <Text key={`${timeline.toStatus}-${timeline.at}-${index}`} style={styles.timelineLogText}>
+                      {`${toWasteStatusLabelOrStart(timeline.fromStatus)} -> ${toWasteStatusLabel(timeline.toStatus)} (${formatDate(timeline.at)})`}
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
           )}
-        </View>
 
-        {selectedWasteRequest && (
-          <>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>참고 사진 ({referencePhotos.length})</Text>
-              {referencePhotos.length === 0 && <Text style={styles.meta}>등록된 참고 사진이 없습니다.</Text>}
-              {referencePhotos.length > 0 && (
-                <View style={styles.photoGrid}>
-                  {referencePhotos.map((photo, index) => (
-                    <PhotoThumbnailCard
-                      key={`ref-${photo.url}-${index}`}
-                      photoUrl={photo.url}
-                      label={`REFERENCE ${index + 1}`}
-                      onPress={() => setPreviewPhotoUrl(photo.url)}
-                    />
-                  ))}
-                </View>
-              )}
+          {selectedWasteRequest && (
+            <>
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>참고 사진 ({referencePhotos.length})</Text>
+                {referencePhotos.length === 0 ? (
+                  <View style={styles.emptyInlineCard}>
+                    <Text style={styles.caption}>등록된 참고 사진이 없습니다.</Text>
+                  </View>
+                ) : (
+                  <View style={styles.photoGrid}>
+                    {referencePhotos.map((photo, index) => (
+                      <PhotoThumbnailCard
+                        key={`ref-${photo.url}-${index}`}
+                        photoUrl={photo.url}
+                        label={`참고사진 ${index + 1}`}
+                        containerStyle={styles.photoCard}
+                        imageStyle={styles.photoImage}
+                        onPress={() => setPreviewPhotoUrl(photo.url)}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>기사 사진 ({driverPhotos.length})</Text>
+                {driverPhotos.length === 0 ? (
+                  <View style={styles.emptyInlineCard}>
+                    <Text style={styles.caption}>등록된 기사 사진이 없습니다.</Text>
+                  </View>
+                ) : (
+                  <View style={styles.photoGrid}>
+                    {driverPhotos.map((photo, index) => (
+                      <PhotoThumbnailCard
+                        key={`driver-${photo.url}-${index}`}
+                        photoUrl={photo.url}
+                        label={`${photo.type || 'PHOTO'} ${index + 1}`}
+                        containerStyle={styles.photoCard}
+                        imageStyle={styles.photoImage}
+                        onPress={() => setPreviewPhotoUrl(photo.url)}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+            </>
+          )}
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>기사 {isReassignMode ? '재배정' : '배정'}</Text>
+            <Text style={styles.caption}>ASSIGNED 상태에서는 재배정, REQUESTED 상태에서는 신규 배정을 수행합니다.</Text>
+
+            <View style={styles.searchRow}>
+              <TextInput
+                style={[styles.input, styles.queryInput]}
+                value={driverCandidateQuery}
+                onChangeText={setDriverCandidateQuery}
+                placeholder="기사 검색(이름/아이디)"
+                placeholderTextColor="#94a3b8"
+                editable={!isLoadingDriverCandidates}
+              />
+              <Pressable
+                style={[styles.secondaryButtonCompact, isLoadingDriverCandidates && styles.buttonDisabled]}
+                onPress={() => void loadDriverCandidates()}
+                disabled={isLoadingDriverCandidates}
+              >
+                <Text style={styles.secondaryButtonCompactText}>검색</Text>
+              </Pressable>
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>기사 사진 ({driverPhotos.length})</Text>
-              {driverPhotos.length === 0 && <Text style={styles.meta}>등록된 기사 사진이 없습니다.</Text>}
-              {driverPhotos.length > 0 && (
-                <View style={styles.photoGrid}>
-                  {driverPhotos.map((photo, index) => (
-                    <PhotoThumbnailCard
-                      key={`driver-${photo.url}-${index}`}
-                      photoUrl={photo.url}
-                      label={`${photo.type || 'PHOTO'} ${index + 1}`}
-                      onPress={() => setPreviewPhotoUrl(photo.url)}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          </>
-        )}
+            {isLoadingDriverCandidates && (
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>기사 후보를 불러오는 중입니다...</Text>
+              </View>
+            )}
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>기사 {isReassignMode ? '재배정' : '배정'}</Text>
-          <Text style={styles.meta}>ASSIGNED 상태에서는 재배정, REQUESTED 상태에서는 신규 배정을 수행합니다.</Text>
-          <View style={styles.searchRow}>
-            <TextInput
-              style={[styles.input, styles.queryInput]}
-              value={driverCandidateQuery}
-              onChangeText={setDriverCandidateQuery}
-              placeholder="기사 검색(이름/아이디)"
-              placeholderTextColor="#94a3b8"
-              editable={!isLoadingDriverCandidates}
-            />
+            {!isLoadingDriverCandidates && driverCandidateError && (
+              <View style={styles.errorCard}>
+                <Text style={styles.errorText}>{driverCandidateError}</Text>
+                <Pressable style={styles.retryButton} onPress={() => void loadDriverCandidates()}>
+                  <Text style={styles.retryButtonText}>다시 시도</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {!isLoadingDriverCandidates && !driverCandidateError && driverCandidates.length === 0 && (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyIcon}>[]</Text>
+                <Text style={styles.emptyTitle}>검색 결과가 없습니다</Text>
+                <Text style={styles.emptyDescription}>이름 또는 아이디를 변경해 다시 검색해 주세요.</Text>
+              </View>
+            )}
+
+            {!isLoadingDriverCandidates && !driverCandidateError && driverCandidates.length > 0 && (
+              <View style={styles.listWrap}>
+                {driverCandidates.map((candidate) => (
+                  <Pressable
+                    key={candidate.driverId}
+                    style={[
+                      styles.listItem,
+                      selectedDriverId === candidate.driverId && styles.listItemActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedDriverId(candidate.driverId);
+                      setAssignError(null);
+                    }}
+                  >
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>기사 #{candidate.driverId}</Text>
+                      {selectedDriverId === candidate.driverId && (
+                        <View style={styles.selectedBadge}>
+                          <Text style={styles.selectedBadgeText}>선택됨</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.listSub}>이름: {candidate.name}</Text>
+                    <Text style={styles.listSub}>아이디: {candidate.loginId}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {assignMessage && (
+              <View style={styles.successCard}>
+                <Text style={styles.successText}>{assignMessage}</Text>
+              </View>
+            )}
+
+            {assignError && (
+              <View style={styles.errorCard}>
+                <Text style={styles.errorText}>{assignError}</Text>
+              </View>
+            )}
+
             <Pressable
-              style={[styles.ghostButton, isLoadingDriverCandidates && styles.buttonDisabled]}
-              onPress={() => void loadDriverCandidates()}
-              disabled={isLoadingDriverCandidates}
+              style={[styles.primaryButton, isAssigning && styles.buttonDisabled]}
+              onPress={() => void handleAssignWasteRequest()}
+              disabled={isAssigning}
             >
-              <Text style={styles.ghostButtonText}>검색</Text>
+              <Text style={styles.primaryButtonText}>
+                {isAssigning ? '처리 중...' : isReassignMode ? '기사 재배정' : '기사 배정'}
+              </Text>
             </Pressable>
           </View>
-          {isLoadingDriverCandidates && <Text style={styles.meta}>기사 후보 조회 중..</Text>}
-          {driverCandidateError && <Text style={styles.error}>{driverCandidateError}</Text>}
-          {driverCandidates.map((candidate) => (
-            <Pressable
-              key={candidate.driverId}
-              style={[styles.listItem, selectedDriverId === candidate.driverId && styles.listItemActive]}
-              onPress={() => {
-                setSelectedDriverId(candidate.driverId);
-                setAssignError(null);
-              }}
-            >
-              <Text style={styles.listTitle}>기사 #{candidate.driverId}</Text>
-              <Text style={styles.listSub}>이름: {candidate.name}</Text>
-              <Text style={styles.listSub}>아이디: {candidate.loginId}</Text>
-            </Pressable>
-          ))}
-          {!isLoadingDriverCandidates && driverCandidates.length === 0 && (
-            <Text style={styles.meta}>검색 결과가 없습니다.</Text>
-          )}
-          {assignMessage && <Text style={styles.success}>{assignMessage}</Text>}
-          {assignError && <Text style={styles.error}>{assignError}</Text>}
-          <Pressable
-            style={[styles.button, isAssigning && styles.buttonDisabled]}
-            onPress={() => void handleAssignWasteRequest()}
-            disabled={isAssigning}
-          >
-            <Text style={styles.buttonText}>
-              {isAssigning ? '처리 중..' : isReassignMode ? '기사 재배정' : '기사 배정'}
-            </Text>
-          </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollScreen>
       <PhotoPreviewModal photoUrl={previewPhotoUrl} onClose={() => setPreviewPhotoUrl(null)} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flexGrow: 1,
-    padding: 16,
-    paddingBottom: 28,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  card: {
-    backgroundColor: ui.colors.card,
+  screenContainer: {
+    gap: 16,
+  },
+  headerCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
-  cardTitle: {
-    fontSize: 16,
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
     fontWeight: '700',
-    color: ui.colors.textStrong,
   },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textStrong,
   },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
   },
-  success: {
-    color: ui.colors.success,
-    fontSize: 13,
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -314,76 +519,281 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  loadingGroup: {
+    gap: 8,
+  },
+  loadingCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: '#1d4ed8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '36%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '82%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  infoGroup: {
+    gap: 8,
+  },
+  infoRow: {
+    gap: 4,
+  },
+  infoLabel: {
+    color: colors.caption,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoValue: {
+    color: colors.textStrong,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  infoValueMultiline: {
+    lineHeight: 20,
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    color: colors.textStrong,
+    backgroundColor: '#ffffff',
+    fontSize: 14,
   },
   queryInput: {
     flex: 1,
   },
-  button: {
-    backgroundColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
+  primaryButton: {
+    height: 48,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonDisabled: {
-    opacity: 0.65,
-  },
-  buttonText: {
+  primaryButtonText: {
     color: '#ffffff',
+    fontSize: 14,
     fontWeight: '700',
   },
-  ghostButton: {
+  secondaryButtonCompact: {
+    height: 40,
     borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
   },
-  ghostButtonText: {
-    color: ui.colors.text,
+  secondaryButtonCompactText: {
+    color: colors.textStrong,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  statusBadgeSuccess: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+  },
+  statusBadgeSuccessText: {
+    color: colors.success,
+  },
+  statusBadgeWarning: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  statusBadgeWarningText: {
+    color: '#b45309',
+  },
+  statusBadgeError: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+  },
+  statusBadgeErrorText: {
+    color: colors.error,
+  },
+  statusBadgeNeutral: {
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+  },
+  statusBadgeNeutralText: {
+    color: colors.caption,
+  },
+  timelineLogBox: {
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    gap: 6,
+  },
+  timelineLogText: {
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  emptyInlineCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#ffffff',
+  },
+  emptyIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.caption,
+  },
+  emptyTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  retryButton: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    color: '#b91c1c',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  successCard: {
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    padding: 12,
+  },
+  successText: {
+    color: colors.success,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  listWrap: {
+    gap: 8,
   },
   listItem: {
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    backgroundColor: '#ffffff',
   },
   listItemActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
   },
-  listTitle: {
-    color: ui.colors.textStrong,
+  selectedBadge: {
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  selectedBadgeText: {
+    color: '#1d4ed8',
+    fontSize: 12,
     fontWeight: '700',
   },
+  listTitle: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 14,
+  },
   listSub: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 12,
-  },
-  resultBox: {
-    gap: 4,
-  },
-  detailText: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
+    lineHeight: 18,
   },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  photoCard: {
+    width: '48%',
+  },
+  photoImage: {
+    height: 104,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });
