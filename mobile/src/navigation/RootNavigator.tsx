@@ -208,16 +208,39 @@ function TabProfileScreen({
 function AppTabsScreen() {
   const { me } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const roles = toKnownRoles(me?.roles);
   const primaryRole = getHighestRole(roles);
   const hasUserRole = roles.includes('USER');
   const isPrimaryUser = primaryRole === 'USER';
+  const tabBarBottomInset = Math.max(insets.bottom, 8);
 
   const sharedTabOptions = {
     headerTitleAlign: 'center' as const,
-    tabBarActiveTintColor: ui.colors.primary,
-    tabBarInactiveTintColor: ui.colors.textMuted,
-    tabBarLabelStyle: { fontWeight: '700' as const, fontSize: 12 },
+    tabBarShowIcon: false,
+    tabBarHideOnKeyboard: true,
+    tabBarActiveTintColor: '#2563EB',
+    tabBarInactiveTintColor: '#64748B',
+    tabBarLabelStyle: {
+      fontWeight: '700' as const,
+      fontSize: 12,
+      lineHeight: 16,
+      paddingBottom: 2,
+    },
+    tabBarItemStyle: {
+      minHeight: 44,
+      justifyContent: 'center' as const,
+      borderRadius: 12,
+      marginHorizontal: 2,
+    },
+    tabBarStyle: {
+      height: 64 + tabBarBottomInset,
+      paddingTop: 8,
+      paddingBottom: tabBarBottomInset,
+      backgroundColor: '#ffffff',
+      borderTopWidth: 1,
+      borderTopColor: '#E5E7EB',
+    },
   };
 
   return (
