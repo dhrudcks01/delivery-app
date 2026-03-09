@@ -36,20 +36,20 @@ const colors = {
 };
 
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
-const PRIMARY_ADDRESS_MISSING_MESSAGE = 'Primary address is missing. Add one in Profile > Address management.';
+const PRIMARY_ADDRESS_MISSING_MESSAGE = '대표 주소가 없습니다. 내정보 > 주소 관리에서 대표 주소를 등록해 주세요.';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
     const apiError = error.response?.data as ApiErrorResponse | undefined;
     if (error.code === 'ECONNABORTED') {
-      return 'Request timed out. Please try again.';
+      return '요청 시간이 초과되었습니다. 다시 시도해 주세요.';
     }
     if (!error.response) {
-      return 'Network is unavailable. Please check your connection and try again.';
+      return '네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
     }
-    return apiError?.message ?? 'An error occurred while processing your request.';
+    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
   }
-  return 'An error occurred while processing your request.';
+  return '요청 처리 중 오류가 발생했습니다.';
 }
 
 function formatDate(dateTime: string | null): string {
@@ -167,7 +167,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
   const loadPrimaryAddress = useCallback(async () => {
     if (!me?.id) {
       setPrimaryAddress(null);
-      setPrimaryAddressError('Unable to read user profile.');
+      setPrimaryAddressError('사용자 정보를 불러오지 못했습니다.');
       return;
     }
 
@@ -219,18 +219,18 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
       if (response.reasonCode === 'SERVICE_AREA_ADDRESS_UNRESOLVED') {
         setServiceAreaCheckError(
-          response.message ?? 'Could not resolve district information from the primary address.',
+          response.message ?? '대표 주소에서 동 정보를 확인할 수 없습니다.',
         );
         return;
       }
 
       if (!response.available && unavailableAlertAddressRef.current !== address) {
-        Alert.alert('This address is outside the service area.');
+        Alert.alert('현재 대표 주소는 서비스 가능 지역이 아닙니다.');
         unavailableAlertAddressRef.current = address;
       }
     } catch {
       setIsServiceAreaAvailable(null);
-      setServiceAreaCheckError('Failed to verify service area. Please try again.');
+      setServiceAreaCheckError('서비스 가능 지역 확인에 실패했습니다. 다시 시도해 주세요.');
     } finally {
       setIsCheckingServiceArea(false);
     }
@@ -238,22 +238,22 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   const handleCreate = async () => {
     if (!primaryAddress) {
-      setSubmitError('Primary address is missing. Add one in Profile > Address management.');
+      setSubmitError('대표 주소가 없습니다. 내정보 > 주소 관리에서 대표 주소를 등록해 주세요.');
       return;
     }
     if (!primaryAddressBuildResult || !primaryAddressBuildResult.ok) {
       setSubmitError(
         primaryAddressBuildResult?.message
-          ?? 'Primary address data is invalid. Please save the address again.',
+          ?? '대표 주소 데이터가 올바르지 않습니다. 주소를 다시 저장해 주세요.',
       );
       return;
     }
     if (!isPhoneVerified) {
-      setSubmitError('Phone verification is required before creating a request.');
+      setSubmitError('수거 신청 전 휴대폰 본인인증이 필요합니다.');
       return;
     }
     if (isServiceAreaAvailable !== true) {
-      setSubmitError('This address is outside the service area.');
+      setSubmitError('현재 대표 주소는 서비스 가능 지역이 아닙니다.');
       return;
     }
 
@@ -268,7 +268,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
       setNote('');
       showSubmitSuccessMessage(
-        created.orderNo ? `Request created. OrderNo: ${created.orderNo}` : 'Request created.',
+        created.orderNo ? `수거 요청이 접수되었습니다. 주문번호: ${created.orderNo}` : '수거 요청이 접수되었습니다.',
       );
       navigation.navigate('WasteRequestDetail', {
         requestId: created.id,
@@ -321,18 +321,18 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       includeTopInset={includeTopInset}
     >
       <View style={styles.headerCard}>
-        <Text style={styles.title}>My Pickup Requests</Text>
-        <Text style={styles.description}>Track your request status and usage history in one place.</Text>
-        <Text style={styles.caption}>Login ID: {me?.loginId ?? me?.email ?? '-'}</Text>
-        <Text style={styles.caption}>Roles: {me?.roles.join(', ') ?? '-'}</Text>
+        <Text style={styles.title}>수거 요청 홈</Text>
+        <Text style={styles.description}>요청 현황과 이용 내역을 한곳에서 확인할 수 있어요.</Text>
+        <Text style={styles.caption}>로그인 ID: {me?.loginId ?? me?.email ?? '-'}</Text>
+        <Text style={styles.caption}>권한: {me?.roles.join(', ') ?? '-'}</Text>
       </View>
 
       {showRequestForm && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Create Request</Text>
-          <Text style={styles.bodyText}>Primary address is loaded from Profile / Address management.</Text>
+          <Text style={styles.sectionTitle}>수거 요청 생성</Text>
+          <Text style={styles.bodyText}>대표 주소는 내정보/주소 관리에서 자동으로 불러옵니다.</Text>
 
-          <Text style={styles.label}>Primary Address</Text>
+          <Text style={styles.label}>대표 주소</Text>
           {isLoadingPrimaryAddress && (
             <View style={styles.skeletonCard}>
               <View style={styles.skeletonLineShort} />
@@ -347,8 +347,8 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
                   ? primaryAddressBuildResult.address
                   : primaryAddress.roadAddress || primaryAddress.jibunAddress || '-'}
               </Text>
-              <Text style={styles.infoMeta}>Zip: {primaryAddress.zipCode || '-'}</Text>
-              <Text style={styles.infoMeta}>Jibun: {primaryAddress.jibunAddress || '-'}</Text>
+              <Text style={styles.infoMeta}>우편번호: {primaryAddress.zipCode || '-'}</Text>
+              <Text style={styles.infoMeta}>지번주소: {primaryAddress.jibunAddress || '-'}</Text>
             </View>
           )}
 
@@ -360,18 +360,18 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
           {shouldShowAddressManagementCta && (
             <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('UserAddressManagement')}>
-              <Text style={styles.secondaryButtonText}>Open Address Management</Text>
+              <Text style={styles.secondaryButtonText}>주소 관리 열기</Text>
             </Pressable>
           )}
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Contact</Text>
-            <Text style={styles.infoMeta}>Verified phone number is applied automatically.</Text>
+            <Text style={styles.infoTitle}>연락처</Text>
+            <Text style={styles.infoMeta}>본인인증 완료된 휴대폰 번호가 자동 적용됩니다.</Text>
             <Text style={styles.infoMeta}>{me?.phoneNumber ?? '-'}</Text>
-            {!isPhoneVerified && <Text style={styles.errorText}>Phone verification is required.</Text>}
+            {!isPhoneVerified && <Text style={styles.errorText}>휴대폰 본인인증이 필요합니다.</Text>}
           </View>
 
-          {isCheckingServiceArea && <Text style={styles.caption}>Checking service area availability...</Text>}
+          {isCheckingServiceArea && <Text style={styles.caption}>서비스 가능 지역을 확인하고 있습니다...</Text>}
 
           {serviceAreaCheckError && (
             <View style={styles.errorCard}>
@@ -388,32 +388,32 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
                 }
               }}
             >
-              <Text style={styles.secondaryButtonText}>Retry</Text>
+              <Text style={styles.secondaryButtonText}>다시 시도</Text>
             </Pressable>
           )}
 
           {isServiceAreaBlocked && !isCheckingServiceArea && !serviceAreaCheckError && (
             <View style={styles.warningCard}>
-              <Text style={styles.warningTitle}>Service area blocked</Text>
-              <Text style={styles.warningText}>Current primary address is outside our service area.</Text>
+              <Text style={styles.warningTitle}>서비스 지역 안내</Text>
+              <Text style={styles.warningText}>현재 대표 주소는 서비스 가능 지역이 아닙니다.</Text>
             </View>
           )}
 
           {(isServiceAreaBlocked || !isPhoneVerified) && (
             <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('ServiceAreaBrowse')}>
-              <Text style={styles.secondaryButtonText}>Browse Service Area</Text>
+              <Text style={styles.secondaryButtonText}>서비스 지역 둘러보기</Text>
             </Pressable>
           )}
 
           {canSubmitRequest && (
             <>
-              <Text style={styles.label}>Note (optional)</Text>
+              <Text style={styles.label}>요청사항 (선택)</Text>
               <TextInput
                 style={styles.textArea}
                 value={note}
                 onChangeText={setNote}
                 multiline
-                placeholder="Enter optional note"
+                placeholder="요청사항을 입력해 주세요"
                 placeholderTextColor="#94a3b8"
                 returnKeyType="done"
                 maxLength={300}
@@ -433,7 +433,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
               {submitError && !isSubmitting && (
                 <Pressable style={styles.secondaryButton} onPress={handleCreate}>
-                  <Text style={styles.secondaryButtonText}>Retry</Text>
+                  <Text style={styles.secondaryButtonText}>다시 시도</Text>
                 </Pressable>
               )}
 
@@ -442,7 +442,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
                 onPress={handleCreate}
                 disabled={isSubmitting || !canSubmitRequest}
               >
-                <Text style={styles.primaryButtonText}>{isSubmitting ? 'Creating...' : 'Create Pickup Request'}</Text>
+                <Text style={styles.primaryButtonText}>{isSubmitting ? '생성 중...' : '수거 요청 생성'}</Text>
               </Pressable>
             </>
           )}
@@ -452,9 +452,9 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       {showHistory && (
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.sectionTitle}>Request History</Text>
+            <Text style={styles.sectionTitle}>요청 내역</Text>
             <Pressable style={styles.secondaryButtonCompact} onPress={refreshRequests}>
-              <Text style={styles.secondaryButtonCompactText}>Refresh</Text>
+              <Text style={styles.secondaryButtonCompactText}>새로고침</Text>
             </Pressable>
           </View>
 
@@ -475,8 +475,8 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           {!isLoadingList && requests.length === 0 && (
             <View style={styles.emptyStateCard}>
               <Text style={styles.emptyIcon}>[]</Text>
-              <Text style={styles.emptyTitle}>No requests yet</Text>
-              <Text style={styles.emptyDescription}>Your pickup requests will appear here.</Text>
+              <Text style={styles.emptyTitle}>아직 수거 요청이 없습니다</Text>
+              <Text style={styles.emptyDescription}>생성한 수거 요청 내역이 이곳에 표시됩니다.</Text>
             </View>
           )}
 
