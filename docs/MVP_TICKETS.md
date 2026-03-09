@@ -1832,6 +1832,18 @@
 - 탭 라벨 텍스트(`홈`, `신청`, `이용내역`, `내정보`)는 유지한다.
 - iOS/Android에서 탭 전환 시 아이콘 노출/정렬/터치 영역(최소 44px) 회귀가 없는지 수동 검증한다.
 
+### [ ] T-0585 USER 신청/이용내역 탭 상단 UX 조정(대표주소 마커 포함)
+**Goal**
+- `이용내역` 탭에서 상단에 `이용내역` 영역이 보이고, 그 아래에 이용 내역 목록이 이어지는 구조로 정리한다.
+- `신청` 탭에서는 상단 `신청` 라벨 대신 좌상단 주소 마커를 제공하고, 탭 시 등록 주소 중 대표주소를 설정하는 화면으로 이동하게 만든다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`, `mobile/src/screens/UserHomeScreen.tsx`, `mobile/src/screens/UserWasteRequestCreateScreen.tsx`, `mobile/src/screens/UserAddressManagementScreen.tsx`
+- `이용내역` 탭 진입 시 상단 헤더 영역(타이틀: `이용내역`)이 먼저 보이고, 요청 내역 카드/리스트가 그 아래에 배치된다.
+- `신청` 탭 진입 화면(`started=false`) 좌상단에 주소 마커 버튼을 추가하고, 탭 시 대표주소 설정 가능한 화면으로 이동한다.
+- `수거 요청 시작` 버튼으로 신청 플로우를 시작한 이후(`started=true`)에는 주소 마커가 노출되지 않는다.
+- 대표주소 미설정/설정 완료 상태에서 진입·복귀 시 UX가 자연스럽고, iOS/Android 양쪽에서 레이아웃 깨짐이 없어야 한다.
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
