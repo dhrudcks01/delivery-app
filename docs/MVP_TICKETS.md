@@ -1593,7 +1593,7 @@
 - Empty/Loading/Error 상태와 권한 거부 안내 UI를 공통 패턴으로 정리한다.
 - iOS/Android에서 1->2->3 단계 이동/뒤로가기/신청 완료까지 수동 검증한다.
 
-### [ ] T-0564 UserWasteRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0564 UserWasteRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - USER 수거요청 상세 화면의 정보 구조와 사진 섹션을 UI_SYSTEM에 맞게 정리한다.
 

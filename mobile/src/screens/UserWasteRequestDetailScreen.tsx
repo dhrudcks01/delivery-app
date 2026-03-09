@@ -8,7 +8,6 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { ui } from '../theme/ui';
 import { ApiErrorResponse, WasteRequestDetail } from '../types/waste';
 import {
   toUserWasteStatusLabel,
@@ -16,8 +15,25 @@ import {
 } from '../utils/wasteStatusLabel';
 
 const STATUS_FLOW = ['REQUESTED', 'ASSIGNED', 'MEASURED', 'COMPLETED'] as const;
+const DISPOSAL_ITEM_LABEL: Record<string, string> = {
+  GENERAL: '혼합 쓰레기',
+  BOX: '택배 박스',
+};
 
 type StepState = 'done' | 'current' | 'upcoming';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -51,6 +67,10 @@ function formatAmount(amount: number | null, currency: string): string {
   return `${amount.toLocaleString('ko-KR')} ${currency}`;
 }
 
+function toDisposalItemLabel(item: string): string {
+  return DISPOSAL_ITEM_LABEL[item] ?? item;
+}
+
 function resolveStepState(stepStatus: string, currentStatus: string | null, passedStatuses: string[]): StepState {
   if (currentStatus === stepStatus) {
     return 'current';
@@ -70,11 +90,21 @@ function resolveStepState(stepStatus: string, currentStatus: string | null, pass
   return passedStatuses.includes(stepStatus) ? 'done' : 'upcoming';
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function getStatusBadgeStyle(status: string) {
+  if (status === 'COMPLETED' || status === 'PAID') {
+    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
+  }
+  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
+    return { container: styles.badgeError, text: styles.badgeErrorText };
+  }
+  return { container: styles.badgeWarning, text: styles.badgeWarningText };
+}
+
+function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <Text style={[styles.infoValue, multiline && styles.infoValueMultiline]}>{value}</Text>
     </View>
   );
 }
@@ -115,6 +145,11 @@ export function UserWasteRequestDetailScreen() {
   const driverPhotos = useMemo(
     () => detail?.photos.filter((photo) => photo.type !== 'REFERENCE') ?? [],
     [detail],
+  );
+
+  const statusBadgeStyle = useMemo(
+    () => getStatusBadgeStyle(detail?.status ?? 'REQUESTED'),
+    [detail?.status],
   );
 
   const loadDetail = useCallback(async () => {
@@ -159,105 +194,109 @@ export function UserWasteRequestDetailScreen() {
   return (
     <>
       <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <View>
+        <View style={styles.headerCard}>
+          <View style={styles.headerTextWrap}>
             <Text style={styles.title}>수거요청 상세</Text>
-            <Text style={styles.meta}>요청 ID: {requestId}</Text>
+            <Text style={styles.caption}>요청 ID: {requestId}</Text>
+            <Text style={styles.caption}>주문번호: {displayOrderNo}</Text>
           </View>
-          <Pressable style={styles.ghostButton} onPress={() => void loadDetail()}>
-            <Text style={styles.ghostButtonText}>새로고침</Text>
+          <Pressable
+            style={[styles.secondaryButtonCompact, isLoading && styles.buttonDisabled]}
+            onPress={() => void loadDetail()}
+            disabled={isLoading}
+          >
+            <Text style={styles.secondaryButtonCompactText}>{isLoading ? '불러오는 중...' : '새로고침'}</Text>
           </Pressable>
         </View>
 
-        <View style={styles.orderNoCard}>
-          <Text style={styles.orderNoLabel}>주문번호</Text>
-          <Text style={styles.orderNoValue}>{displayOrderNo}</Text>
-        </View>
+        {isLoading && !detail && (
+          <View style={styles.loadingGroup}>
+            <View style={styles.loadingCard}>
+              <View style={styles.skeletonLineShort} />
+              <View style={styles.skeletonLineLong} />
+              <View style={styles.skeletonLineLong} />
+            </View>
+            <View style={styles.loadingCard}>
+              <View style={styles.skeletonLineShort} />
+              <View style={styles.skeletonLineLong} />
+              <View style={styles.skeletonLineLong} />
+            </View>
+          </View>
+        )}
 
-        {isLoading && !detail && <Text style={styles.meta}>상세를 불러오는 중입니다.</Text>}
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+        {error && (
+          <Pressable style={styles.secondaryButton} onPress={() => void loadDetail()}>
+            <Text style={styles.secondaryButtonText}>다시 시도</Text>
+          </Pressable>
+        )}
 
         {detail && (
           <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>주문정보</Text>
-              <InfoRow label="요청상태" value={toUserWasteStatusLabel(detail.status)} />
-              <InfoRow label="주소" value={detail.address} />
-              <InfoRow label="연락처" value={detail.contactPhone} />
-              <InfoRow label="요청사항" value={detail.note || '-'} />
+            <View style={styles.card}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>요약 정보</Text>
+                <View style={[styles.statusBadge, statusBadgeStyle.container]}>
+                  <Text style={[styles.statusBadgeText, statusBadgeStyle.text]}>
+                    {toUserWasteStatusLabel(detail.status)}
+                  </Text>
+                </View>
+              </View>
+              <InfoRow label="주문번호" value={displayOrderNo} />
               <InfoRow label="생성일시" value={formatDate(detail.createdAt)} />
               <InfoRow label="수정일시" value={formatDate(detail.updatedAt)} />
-              {paymentFailureNotice && <Text style={styles.meta}>{paymentFailureNotice}</Text>}
+              <InfoRow label="주소" value={detail.address} multiline />
+              <InfoRow label="연락처" value={detail.contactPhone} />
+              <InfoRow label="요청사항" value={detail.note || '-'} multiline />
+
+              {paymentFailureNotice && (
+                <View style={styles.warningCard}>
+                  <Text style={styles.warningTitle}>결제 상태 안내</Text>
+                  <Text style={styles.warningText}>{paymentFailureNotice}</Text>
+                </View>
+              )}
 
               <Pressable
                 style={[
-                  styles.actionButton,
-                  (!canCancel || isCancelling) && styles.actionButtonDisabled,
-                  !canCancel && styles.actionButtonMuted,
+                  styles.primaryButton,
+                  !canCancel && styles.primaryButtonMuted,
+                  (isCancelling || !canCancel) && styles.buttonDisabled,
                 ]}
                 onPress={() => void handleCancel()}
                 disabled={!canCancel || isCancelling}
               >
-                <Text style={styles.actionButtonText}>
-                  {isCancelling ? '취소 처리 중..' : canCancel ? '요청 취소' : '취소 불가 상태'}
+                <Text style={styles.primaryButtonText}>
+                  {isCancelling ? '취소 처리 중...' : canCancel ? '요청 취소' : '취소 불가 상태'}
                 </Text>
               </Pressable>
             </View>
 
-            <View style={styles.section}>
+            <View style={styles.card}>
               <Text style={styles.sectionTitle}>배출정보</Text>
               <InfoRow label="수거비닐 수량" value={`${detail.bagCount}개`} />
-              {disposalItems.length === 0 && <Text style={styles.meta}>배출품목 정보가 없습니다.</Text>}
+              {disposalItems.length === 0 && (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyIcon}>[]</Text>
+                  <Text style={styles.emptyTitle}>배출 품목 정보가 없습니다</Text>
+                  <Text style={styles.emptyDescription}>신청 시 선택된 품목이 이곳에 표시됩니다.</Text>
+                </View>
+              )}
               {disposalItems.length > 0 && (
                 <View style={styles.itemsWrap}>
                   {disposalItems.map((item, index) => (
                     <View key={`${item}-${index}`} style={styles.itemChip}>
-                      <Text style={styles.itemChipText}>{item}</Text>
+                      <Text style={styles.itemChipText}>{toDisposalItemLabel(item)}</Text>
                     </View>
                   ))}
                 </View>
               )}
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>참고 사진</Text>
-              {referencePhotos.length === 0 && (
-                <Text style={styles.meta}>등록된 참고 사진이 없습니다.</Text>
-              )}
-              {referencePhotos.length > 0 && (
-                <View style={styles.photoGrid}>
-                  {referencePhotos.map((photo, index) => (
-                    <PhotoThumbnailCard
-                      key={`reference-${photo.url}-${index}`}
-                      photoUrl={photo.url}
-                      label={`REFERENCE ${index + 1}`}
-                      onPress={() => setSelectedPhotoUrl(photo.url)}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>기사 사진</Text>
-              {driverPhotos.length === 0 && (
-                <Text style={styles.meta}>등록된 기사 사진이 없습니다.</Text>
-              )}
-              {driverPhotos.length > 0 && (
-                <View style={styles.photoGrid}>
-                  {driverPhotos.map((photo, index) => (
-                    <PhotoThumbnailCard
-                      key={`driver-${photo.url}-${index}`}
-                      photoUrl={photo.url}
-                      label={`${photo.type || 'PHOTO'} ${index + 1}`}
-                      onPress={() => setSelectedPhotoUrl(photo.url)}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-
-            <View style={styles.section}>
+            <View style={styles.card}>
               <Text style={styles.sectionTitle}>수거정보</Text>
               <InfoRow label="측정무게" value={formatWeight(detail.measuredWeightKg)} />
               <InfoRow label="측정시각" value={formatDate(detail.measuredAt)} />
@@ -265,44 +304,104 @@ export function UserWasteRequestDetailScreen() {
               <InfoRow label="배정시각" value={formatDate(detail.assignedAt)} />
             </View>
 
-            <View style={styles.section}>
+            <View style={styles.card}>
               <Text style={styles.sectionTitle}>결제정보</Text>
               <InfoRow label="통화" value={detail.currency} />
               <InfoRow label="결제예정금액" value={formatAmount(detail.finalAmount, detail.currency)} />
             </View>
 
-            <View style={styles.section}>
+            <View style={styles.card}>
               <Text style={styles.sectionTitle}>상태 타임라인</Text>
-              {STATUS_FLOW.map((status) => {
-                const state = resolveStepState(status, detail.status, passedStatuses);
-                return (
-                  <View key={status} style={styles.stepRow}>
-                    <View
-                      style={[
-                        styles.stepDot,
-                        state === 'done' && styles.stepDotDone,
-                        state === 'current' && styles.stepDotCurrent,
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.stepText,
-                        state === 'done' && styles.stepTextDone,
-                        state === 'current' && styles.stepTextCurrent,
-                      ]}
-                    >
-                      {toUserWasteStatusLabel(status)}
-                    </Text>
-                  </View>
-                );
-              })}
-              {detail.statusTimeline.length === 0 && <Text style={styles.meta}>상태 이력이 없습니다.</Text>}
+              <View style={styles.timelineStepWrap}>
+                {STATUS_FLOW.map((status) => {
+                  const state = resolveStepState(status, detail.status, passedStatuses);
+                  return (
+                    <View key={status} style={styles.stepRow}>
+                      <View
+                        style={[
+                          styles.stepDot,
+                          state === 'done' && styles.stepDotDone,
+                          state === 'current' && styles.stepDotCurrent,
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.stepText,
+                          state === 'done' && styles.stepTextDone,
+                          state === 'current' && styles.stepTextCurrent,
+                        ]}
+                      >
+                        {toUserWasteStatusLabel(status)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {detail.statusTimeline.length === 0 && (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyIcon}>[]</Text>
+                  <Text style={styles.emptyTitle}>상태 이력이 없습니다</Text>
+                  <Text style={styles.emptyDescription}>상태 변경 이력이 생성되면 여기에 표시됩니다.</Text>
+                </View>
+              )}
+
               {detail.statusTimeline.length > 0 && (
                 <View style={styles.timelineLogBox}>
                   {detail.statusTimeline.map((timeline, index) => (
                     <Text key={`${timeline.toStatus}-${timeline.at}-${index}`} style={styles.timelineLogText}>
                       {`${toUserWasteStatusLabelOrStart(timeline.fromStatus)} -> ${toUserWasteStatusLabel(timeline.toStatus)} (${formatDate(timeline.at)})`}
                     </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>참고 사진</Text>
+              {referencePhotos.length === 0 && (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyIcon}>[]</Text>
+                  <Text style={styles.emptyTitle}>등록된 참고 사진이 없습니다</Text>
+                  <Text style={styles.emptyDescription}>사용자가 업로드한 참고 사진이 여기에 표시됩니다.</Text>
+                </View>
+              )}
+              {referencePhotos.length > 0 && (
+                <View style={styles.photoGrid}>
+                  {referencePhotos.map((photo, index) => (
+                    <PhotoThumbnailCard
+                      key={`reference-${photo.url}-${index}`}
+                      photoUrl={photo.url}
+                      label={`참고사진 ${index + 1}`}
+                      containerStyle={styles.photoCard}
+                      imageStyle={styles.photoImage}
+                      onPress={() => setSelectedPhotoUrl(photo.url)}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>기사 사진</Text>
+              {driverPhotos.length === 0 && (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyIcon}>[]</Text>
+                  <Text style={styles.emptyTitle}>등록된 기사 사진이 없습니다</Text>
+                  <Text style={styles.emptyDescription}>기사님이 업로드한 사진이 여기에 표시됩니다.</Text>
+                </View>
+              )}
+              {driverPhotos.length > 0 && (
+                <View style={styles.photoGrid}>
+                  {driverPhotos.map((photo, index) => (
+                    <PhotoThumbnailCard
+                      key={`driver-${photo.url}-${index}`}
+                      photoUrl={photo.url}
+                      label={`기사사진 ${index + 1}`}
+                      containerStyle={styles.photoCard}
+                      imageStyle={styles.photoImage}
+                      onPress={() => setSelectedPhotoUrl(photo.url)}
+                    />
                   ))}
                 </View>
               )}
@@ -318,108 +417,247 @@ export function UserWasteRequestDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: ui.colors.screen,
+    backgroundColor: colors.background,
+    gap: 24,
+  },
+  headerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
     gap: 12,
   },
-  headerRow: {
+  headerTextWrap: {
+    gap: 4,
+  },
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
   },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
-  },
-  orderNoCard: {
-    borderWidth: 1,
-    borderColor: '#b8d2ca',
-    borderRadius: 10,
-    backgroundColor: '#eef8f6',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 2,
-  },
-  orderNoLabel: {
-    color: ui.colors.text,
+  caption: {
     fontSize: 12,
+    color: colors.caption,
   },
-  orderNoValue: {
-    color: ui.colors.textStrong,
-    fontSize: 18,
+  card: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 12,
+  },
+  loadingGroup: {
+    gap: 12,
+  },
+  loadingCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    gap: 10,
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '48%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '80%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  errorCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  warningCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    backgroundColor: '#fffbeb',
+    padding: 12,
+    gap: 4,
+  },
+  warningTitle: {
+    color: '#92400e',
+    fontSize: 14,
     fontWeight: '700',
   },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
-  },
-  section: {
-    backgroundColor: ui.colors.card,
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
-    gap: 8,
+  warningText: {
+    color: '#b45309',
+    fontSize: 12,
+    lineHeight: 18,
   },
   sectionTitle: {
     fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  statusBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+  },
+  badgeSuccess: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeSuccessText: {
+    color: '#166534',
+  },
+  badgeWarning: {
+    backgroundColor: '#fef3c7',
+  },
+  badgeWarningText: {
+    color: '#92400e',
+  },
+  badgeError: {
+    backgroundColor: '#fee2e2',
+  },
+  badgeErrorText: {
+    color: '#991b1b',
   },
   infoRow: {
-    gap: 2,
+    gap: 4,
   },
   infoLabel: {
-    color: ui.colors.text,
+    color: colors.caption,
     fontSize: 12,
+    fontWeight: '600',
   },
   infoValue: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
+    color: colors.textStrong,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  actionButton: {
-    backgroundColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
+  infoValueMultiline: {
+    lineHeight: 21,
+  },
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
     alignItems: 'center',
-    marginTop: 4,
+    justifyContent: 'center',
   },
-  actionButtonMuted: {
-    backgroundColor: ui.colors.textMuted,
-  },
-  actionButtonDisabled: {
-    opacity: 0.65,
-  },
-  actionButtonText: {
+  primaryButtonText: {
     color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  primaryButtonMuted: {
+    backgroundColor: '#64748b',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  secondaryButton: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  secondaryButtonCompact: {
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
+  },
+  secondaryButtonCompactText: {
+    color: colors.primary,
+    fontSize: 12,
     fontWeight: '700',
   },
   itemsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   itemChip: {
     borderWidth: 1,
-    borderColor: '#a8c8c0',
+    borderColor: colors.border,
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#f2fbf8',
+    paddingVertical: 6,
+    backgroundColor: '#f8fafc',
   },
   itemChipText: {
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
     fontSize: 12,
     fontWeight: '600',
   },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoCard: {
+    width: '48%',
+  },
+  photoImage: {
+    height: 104,
+  },
+  emptyCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyIcon: {
+    color: colors.caption,
+    fontSize: 16,
+  },
+  emptyTitle: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyDescription: {
+    color: colors.caption,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  timelineStepWrap: {
     gap: 8,
   },
   stepRow: {
@@ -440,8 +678,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0ea5e9',
   },
   stepText: {
-    color: ui.colors.textMuted,
-    fontSize: 12,
+    color: colors.caption,
+    fontSize: 13,
     fontWeight: '600',
   },
   stepTextDone: {
@@ -452,26 +690,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   timelineLogBox: {
-    marginTop: 6,
-    padding: 8,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: '#f8fafc',
-    gap: 3,
+    gap: 6,
   },
   timelineLogText: {
-    color: ui.colors.text,
-    fontSize: 11,
-  },
-  ghostButton: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  ghostButtonText: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 12,
-    fontWeight: '600',
+    lineHeight: 18,
   },
 });
