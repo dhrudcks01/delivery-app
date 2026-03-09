@@ -1,5 +1,6 @@
 ﻿import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { AxiosError } from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -327,8 +328,19 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   if (!started) {
     return (
       <KeyboardAwareScrollScreen contentContainerStyle={styles.container} includeTopInset={includeTopInset}>
+        <View style={styles.entryTopRow}>
+          <Pressable
+            style={styles.addressMarkerButton}
+            accessibilityRole="button"
+            accessibilityLabel="대표주소 설정 화면으로 이동"
+            hitSlop={8}
+            onPress={() => navigation.navigate('UserAddressManagement')}
+          >
+            <Ionicons name="location-outline" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
+
         <View style={styles.heroCard}>
-          <Text style={styles.badge}>수거 신청</Text>
           <Text style={styles.title}>3단계로 간편하게 신청해요</Text>
           <Text style={styles.description}>수거 품목 선택 → 특이사항 입력 → 신청 정보 확인 순서로 진행됩니다.</Text>
         </View>
@@ -623,6 +635,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: colors.background,
     gap: 24,
+  },
+  entryTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  addressMarkerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroCard: {
     borderRadius: 12,

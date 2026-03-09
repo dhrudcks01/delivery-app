@@ -22,6 +22,24 @@ type UserHomeScreenProps = {
   includeTopInset?: boolean;
 };
 
+const SECTION_HEADER_COPY: Record<UserHomeSection, { badge: string; title: string; description: string }> = {
+  all: {
+    badge: '수거 요청',
+    title: '수거 요청 홈',
+    description: '요청 현황과 이용 내역을 한곳에서 확인할 수 있어요.',
+  },
+  history: {
+    badge: '이용내역',
+    title: '이용내역',
+    description: '내 수거 요청의 상태와 처리 이력을 확인할 수 있어요.',
+  },
+  'request-form': {
+    badge: '수거 요청',
+    title: '수거 요청',
+    description: '대표 주소를 기준으로 수거 신청을 진행할 수 있어요.',
+  },
+};
+
 const colors = {
   primary: '#2563EB',
   success: '#16A34A',
@@ -75,6 +93,7 @@ function getStatusBadgeStyle(status: WasteRequest['status']) {
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
   const { me } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const headerCopy = SECTION_HEADER_COPY[section];
 
   const [primaryAddress, setPrimaryAddress] = useState<UserAddress | null>(null);
   const [isLoadingPrimaryAddress, setIsLoadingPrimaryAddress] = useState(false);
@@ -321,8 +340,9 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       includeTopInset={includeTopInset}
     >
       <View style={styles.headerCard}>
-        <Text style={styles.title}>수거 요청 홈</Text>
-        <Text style={styles.description}>요청 현황과 이용 내역을 한곳에서 확인할 수 있어요.</Text>
+        <Text style={styles.badgeLabel}>{headerCopy.badge}</Text>
+        <Text style={styles.title}>{headerCopy.title}</Text>
+        <Text style={styles.description}>{headerCopy.description}</Text>
         <Text style={styles.caption}>로그인 ID: {me?.loginId ?? me?.email ?? '-'}</Text>
         <Text style={styles.caption}>권한: {me?.roles.join(', ') ?? '-'}</Text>
       </View>
@@ -524,6 +544,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.textStrong,
+  },
+  badgeLabel: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '700',
   },
   description: {
     fontSize: 14,
