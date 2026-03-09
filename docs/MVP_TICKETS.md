@@ -1898,6 +1898,39 @@
 - 최소 USER/DRIVER/OPS/SYS 대표 화면에 공통 모듈 적용
 - 상태 라벨/색상/문구 정책 변경 시 한 지점 수정으로 반영되는 구조 보장
 
+### [ ] T-0591 UI 토큰 단일화 2차(잔여 화면 `const colors` 제거)
+**Goal**
+- 잔여 화면에 남아있는 `const colors` 상수 중복을 제거하고 `mobile/src/theme/ui.ts` 기준으로 색상 참조를 완전 단일화한다.
+
+**DoD**
+- 대상: `PhoneVerificationScreen`, `ProfileSettingsScreen`, `RoleCenterScreen`, `ServiceAreaBrowseScreen`, `ServiceAreaManagementScreen`, `UserAddressManagementScreen`, `UserPaymentManagementScreen`
+- 화면 내 로컬 `const colors`를 제거하거나 최소화하고 `ui.colors` 참조로 대체
+- `docs/UI_SYSTEM.md`의 Color System(Primary/Success/Warning/Error/Background/Border)과 충돌하지 않도록 정렬
+- 기능/문구/네비게이션 동작 변경 없이 시각 토큰 참조만 정리
+
+### [ ] T-0592 에러/상태배지 공통 모듈 적용 확장(잔여 화면)
+**Goal**
+- T-0590에서 도입한 `errorMessage/statusBadge` 공통 모듈을 잔여 화면으로 확장 적용해 중복 로직을 제거하고 정책 변경 비용을 낮춘다.
+
+**DoD**
+- 대상: `DriverAssignedRequestDetailScreen`, `OpsWasteRequestDetailScreen`, `RoleCenterScreen`, `ServiceAreaBrowseScreen`, `ServiceAreaManagementScreen`, `UserAddressManagementScreen`, `UserPaymentManagementScreen`, `UserWasteRequestCreateScreen`, `UserWasteRequestDetailScreen`(및 동등 패턴 화면)
+- 화면 내부 `toErrorMessage`, `getStatusBadgeStyle`, `getApplicationStatusBadgeStyle` 중복 함수를 공통 모듈 사용으로 전환
+- 상태 라벨/배지 색상/에러 문구 동작을 기존과 동일하게 유지(기능 회귀 금지)
+- 정책 변경 시 `mobile/src/utils/errorMessage.ts`, `mobile/src/utils/statusBadge.ts` 중심으로 일괄 반영 가능한 구조 확보
+
+### [ ] T-0593 대형 화면 2차 분해(컨테이너/섹션/훅 추가 분리)
+**Goal**
+- 600라인 이상 대형 화면의 응집도를 높이기 위해 컨테이너/프레젠테이션/훅 분리를 추가로 수행하고 회귀 위험을 낮춘다.
+
+**DoD**
+- 우선 대상: `ServiceAreaManagementScreen`, `OpsAdminHomeScreen`, `UserPaymentManagementScreen`, `UserAddressManagementScreen`, `OpsWasteRequestDetailScreen`, `UserWasteRequestCreateScreen`, `SysAdminHomeScreen`
+- 분해 기준:
+  - 컨테이너: API 호출/상태 전이/권한 분기
+  - 섹션 컴포넌트: 렌더링 블록(UI 전용)
+  - 훅/유틸: 폼 검증, 필터/정렬/요약 계산, 파생 상태
+- 외부 계약(API payload/response, 라우팅 파라미터, 권한 정책) 변경 금지
+- 타입체크 및 핵심 사용자 시나리오 수동 회귀 점검 체크리스트를 티켓에 함께 남김
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
