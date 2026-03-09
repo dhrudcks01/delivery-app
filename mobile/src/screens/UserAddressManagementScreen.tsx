@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
 import {
@@ -12,11 +12,23 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
-import { ui } from '../theme/ui';
 import { AddressItem } from '../types/address';
 import { UserAddress, UserAddressUpsertPayload } from '../types/userAddress';
-import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ApiErrorResponse } from '../types/waste';
+import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -55,6 +67,8 @@ export function UserAddressManagementScreen() {
   const [zipCode, setZipCode] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
   const [isPrimaryDraft, setIsPrimaryDraft] = useState(false);
+
+  const isEditing = editingAddressId !== null;
 
   const toUpsertPayload = useCallback((
     payload: {
@@ -131,7 +145,7 @@ export function UserAddressManagementScreen() {
     void loadAddresses();
   }, [loadAddresses]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEditingAddressId(null);
     setRoadAddress('');
     setJibunAddress('');
@@ -141,7 +155,7 @@ export function UserAddressManagementScreen() {
     setAddressQuery('');
     setSearchResults([]);
     setSearchError(null);
-  };
+  }, [addresses.length]);
 
   const handleSearchAddress = async () => {
     const query = addressQuery.trim();
@@ -261,61 +275,109 @@ export function UserAddressManagementScreen() {
     }
   };
 
+  const primaryAddressId = useMemo(
+    () => addresses.find((item) => item.isPrimary)?.id ?? null,
+    [addresses],
+  );
+
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>주소관리</Text>
-      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>등록된 주소</Text>
-          <Pressable style={styles.ghostButton} onPress={loadAddresses}>
-            <Text style={styles.ghostButtonText}>목록 새로고침</Text>
-          </Pressable>
-        </View>
-
-        {isLoadingAddresses && <Text style={styles.meta}>주소 목록을 불러오는 중입니다.</Text>}
-        {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
-        {resultMessage && <Text style={styles.success}>{resultMessage}</Text>}
-
-        {addresses.map((item) => (
-          <View key={item.id} style={styles.listItem}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.listTitle}>{formatAddress(item)}</Text>
-              {item.isPrimary && <Text style={styles.primaryBadge}>대표</Text>}
-            </View>
-            <Text style={styles.listSub}>우편번호: {item.zipCode || '-'}</Text>
-            <Text style={styles.listSub}>지번: {item.jibunAddress || '-'}</Text>
-            <View style={styles.actionRow}>
-              <Pressable
-                style={[styles.actionButton, item.isPrimary && styles.actionButtonDisabled]}
-                onPress={() => void handleSetPrimaryAddress(item.id)}
-                disabled={item.isPrimary}
-              >
-                <Text style={styles.actionButtonText}>대표로 설정</Text>
-              </Pressable>
-              <Pressable style={styles.actionButton} onPress={() => handleStartEdit(item)}>
-                <Text style={styles.actionButtonText}>수정</Text>
-              </Pressable>
-              <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={() => void handleDeleteAddress(item.id)}>
-                <Text style={styles.deleteButtonText}>삭제</Text>
-              </Pressable>
-            </View>
-          </View>
-        ))}
-
-        {!isLoadingAddresses && addresses.length === 0 && (
-          <Text style={styles.meta}>등록된 주소가 없습니다. 아래에서 주소를 등록해 주세요.</Text>
-        )}
+      <View style={styles.headerCard}>
+        <Text style={styles.badge}>내정보</Text>
+        <Text style={styles.title}>주소 관리</Text>
+        <Text style={styles.description}>대표 주소 설정과 주소 등록/수정을 한 화면에서 관리할 수 있습니다.</Text>
+        <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{editingAddressId ? '주소 수정' : '새 주소 등록'}</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>등록된 주소</Text>
+          <Pressable
+            style={[styles.secondaryButtonCompact, isLoadingAddresses && styles.buttonDisabled]}
+            onPress={() => void loadAddresses()}
+            disabled={isLoadingAddresses}
+          >
+            <Text style={styles.secondaryButtonCompactText}>{isLoadingAddresses ? '불러오는 중...' : '새로고침'}</Text>
+          </Pressable>
+        </View>
+
+        {isLoadingAddresses && (
+          <View style={styles.skeletonGroup}>
+            <View style={styles.skeletonCard}>
+              <View style={styles.skeletonLineShort} />
+              <View style={styles.skeletonLineLong} />
+            </View>
+            <View style={styles.skeletonCard}>
+              <View style={styles.skeletonLineShort} />
+              <View style={styles.skeletonLineLong} />
+            </View>
+          </View>
+        )}
+
+        {errorMessage && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
+
+        {resultMessage && (
+          <View style={styles.successCard}>
+            <Text style={styles.successText}>{resultMessage}</Text>
+          </View>
+        )}
+
+        {!isLoadingAddresses && addresses.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>[]</Text>
+            <Text style={styles.emptyTitle}>등록된 주소가 없습니다</Text>
+            <Text style={styles.emptyDescription}>아래 입력 폼에서 주소를 검색하고 등록해 주세요.</Text>
+          </View>
+        )}
+
+        {addresses.map((item) => {
+          const isPrimary = item.id === primaryAddressId;
+          return (
+            <View key={item.id} style={styles.addressCard}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.addressTitle}>{formatAddress(item)}</Text>
+                {isPrimary && (
+                  <View style={styles.primaryBadge}>
+                    <Text style={styles.primaryBadgeText}>대표주소</Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.addressMeta}>우편번호: {item.zipCode || '-'}</Text>
+              <Text style={styles.addressMeta}>지번주소: {item.jibunAddress || '-'}</Text>
+              <Text style={styles.addressMeta}>상세주소: {item.detailAddress || '-'}</Text>
+
+              <View style={styles.buttonRow}>
+                <Pressable
+                  style={[styles.secondaryButtonSmall, isPrimary && styles.buttonDisabled]}
+                  onPress={() => void handleSetPrimaryAddress(item.id)}
+                  disabled={isPrimary}
+                >
+                  <Text style={styles.secondaryButtonSmallText}>대표로 설정</Text>
+                </Pressable>
+                <Pressable style={styles.secondaryButtonSmall} onPress={() => handleStartEdit(item)}>
+                  <Text style={styles.secondaryButtonSmallText}>수정</Text>
+                </Pressable>
+                <Pressable style={styles.dangerButtonSmall} onPress={() => void handleDeleteAddress(item.id)}>
+                  <Text style={styles.dangerButtonSmallText}>삭제</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>{isEditing ? '주소 수정' : '새 주소 등록'}</Text>
 
         <Text style={styles.label}>주소 검색</Text>
-        <View style={styles.rowGap8}>
+        <View style={styles.searchRow}>
           <TextInput
-            style={[styles.input, styles.flexInput]}
+            style={[styles.input, styles.searchInput]}
             value={addressQuery}
             onChangeText={setAddressQuery}
             placeholder="도로명 주소 검색어 입력"
@@ -324,28 +386,33 @@ export function UserAddressManagementScreen() {
             onSubmitEditing={() => void handleSearchAddress()}
           />
           <Pressable
-            style={[styles.ghostButton, isSearching && styles.actionButtonDisabled]}
-            onPress={handleSearchAddress}
+            style={[styles.secondaryButtonCompact, isSearching && styles.buttonDisabled]}
+            onPress={() => void handleSearchAddress()}
             disabled={isSearching}
           >
-            <Text style={styles.ghostButtonText}>{isSearching ? '검색 중..' : '주소 검색'}</Text>
+            <Text style={styles.secondaryButtonCompactText}>{isSearching ? '검색 중...' : '주소 검색'}</Text>
           </Pressable>
         </View>
 
-        {searchError && <Text style={styles.error}>{searchError}</Text>}
+        {searchError && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{searchError}</Text>
+          </View>
+        )}
+
         {searchResults.length > 0 && (
-          <View style={styles.resultList}>
+          <View style={styles.searchResultGroup}>
             {searchResults.map((item) => {
               const key = `${item.roadAddress}-${item.zipCode}`;
               const selected = item.roadAddress === roadAddress;
               return (
                 <Pressable
                   key={key}
-                  style={[styles.resultItem, selected && styles.resultItemSelected]}
+                  style={[styles.searchResultCard, selected && styles.searchResultCardSelected]}
                   onPress={() => handleSelectSearchResult(item)}
                 >
-                  <Text style={styles.listTitle}>{item.roadAddress}</Text>
-                  <Text style={styles.listSub}>[{item.zipCode}] {item.jibunAddress || '-'}</Text>
+                  <Text style={styles.searchResultTitle}>{item.roadAddress}</Text>
+                  <Text style={styles.searchResultMeta}>[{item.zipCode}] {item.jibunAddress || '-'}</Text>
                 </Pressable>
               );
             })}
@@ -372,23 +439,24 @@ export function UserAddressManagementScreen() {
         />
 
         <Pressable
-          style={[styles.switchButton, isPrimaryDraft && styles.switchButtonActive]}
+          style={[styles.checkboxRow, isPrimaryDraft && styles.checkboxRowActive]}
           onPress={() => setIsPrimaryDraft((prev) => !prev)}
         >
-          <Text style={[styles.switchButtonText, isPrimaryDraft && styles.switchButtonTextActive]}>
-            {isPrimaryDraft ? '대표 주소지로 저장됨' : '대표 주소지로 저장'}
-          </Text>
+          <View style={[styles.checkbox, isPrimaryDraft && styles.checkboxActive]}>
+            <Text style={[styles.checkboxMark, isPrimaryDraft && styles.checkboxMarkActive]}>{isPrimaryDraft ? '✓' : ''}</Text>
+          </View>
+          <Text style={styles.checkboxLabel}>대표 주소지로 저장</Text>
         </Pressable>
 
         <Pressable
-          style={[styles.primaryButton, isSaving && styles.actionButtonDisabled]}
-          onPress={handleSaveAddress}
+          style={[styles.primaryButton, isSaving && styles.buttonDisabled]}
+          onPress={() => void handleSaveAddress()}
           disabled={isSaving}
         >
-          <Text style={styles.primaryButtonText}>{isSaving ? '저장 중..' : editingAddressId ? '수정 저장' : '주소 등록'}</Text>
+          <Text style={styles.primaryButtonText}>{isSaving ? '저장 중...' : isEditing ? '수정 저장' : '주소 등록'}</Text>
         </Pressable>
 
-        {editingAddressId && (
+        {isEditing && (
           <Pressable style={styles.secondaryButton} onPress={resetForm}>
             <Text style={styles.secondaryButtonText}>수정 취소</Text>
           </Pressable>
@@ -400,188 +468,331 @@ export function UserAddressManagementScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: colors.background,
+    gap: 24,
+  },
+  headerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     padding: 16,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+    gap: 10,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '700',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
   },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
   },
   card: {
-    backgroundColor: ui.colors.card,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
-    gap: 8,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 12,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  label: {
-    fontSize: 13,
-    color: ui.colors.textStrong,
-    marginTop: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
-  },
-  rowBetween: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
   },
-  rowGap8: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  skeletonGroup: {
+    gap: 10,
+  },
+  skeletonCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    padding: 12,
     gap: 8,
   },
-  flexInput: {
+  skeletonLineShort: {
+    height: 10,
+    width: '46%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '78%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  errorCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  successCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#86efac',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  successText: {
+    color: colors.success,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  emptyCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyIcon: {
+    color: colors.caption,
+    fontSize: 16,
+  },
+  emptyTitle: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyDescription: {
+    color: colors.caption,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  addressCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 12,
+    gap: 6,
+  },
+  addressTitle: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 14,
     flex: 1,
   },
-  ghostButton: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  ghostButtonText: {
-    color: ui.colors.text,
+  addressMeta: {
+    color: colors.caption,
     fontSize: 12,
-    fontWeight: '600',
-  },
-  listItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-  },
-  listTitle: {
-    color: ui.colors.textStrong,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  listSub: {
-    color: ui.colors.text,
-    fontSize: 12,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
-  },
-  actionButton: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#ffffff',
-  },
-  actionButtonText: {
-    color: ui.colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  actionButtonDisabled: {
-    opacity: 0.6,
   },
   primaryBadge: {
-    color: '#065f46',
-    backgroundColor: '#d1fae5',
     borderRadius: 999,
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
+  },
+  primaryBadgeText: {
+    color: '#166534',
     fontSize: 11,
     fontWeight: '700',
   },
-  deleteButton: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fff1f2',
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
   },
-  deleteButtonText: {
-    color: '#ef4444',
+  secondaryButtonSmall: {
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  secondaryButtonSmallText: {
+    color: colors.text,
     fontSize: 12,
     fontWeight: '700',
   },
-  resultList: {
-    gap: 6,
-  },
-  resultItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
+  dangerButtonSmall: {
+    minHeight: 36,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    gap: 3,
-  },
-  resultItemSelected: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
-  switchButton: {
     borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: ui.radius.control,
-    paddingVertical: 10,
+    borderColor: '#fca5a5',
+    backgroundColor: '#fff1f2',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
   },
-  switchButtonActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
-  switchButtonText: {
-    color: ui.colors.text,
-    fontWeight: '600',
-  },
-  switchButtonTextActive: {
-    color: ui.colors.primary,
+  dangerButtonSmallText: {
+    color: '#dc2626',
+    fontSize: 12,
     fontWeight: '700',
   },
-  primaryButton: {
-    backgroundColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
+  searchRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: colors.textStrong,
+    backgroundColor: '#ffffff',
+    fontSize: 14,
+  },
+  searchResultGroup: {
+    gap: 8,
+  },
+  searchResultCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+    backgroundColor: '#ffffff',
+  },
+  searchResultCardSelected: {
+    borderColor: '#93c5fd',
+    backgroundColor: '#eff6ff',
+  },
+  searchResultTitle: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  searchResultMeta: {
+    color: colors.caption,
+    fontSize: 12,
+  },
+  checkboxRow: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkboxRowActive: {
+    borderColor: '#93c5fd',
+    backgroundColor: '#eff6ff',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#94a3b8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  checkboxActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#dbeafe',
+  },
+  checkboxMark: {
+    color: 'transparent',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  checkboxMarkActive: {
+    color: colors.primary,
+  },
+  checkboxLabel: {
+    color: colors.textStrong,
+    fontSize: 14,
+    flex: 1,
+  },
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButtonText: {
     color: '#ffffff',
+    fontSize: 14,
     fontWeight: '700',
   },
   secondaryButton: {
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#94a3b8',
-    borderRadius: ui.radius.control,
-    paddingVertical: 10,
-    alignItems: 'center',
+    borderColor: colors.border,
     backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: '#334155',
-    fontWeight: '600',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
+  secondaryButtonCompact: {
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
   },
-  success: {
-    color: ui.colors.success,
-    fontSize: 13,
+  secondaryButtonCompactText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });

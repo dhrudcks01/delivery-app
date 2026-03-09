@@ -1,4 +1,4 @@
-﻿# MVP 티켓 백로그 (쓰레기 수거 서비스)
+# MVP 티켓 백로그 (쓰레기 수거 서비스)
 
 ## 사용 규칙 (중요)
 - Codex는 작업마다 "티켓 1개"만 수행한다.
@@ -1604,7 +1604,7 @@
 - 로딩/빈 사진/오류 상태를 공통 Empty/Loading/Error 패턴으로 제공한다.
 - iOS/Android에서 상세 조회/사진 확대/되돌아가기 UX를 수동 검증한다.
 
-### [ ] T-0565 UserAddressManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0565 UserAddressManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 주소관리 화면의 목록/대표주소/입력 폼 UI를 UI_SYSTEM 기준으로 정렬한다.
 
