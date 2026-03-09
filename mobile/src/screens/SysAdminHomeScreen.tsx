@@ -18,24 +18,14 @@ import {
 } from '../api/sysAdminRoleApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { ui } from '../theme/ui';
 import { RoleApplication } from '../types/roleApplication';
 import { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
 
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
+const colors = ui.colors;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {

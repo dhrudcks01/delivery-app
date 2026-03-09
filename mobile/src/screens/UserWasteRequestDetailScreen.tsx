@@ -8,6 +8,7 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { ui } from '../theme/ui';
 import { ApiErrorResponse, WasteRequestDetail } from '../types/waste';
 import {
   toUserWasteStatusLabel,
@@ -22,18 +23,7 @@ const DISPOSAL_ITEM_LABEL: Record<string, string> = {
 
 type StepState = 'done' | 'current' | 'upcoming';
 
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
+const colors = ui.colors;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {

@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
+import { ui } from '../theme/ui';
 import type { UserAddress } from '../types/userAddress';
 import type { ApiErrorResponse, WasteRequest } from '../types/waste';
 import { toUserWasteStatusLabel } from '../utils/wasteStatusLabel';
@@ -40,18 +41,7 @@ const SECTION_HEADER_COPY: Record<UserHomeSection, { badge: string; title: strin
   },
 };
 
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0f172a',
-  text: '#334155',
-  caption: '#64748b',
-};
+const colors = ui.colors;
 
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
 const PRIMARY_ADDRESS_MISSING_MESSAGE = '대표 주소가 없습니다. 내정보 > 주소 관리에서 대표 주소를 등록해 주세요.';

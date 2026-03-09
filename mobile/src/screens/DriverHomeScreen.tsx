@@ -7,23 +7,13 @@ import { getMyAssignedWasteRequests } from '../api/driverWasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { ui } from '../theme/ui';
 import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 type DriverFilter = 'ALL' | 'ACTION_REQUIRED' | 'DONE';
 
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
+const colors = ui.colors;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
