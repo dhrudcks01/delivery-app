@@ -1670,7 +1670,7 @@
 - Empty/Loading/Error 및 부분 실패 메시지를 공통 패턴으로 정리한다.
 - iOS/Android에서 선택/등록/상태변경 동선을 수동 검증한다.
 
-### [ ] T-0571 DriverHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0571 DriverHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - DRIVER 홈(배정 목록/측정 입력 진입) UI를 UI_SYSTEM 기준으로 리팩토링한다.
 

@@ -2,15 +2,28 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getMyAssignedWasteRequests } from '../api/driverWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { ui } from '../theme/ui';
 import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 type DriverFilter = 'ALL' | 'ACTION_REQUIRED' | 'DONE';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -25,6 +38,29 @@ function formatDate(dateTime: string | null): string {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
+}
+
+function getStatusBadgeStyle(status: string) {
+  if (status === 'ASSIGNED') {
+    return { container: styles.statusBadgeWarning, text: styles.statusBadgeWarningText };
+  }
+  if (status === 'COMPLETED' || status === 'PAID') {
+    return { container: styles.statusBadgeSuccess, text: styles.statusBadgeSuccessText };
+  }
+  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
+    return { container: styles.statusBadgeError, text: styles.statusBadgeErrorText };
+  }
+  return { container: styles.statusBadgeNeutral, text: styles.statusBadgeNeutralText };
+}
+
+function getFilterCount(requests: DriverAssignedWasteRequest[], filter: DriverFilter): number {
+  if (filter === 'ALL') {
+    return requests.length;
+  }
+  if (filter === 'ACTION_REQUIRED') {
+    return requests.filter((request) => request.status === 'ASSIGNED').length;
+  }
+  return requests.filter((request) => request.status !== 'ASSIGNED').length;
 }
 
 export function DriverHomeScreen() {
@@ -65,99 +101,382 @@ export function DriverHomeScreen() {
     }, [refreshAssignedRequests]),
   );
 
+  const actionRequiredCount = useMemo(
+    () => assignedRequests.filter((request) => request.status === 'ASSIGNED').length,
+    [assignedRequests],
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>DRIVER 전용 배정건</Text>
-      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-      <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>배정 목록</Text>
-          <Pressable style={styles.ghostButton} onPress={() => void refreshAssignedRequests()}>
-            <Text style={styles.ghostButtonText}>새로고침</Text>
-          </Pressable>
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} includeTopInset>
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.badge}>DRIVER</Text>
+          <Text style={styles.title}>배정 수거 요청</Text>
+          <Text style={styles.description}>배정 목록을 확인하고 요청별 상세 화면에서 측정 입력을 진행합니다.</Text>
+          <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
+          <Text style={styles.caption}>역할: {me?.roles.join(', ') ?? '-'}</Text>
         </View>
-        <Text style={styles.meta}>요청을 탭하면 상세 화면으로 이동합니다.</Text>
 
-        <View style={styles.filterRow}>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>전체 배정</Text>
+            <Text style={styles.summaryValue}>{assignedRequests.length}건</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>처리 필요</Text>
+            <Text style={styles.summaryValueWarn}>{actionRequiredCount}건</Text>
+          </View>
           <Pressable
-            style={[styles.filterChip, driverFilter === 'ACTION_REQUIRED' && styles.filterChipActive]}
-            onPress={() => setDriverFilter('ACTION_REQUIRED')}
+            style={[styles.secondaryButtonCompact, isLoadingList && styles.buttonDisabled]}
+            onPress={() => void refreshAssignedRequests()}
+            disabled={isLoadingList}
           >
-            <Text style={[styles.filterChipText, driverFilter === 'ACTION_REQUIRED' && styles.filterChipTextActive]}>
-              처리 필요
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.filterChip, driverFilter === 'DONE' && styles.filterChipActive]}
-            onPress={() => setDriverFilter('DONE')}
-          >
-            <Text style={[styles.filterChipText, driverFilter === 'DONE' && styles.filterChipTextActive]}>
-              처리 완료
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.filterChip, driverFilter === 'ALL' && styles.filterChipActive]}
-            onPress={() => setDriverFilter('ALL')}
-          >
-            <Text style={[styles.filterChipText, driverFilter === 'ALL' && styles.filterChipTextActive]}>전체</Text>
+            <Text style={styles.secondaryButtonCompactText}>{isLoadingList ? '새로고침 중...' : '새로고침'}</Text>
           </Pressable>
         </View>
 
-        {isLoadingList && <Text style={styles.meta}>목록을 불러오는 중..</Text>}
-        {listError && <Text style={styles.error}>{listError}</Text>}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>배정 목록</Text>
+          <Text style={styles.caption}>요청 카드를 눌러 상세 화면으로 이동하면 측정 입력/처리 완료를 진행할 수 있습니다.</Text>
 
-        {filteredRequests.map((item) => (
-          <Pressable
-            key={item.requestId}
-            style={styles.listItem}
-            onPress={() => navigation.navigate('DriverAssignedRequestDetail', { requestId: item.requestId })}
-          >
-            <View style={styles.rowBetween}>
-              <Text style={styles.listTitle}>#{item.requestId} {toWasteStatusLabel(item.status)}</Text>
-              {item.status === 'ASSIGNED' && <Text style={styles.priorityBadge}>우선 처리</Text>}
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, driverFilter === 'ACTION_REQUIRED' && styles.filterChipActive]}
+              onPress={() => setDriverFilter('ACTION_REQUIRED')}
+            >
+              <Text style={[styles.filterChipText, driverFilter === 'ACTION_REQUIRED' && styles.filterChipTextActive]}>
+                처리 필요 ({getFilterCount(assignedRequests, 'ACTION_REQUIRED')})
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, driverFilter === 'DONE' && styles.filterChipActive]}
+              onPress={() => setDriverFilter('DONE')}
+            >
+              <Text style={[styles.filterChipText, driverFilter === 'DONE' && styles.filterChipTextActive]}>
+                처리 완료 ({getFilterCount(assignedRequests, 'DONE')})
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, driverFilter === 'ALL' && styles.filterChipActive]}
+              onPress={() => setDriverFilter('ALL')}
+            >
+              <Text style={[styles.filterChipText, driverFilter === 'ALL' && styles.filterChipTextActive]}>
+                전체 ({getFilterCount(assignedRequests, 'ALL')})
+              </Text>
+            </Pressable>
+          </View>
+
+          {isLoadingList && (
+            <View style={styles.loadingGroup}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>배정 목록을 불러오는 중입니다...</Text>
+              </View>
+              <View style={styles.skeletonCard}>
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+                <View style={styles.skeletonLineLong} />
+              </View>
+              <View style={styles.skeletonCard}>
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+                <View style={styles.skeletonLineLong} />
+              </View>
             </View>
-            <Text style={styles.listSub}>{item.address}</Text>
-            <Text style={styles.listSub}>배정일: {formatDate(item.assignedAt)}</Text>
-          </Pressable>
-        ))}
+          )}
 
-        {!isLoadingList && filteredRequests.length === 0 && (
-          <Text style={styles.meta}>선택한 필터에 해당하는 배정 요청이 없습니다.</Text>
-        )}
+          {!isLoadingList && listError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{listError}</Text>
+              <Pressable style={styles.retryButton} onPress={() => void refreshAssignedRequests()}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!isLoadingList && !listError && filteredRequests.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>선택한 필터에 해당하는 배정 요청이 없습니다</Text>
+              <Text style={styles.emptyDescription}>필터를 변경하거나 새로고침 후 다시 확인해 주세요.</Text>
+            </View>
+          )}
+
+          {!isLoadingList && !listError && filteredRequests.length > 0 && (
+            <View style={styles.listWrap}>
+              {filteredRequests.map((item) => {
+                const badgeStyle = getStatusBadgeStyle(item.status);
+                const isActionRequired = item.status === 'ASSIGNED';
+                return (
+                  <Pressable
+                    key={item.requestId}
+                    style={styles.listItem}
+                    onPress={() => navigation.navigate('DriverAssignedRequestDetail', { requestId: item.requestId })}
+                  >
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>요청 #{item.requestId}</Text>
+                      <View style={[styles.statusBadge, badgeStyle.container]}>
+                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{toWasteStatusLabel(item.status)}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.listSub}>{item.address}</Text>
+                    <Text style={styles.listSub}>배정일: {formatDate(item.assignedAt)}</Text>
+
+                    {item.contactPhone ? <Text style={styles.listSub}>연락처: {item.contactPhone}</Text> : null}
+                    {item.note ? <Text style={styles.listSub}>요청사항: {item.note}</Text> : null}
+
+                    <View style={styles.rowBetween}>
+                      {isActionRequired ? (
+                        <View style={styles.priorityBadge}>
+                          <Text style={styles.priorityBadgeText}>우선 처리</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.priorityBadgeNeutral}>
+                          <Text style={styles.priorityBadgeNeutralText}>처리 기록 확인</Text>
+                        </View>
+                      )}
+                      <View style={styles.detailButton}>
+                        <Text style={styles.detailButtonText}>{isActionRequired ? '측정 입력' : '상세보기'}</Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+  screen: {
+    flexGrow: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
+  screenContainer: {
+    gap: 16,
   },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
-  },
-  card: {
-    backgroundColor: ui.colors.card,
+  headerCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
-  cardTitle: {
-    fontSize: 16,
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textStrong,
+  },
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
+  },
+  summaryCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  summaryItem: {
+    flex: 1,
+    gap: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: colors.caption,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: colors.textStrong,
+    fontWeight: '700',
+  },
+  summaryValueWarn: {
+    fontSize: 16,
+    color: '#b45309',
+    fontWeight: '700',
+  },
+  secondaryButtonCompact: {
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  secondaryButtonCompactText: {
+    fontSize: 13,
+    color: colors.textStrong,
+    fontWeight: '700',
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+  },
+  filterRow: {
+    gap: 8,
+  },
+  filterChip: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+  },
+  filterChipActive: {
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+  },
+  filterChipText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: '#1d4ed8',
+  },
+  loadingGroup: {
+    gap: 8,
+  },
+  loadingCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#1d4ed8',
+    fontWeight: '600',
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '36%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '82%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  retryButton: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    fontSize: 13,
+    color: '#b91c1c',
+    fontWeight: '700',
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  emptyIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.caption,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  listWrap: {
+    gap: 8,
+  },
+  listItem: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    backgroundColor: '#ffffff',
   },
   rowBetween: {
     flexDirection: 'row',
@@ -165,68 +484,97 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#ffffff',
-  },
-  filterChipActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
-  filterChipText: {
-    color: ui.colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  filterChipTextActive: {
-    color: ui.colors.primary,
-  },
-  ghostButton: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  ghostButtonText: {
-    color: ui.colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  listItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 2,
-  },
   listTitle: {
-    color: ui.colors.textStrong,
+    flex: 1,
+    color: colors.textStrong,
+    fontSize: 14,
     fontWeight: '700',
   },
   listSub: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 12,
+    lineHeight: 18,
+  },
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statusBadgeSuccess: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+  },
+  statusBadgeSuccessText: {
+    color: colors.success,
+  },
+  statusBadgeWarning: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  statusBadgeWarningText: {
+    color: '#b45309',
+  },
+  statusBadgeError: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+  },
+  statusBadgeErrorText: {
+    color: colors.error,
+  },
+  statusBadgeNeutral: {
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+  },
+  statusBadgeNeutralText: {
+    color: colors.caption,
   },
   priorityBadge: {
-    color: '#b91c1c',
-    fontSize: 11,
-    fontWeight: '700',
-    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    backgroundColor: '#fff7ed',
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
+  priorityBadgeText: {
+    color: '#c2410c',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  priorityBadgeNeutral: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  priorityBadgeNeutralText: {
+    color: colors.caption,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailButton: {
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  detailButtonText: {
+    color: '#1d4ed8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });
