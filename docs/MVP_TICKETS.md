@@ -1692,7 +1692,7 @@
 - Empty/Loading/Error 상태 및 업로드 실패 메시지 패턴을 일관화한다.
 - iOS/Android에서 업로드/측정완료/뒤로가기 동선을 수동 검증한다.
 
-### [ ] T-0573 OpsAdminHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0573 OpsAdminHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - OPS_ADMIN 홈(요청 목록/필터/배정 진입) UI를 UI_SYSTEM 기준으로 리팩토링한다.
 

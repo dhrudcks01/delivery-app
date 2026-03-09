@@ -1,8 +1,8 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveDriverApplication,
   getDriverApplicationsForOps,
@@ -14,12 +14,25 @@ import {
   retryFailedPaymentForOps,
 } from '../api/opsAdminWasteApi';
 import { useAuth } from '../auth/AuthContext';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { ui } from '../theme/ui';
 import { DriverApplication } from '../types/driverApplication';
 import { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -37,6 +50,29 @@ function formatDate(dateTime: string | null): string {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
+}
+
+function getApplicationStatusBadgeStyle(status: string) {
+  if (status === 'APPROVED') {
+    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
+  }
+  if (status === 'REJECTED') {
+    return { container: styles.badgeError, text: styles.badgeErrorText };
+  }
+  return { container: styles.badgeWarning, text: styles.badgeWarningText };
+}
+
+function getWasteStatusBadgeStyle(status: string) {
+  if (status === 'COMPLETED' || status === 'PAID' || status === 'PICKED_UP') {
+    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
+  }
+  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
+    return { container: styles.badgeError, text: styles.badgeErrorText };
+  }
+  if (status === 'REQUESTED' || status === 'ASSIGNED' || status === 'PAYMENT_PENDING') {
+    return { container: styles.badgeWarning, text: styles.badgeWarningText };
+  }
+  return { container: styles.badgeNeutral, text: styles.badgeNeutralText };
 }
 
 export function OpsAdminHomeScreen() {
@@ -200,204 +236,419 @@ export function OpsAdminHomeScreen() {
     setSelectedApplication(found);
   }, [applications, selectedApplicationId]);
 
+  const requestedCount = useMemo(
+    () => opsWasteRequests.filter((item) => item.status === 'REQUESTED').length,
+    [opsWasteRequests],
+  );
+
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
+    <KeyboardAwareScrollScreen
+      contentContainerStyle={styles.screen}
       keyboardShouldPersistTaps="handled"
-      contentInsetAdjustmentBehavior="always"
+      includeTopInset
     >
-      <Text style={styles.title}>OPS_ADMIN 운영 관리</Text>
-      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-      <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>기사 신청 승인/반려 (OPS_ADMIN/SYS_ADMIN)</Text>
-          <Pressable style={styles.ghostButton} onPress={() => void loadPendingApplications()}>
-            <Text style={styles.ghostButtonText}>대기 목록 새로고침</Text>
-          </Pressable>
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.badge}>OPS_ADMIN</Text>
+          <Text style={styles.title}>운영 관리</Text>
+          <Text style={styles.description}>기사 신청 승인, 수거 요청 조회, 결제 실패 재시도를 관리합니다.</Text>
+          <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
+          <Text style={styles.caption}>역할: {me?.roles.join(', ') ?? '-'}</Text>
         </View>
-        <Text style={styles.meta}>OPS_ADMIN 또는 SYS_ADMIN 권한으로 기사 신청을 처리할 수 있습니다.</Text>
-        {isLoadingApplications && <Text style={styles.meta}>기사 신청 목록 로딩 중..</Text>}
-        {applicationListError && <Text style={styles.error}>{applicationListError}</Text>}
-        {applications.map((item) => (
-          <Pressable
-            key={item.id}
-            style={[styles.listItem, selectedApplicationId === item.id && styles.listItemActive]}
-            onPress={() => {
-              setSelectedApplicationId(item.id);
-              setSelectedApplication(item);
-              setApplicationActionError(null);
-              setApplicationResultMessage(null);
-            }}
-          >
-            <Text style={styles.listTitle}>요청 #{item.id}</Text>
-            <Text style={styles.listSub}>신청자: {item.userDisplayName} ({item.userEmail})</Text>
-            <Text style={styles.listSub}>신청시각: {formatDate(item.createdAt)}</Text>
-          </Pressable>
-        ))}
-        {!isLoadingApplications && applications.length === 0 && (
-          <Text style={styles.meta}>현재 대기(PENDING) 기사 신청이 없습니다.</Text>
-        )}
 
-        {selectedApplication && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>선택 요청 ID: {selectedApplication.id}</Text>
-            <Text style={styles.detailText}>상태: {selectedApplication.status}</Text>
-            <Text style={styles.detailText}>
-              신청자: {selectedApplication.userDisplayName} ({selectedApplication.userEmail})
-            </Text>
-            <Text style={styles.detailText}>신청시각: {formatDate(selectedApplication.createdAt)}</Text>
-            <Text style={styles.detailText}>
-              신청내용: {selectedApplication.payload ? JSON.stringify(selectedApplication.payload) : '-'}
-            </Text>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>기사 신청 대기</Text>
+            <Text style={styles.summaryValue}>{applications.length}건</Text>
           </View>
-        )}
-        {applicationResultMessage && <Text style={styles.success}>{applicationResultMessage}</Text>}
-        {applicationActionError && <Text style={styles.error}>{applicationActionError}</Text>}
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={[styles.button, isSubmittingApprove && styles.buttonDisabled]}
-            onPress={() => void handleApproveApplication()}
-            disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
-          >
-            <Text style={styles.buttonText}>{isSubmittingApprove ? '승인 중..' : '승인'}</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.rejectButton, isSubmittingReject && styles.buttonDisabled]}
-            onPress={() => void handleRejectApplication()}
-            disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
-          >
-            <Text style={styles.buttonText}>{isSubmittingReject ? '반려 중..' : '반려'}</Text>
-          </Pressable>
-        </View>
-        {latestApplicationResult && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>최근 처리 요청 ID: {latestApplicationResult.id}</Text>
-            <Text style={styles.detailText}>상태: {latestApplicationResult.status}</Text>
-            <Text style={styles.detailText}>신청자: {latestApplicationResult.userEmail}</Text>
-            <Text style={styles.detailText}>처리시각: {formatDate(latestApplicationResult.processedAt)}</Text>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>REQUESTED 요청</Text>
+            <Text style={styles.summaryValue}>{requestedCount}건</Text>
           </View>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>수거 요청 목록</Text>
-          <Pressable style={styles.ghostButton} onPress={() => void loadWasteRequests()}>
-            <Text style={styles.ghostButtonText}>새로고침</Text>
-          </Pressable>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>결제 실패</Text>
+            <Text style={styles.summaryValueError}>{failedPayments.length}건</Text>
+          </View>
         </View>
-        <Text style={styles.meta}>기본 조회 상태는 REQUESTED 입니다. 항목을 탭하면 상세/배정 화면으로 이동합니다.</Text>
-        <TextInput
-          style={styles.input}
-          value={wasteStatusFilter}
-          onChangeText={setWasteStatusFilter}
-          placeholder="상태 필터 (기본: REQUESTED)"
-          placeholderTextColor="#94a3b8"
-        />
-        <Pressable style={styles.secondaryButton} onPress={() => void loadWasteRequests()}>
-          <Text style={styles.secondaryButtonText}>필터 적용</Text>
-        </Pressable>
-        {isLoadingWasteList && <Text style={styles.meta}>요청 목록 로딩 중..</Text>}
-        {wasteListError && <Text style={styles.error}>{wasteListError}</Text>}
-        {opsWasteRequests.map((item) => (
-          <Pressable
-            key={item.id}
-            style={styles.listItem}
-            onPress={() => navigation.navigate('OpsWasteRequestDetail', { requestId: item.id })}
-          >
-            <Text style={styles.listTitle}>#{item.id} {toWasteStatusLabel(item.status)}</Text>
-            <Text style={styles.listSub}>{item.address}</Text>
-            <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
-          </Pressable>
-        ))}
-        {!isLoadingWasteList && opsWasteRequests.length === 0 && (
-          <Text style={styles.meta}>조회된 요청이 없습니다.</Text>
-        )}
-      </View>
 
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>결제 실패 처리</Text>
-          <Pressable style={styles.ghostButton} onPress={() => void loadFailedPayments()}>
-            <Text style={styles.ghostButtonText}>실패 목록 새로고침</Text>
-          </Pressable>
-        </View>
-        {retryResultMessage && <Text style={styles.success}>{retryResultMessage}</Text>}
-        {failedPaymentError && <Text style={styles.error}>{failedPaymentError}</Text>}
-        {isLoadingFailedPayments && <Text style={styles.meta}>실패 결제 목록 로딩 중..</Text>}
-        {failedPayments.map((item) => (
-          <View key={item.paymentId} style={styles.listItem}>
-            <Text style={styles.listTitle}>결제 #{item.paymentId}</Text>
-            <Text style={styles.listSub}>요청 ID: {item.wasteRequestId}</Text>
-            <Text style={styles.listSub}>실패코드: {item.failureCode ?? '-'}</Text>
-            <Text style={styles.listSub}>실패사유: {item.failureMessage ?? '-'}</Text>
-            <Text style={styles.listSub}>갱신시각: {formatDate(item.updatedAt)}</Text>
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>기사 신청 승인/반려</Text>
             <Pressable
-              style={[styles.button, isRetryingPayment === item.wasteRequestId && styles.buttonDisabled]}
-              onPress={() => void handleRetryFailedPayment(item.wasteRequestId)}
-              disabled={isRetryingPayment !== null}
+              style={[styles.secondaryButtonCompact, isLoadingApplications && styles.buttonDisabled]}
+              onPress={() => void loadPendingApplications()}
+              disabled={isLoadingApplications}
             >
-              <Text style={styles.buttonText}>
-                {isRetryingPayment === item.wasteRequestId ? '재시도 중..' : '결제 재시도'}
-              </Text>
+              <Text style={styles.secondaryButtonCompactText}>{isLoadingApplications ? '불러오는 중...' : '새로고침'}</Text>
             </Pressable>
           </View>
-        ))}
-        {!isLoadingFailedPayments && failedPayments.length === 0 && (
-          <Text style={styles.meta}>결제 실패 건이 없습니다.</Text>
-        )}
+          <Text style={styles.caption}>OPS_ADMIN 또는 SYS_ADMIN 권한으로 기사 신청을 처리할 수 있습니다.</Text>
+
+          {isLoadingApplications && (
+            <View style={styles.loadingGroup}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>기사 신청 목록을 불러오는 중입니다...</Text>
+              </View>
+              <View style={styles.skeletonCard}>
+                <View style={styles.skeletonLineShort} />
+                <View style={styles.skeletonLineLong} />
+              </View>
+            </View>
+          )}
+
+          {!isLoadingApplications && applicationListError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{applicationListError}</Text>
+              <Pressable style={styles.retryButton} onPress={() => void loadPendingApplications()}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!isLoadingApplications && !applicationListError && applications.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>현재 대기(PENDING) 기사 신청이 없습니다</Text>
+              <Text style={styles.emptyDescription}>새 신청이 접수되면 이 영역에 표시됩니다.</Text>
+            </View>
+          )}
+
+          {!isLoadingApplications && !applicationListError && applications.length > 0 && (
+            <View style={styles.listWrap}>
+              {applications.map((item) => {
+                const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+                const isSelected = selectedApplicationId === item.id;
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={[styles.listItem, isSelected && styles.listItemActive]}
+                    onPress={() => {
+                      setSelectedApplicationId(item.id);
+                      setSelectedApplication(item);
+                      setApplicationActionError(null);
+                      setApplicationResultMessage(null);
+                    }}
+                  >
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>요청 #{item.id}</Text>
+                      <View style={[styles.statusBadge, badgeStyle.container]}>
+                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.listSub}>신청자: {item.userDisplayName} ({item.userEmail})</Text>
+                    <Text style={styles.listSub}>신청시각: {formatDate(item.createdAt)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {selectedApplication && (
+            <View style={styles.infoCard}>
+              <Text style={styles.infoText}>선택 요청 ID: {selectedApplication.id}</Text>
+              <Text style={styles.infoText}>상태: {selectedApplication.status}</Text>
+              <Text style={styles.infoText}>
+                신청자: {selectedApplication.userDisplayName} ({selectedApplication.userEmail})
+              </Text>
+              <Text style={styles.infoText}>신청시각: {formatDate(selectedApplication.createdAt)}</Text>
+              <Text style={styles.infoText}>
+                신청내용: {selectedApplication.payload ? JSON.stringify(selectedApplication.payload) : '-'}
+              </Text>
+            </View>
+          )}
+
+          {applicationResultMessage && (
+            <View style={styles.successCard}>
+              <Text style={styles.successText}>{applicationResultMessage}</Text>
+            </View>
+          )}
+          {applicationActionError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{applicationActionError}</Text>
+            </View>
+          )}
+
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={[styles.primaryButton, (isSubmittingApprove || isSubmittingReject || !selectedApplicationId) && styles.buttonDisabled]}
+              onPress={() => void handleApproveApplication()}
+              disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
+            >
+              <Text style={styles.primaryButtonText}>{isSubmittingApprove ? '승인 중...' : '승인'}</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.dangerButton, (isSubmittingApprove || isSubmittingReject || !selectedApplicationId) && styles.buttonDisabled]}
+              onPress={() => void handleRejectApplication()}
+              disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
+            >
+              <Text style={styles.dangerButtonText}>{isSubmittingReject ? '반려 중...' : '반려'}</Text>
+            </Pressable>
+          </View>
+
+          {latestApplicationResult && (
+            <View style={styles.infoCard}>
+              <Text style={styles.infoText}>최근 처리 요청 ID: {latestApplicationResult.id}</Text>
+              <Text style={styles.infoText}>상태: {latestApplicationResult.status}</Text>
+              <Text style={styles.infoText}>신청자: {latestApplicationResult.userEmail}</Text>
+              <Text style={styles.infoText}>처리시각: {formatDate(latestApplicationResult.processedAt)}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>수거 요청 목록</Text>
+            <Pressable
+              style={[styles.secondaryButtonCompact, isLoadingWasteList && styles.buttonDisabled]}
+              onPress={() => void loadWasteRequests()}
+              disabled={isLoadingWasteList}
+            >
+              <Text style={styles.secondaryButtonCompactText}>{isLoadingWasteList ? '불러오는 중...' : '새로고침'}</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.caption}>항목을 탭하면 수거요청 상세/배정 화면으로 이동합니다.</Text>
+
+          <Text style={styles.fieldLabel}>상태 필터</Text>
+          <TextInput
+            style={styles.input}
+            value={wasteStatusFilter}
+            onChangeText={setWasteStatusFilter}
+            placeholder="상태 필터 (기본: REQUESTED)"
+            placeholderTextColor="#94a3b8"
+          />
+          <View style={styles.chipWrap}>
+            <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('REQUESTED')}>
+              <Text style={styles.quickChipText}>REQUESTED</Text>
+            </Pressable>
+            <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('ASSIGNED')}>
+              <Text style={styles.quickChipText}>ASSIGNED</Text>
+            </Pressable>
+            <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('PAYMENT_FAILED')}>
+              <Text style={styles.quickChipText}>PAYMENT_FAILED</Text>
+            </Pressable>
+          </View>
+          <Pressable
+            style={[styles.primaryButton, isLoadingWasteList && styles.buttonDisabled]}
+            onPress={() => void loadWasteRequests()}
+            disabled={isLoadingWasteList}
+          >
+            <Text style={styles.primaryButtonText}>필터 적용</Text>
+          </Pressable>
+
+          {isLoadingWasteList && (
+            <View style={styles.loadingGroup}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>요청 목록을 불러오는 중입니다...</Text>
+              </View>
+            </View>
+          )}
+
+          {!isLoadingWasteList && wasteListError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{wasteListError}</Text>
+              <Pressable style={styles.retryButton} onPress={() => void loadWasteRequests()}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!isLoadingWasteList && !wasteListError && opsWasteRequests.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>조회된 요청이 없습니다</Text>
+              <Text style={styles.emptyDescription}>필터를 변경하거나 새로고침 후 다시 확인해 주세요.</Text>
+            </View>
+          )}
+
+          {!isLoadingWasteList && !wasteListError && opsWasteRequests.length > 0 && (
+            <View style={styles.listWrap}>
+              {opsWasteRequests.map((item) => {
+                const badgeStyle = getWasteStatusBadgeStyle(item.status);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={styles.listItem}
+                    onPress={() => navigation.navigate('OpsWasteRequestDetail', { requestId: item.id })}
+                  >
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>#{item.id}</Text>
+                      <View style={[styles.statusBadge, badgeStyle.container]}>
+                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{toWasteStatusLabel(item.status)}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.listSub}>{item.address}</Text>
+                    <Text style={styles.listSub}>{formatDate(item.createdAt)}</Text>
+                    <View style={styles.detailActionBadge}>
+                      <Text style={styles.detailActionText}>상세/배정 관리</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>결제 실패 처리</Text>
+            <Pressable
+              style={[styles.secondaryButtonCompact, isLoadingFailedPayments && styles.buttonDisabled]}
+              onPress={() => void loadFailedPayments()}
+              disabled={isLoadingFailedPayments}
+            >
+              <Text style={styles.secondaryButtonCompactText}>{isLoadingFailedPayments ? '불러오는 중...' : '새로고침'}</Text>
+            </Pressable>
+          </View>
+
+          {retryResultMessage && (
+            <View style={styles.successCard}>
+              <Text style={styles.successText}>{retryResultMessage}</Text>
+            </View>
+          )}
+
+          {isLoadingFailedPayments && (
+            <View style={styles.loadingGroup}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>실패 결제 목록을 불러오는 중입니다...</Text>
+              </View>
+            </View>
+          )}
+
+          {!isLoadingFailedPayments && failedPaymentError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{failedPaymentError}</Text>
+              <Pressable style={styles.retryButton} onPress={() => void loadFailedPayments()}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!isLoadingFailedPayments && !failedPaymentError && failedPayments.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>결제 실패 건이 없습니다</Text>
+              <Text style={styles.emptyDescription}>실패 결제가 발생하면 이 영역에서 재시도할 수 있습니다.</Text>
+            </View>
+          )}
+
+          {!isLoadingFailedPayments && !failedPaymentError && failedPayments.length > 0 && (
+            <View style={styles.listWrap}>
+              {failedPayments.map((item) => (
+                <View key={item.paymentId} style={styles.listItem}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.listTitle}>결제 #{item.paymentId}</Text>
+                    <View style={[styles.statusBadge, styles.badgeError]}>
+                      <Text style={[styles.statusBadgeText, styles.badgeErrorText]}>실패</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.listSub}>요청 ID: {item.wasteRequestId}</Text>
+                  <Text style={styles.listSub}>실패코드: {item.failureCode ?? '-'}</Text>
+                  <Text style={styles.listSub}>실패사유: {item.failureMessage ?? '-'}</Text>
+                  <Text style={styles.listSub}>갱신시각: {formatDate(item.updatedAt)}</Text>
+                  <Pressable
+                    style={[styles.primaryButton, isRetryingPayment === item.wasteRequestId && styles.buttonDisabled]}
+                    onPress={() => void handleRetryFailedPayment(item.wasteRequestId)}
+                    disabled={isRetryingPayment !== null}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {isRetryingPayment === item.wasteRequestId ? '재시도 중...' : '결제 재시도'}
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flexGrow: 1,
     padding: 16,
     paddingBottom: 28,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
+    backgroundColor: colors.background,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
+  screenContainer: {
+    gap: 16,
   },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
-  },
-  card: {
-    backgroundColor: ui.colors.card,
+  headerCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '700',
   },
-  success: {
-    color: ui.colors.success,
-    fontSize: 13,
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textStrong,
   },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
+  },
+  summaryCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  summaryItem: {
+    flex: 1,
+    gap: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: colors.caption,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: colors.textStrong,
+    fontWeight: '700',
+  },
+  summaryValueError: {
+    fontSize: 16,
+    color: colors.error,
+    fontWeight: '700',
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -405,74 +656,280 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  secondaryButtonCompact: {
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  secondaryButtonCompactText: {
+    color: colors.textStrong,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  fieldLabel: {
+    fontSize: 14,
+    color: colors.textStrong,
+    fontWeight: '600',
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    color: colors.textStrong,
+    backgroundColor: '#ffffff',
+    fontSize: 14,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickChip: {
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  quickChipText: {
+    color: '#1d4ed8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  loadingGroup: {
+    gap: 8,
+  },
+  loadingCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: '#1d4ed8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '38%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '82%',
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  emptyIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.caption,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  retryButton: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    color: '#b91c1c',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  successCard: {
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    padding: 12,
+  },
+  successText: {
+    color: colors.success,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  listWrap: {
+    gap: 8,
+  },
+  listItem: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    backgroundColor: '#ffffff',
+  },
+  listItemActive: {
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+  },
+  listTitle: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  listSub: {
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  badgeSuccess: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+  },
+  badgeSuccessText: {
+    color: colors.success,
+  },
+  badgeWarning: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  badgeWarningText: {
+    color: '#b45309',
+  },
+  badgeError: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+  },
+  badgeErrorText: {
+    color: colors.error,
+  },
+  badgeNeutral: {
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+  },
+  badgeNeutralText: {
+    color: colors.caption,
+  },
+  infoCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
+    backgroundColor: '#ffffff',
+  },
+  infoText: {
+    color: colors.textStrong,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   buttonRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  button: {
+  primaryButton: {
     flex: 1,
-    backgroundColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
+    height: 48,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: ui.colors.primary,
-    fontWeight: '700',
-  },
-  rejectButton: {
-    backgroundColor: '#7f1d1d',
-  },
-  buttonDisabled: {
-    opacity: 0.65,
-  },
-  buttonText: {
+  primaryButtonText: {
     color: '#ffffff',
     fontWeight: '700',
+    fontSize: 14,
   },
-  ghostButton: {
+  dangerButton: {
+    flex: 1,
+    height: 48,
     borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerButtonText: {
+    color: '#b91c1c',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  detailActionBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
-  ghostButtonText: {
-    color: ui.colors.text,
+  detailActionText: {
+    color: '#1d4ed8',
     fontSize: 12,
-    fontWeight: '600',
-  },
-  listItem: {
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-  },
-  listItemActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
-  },
-  listTitle: {
-    color: ui.colors.textStrong,
     fontWeight: '700',
   },
-  listSub: {
-    color: ui.colors.text,
-    fontSize: 12,
-  },
-  resultBox: {
-    gap: 4,
-  },
-  detailText: {
-    color: ui.colors.textStrong,
-    fontSize: 13,
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });
