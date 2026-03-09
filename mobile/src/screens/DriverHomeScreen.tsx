@@ -1,6 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AxiosError } from 'axios';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getMyAssignedWasteRequests } from '../api/driverWasteApi';
@@ -12,39 +11,20 @@ import { SecondaryButton } from '../components/SecondaryButton';
 import { SectionHeader } from '../components/SectionHeader';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
-import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
+import type { DriverAssignedWasteRequest } from '../types/waste';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 type DriverFilter = 'ALL' | 'ACTION_REQUIRED' | 'DONE';
 
 const colors = ui.colors;
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
-
 function formatDate(dateTime: string | null): string {
   if (!dateTime) {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
-}
-
-function getStatusBadgeStyle(status: string) {
-  if (status === 'ASSIGNED') {
-    return { container: styles.statusBadgeWarning, text: styles.statusBadgeWarningText };
-  }
-  if (status === 'COMPLETED' || status === 'PAID') {
-    return { container: styles.statusBadgeSuccess, text: styles.statusBadgeSuccessText };
-  }
-  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
-    return { container: styles.statusBadgeError, text: styles.statusBadgeErrorText };
-  }
-  return { container: styles.statusBadgeNeutral, text: styles.statusBadgeNeutralText };
 }
 
 function getFilterCount(requests: DriverAssignedWasteRequest[], filter: DriverFilter): number {
@@ -83,7 +63,7 @@ export function DriverHomeScreen() {
       const data = await getMyAssignedWasteRequests();
       setAssignedRequests(data);
     } catch (error) {
-      setListError(toErrorMessage(error));
+      setListError(toApiErrorMessage(error));
     } finally {
       setIsLoadingList(false);
     }
@@ -195,7 +175,7 @@ export function DriverHomeScreen() {
           {!isLoadingList && !listError && filteredRequests.length > 0 && (
             <View style={styles.listWrap}>
               {filteredRequests.map((item) => {
-                const badgeStyle = getStatusBadgeStyle(item.status);
+                const badgePalette = getStatusBadgePalette(resolveWasteStatusBadgeTone(item.status));
                 const isActionRequired = item.status === 'ASSIGNED';
                 return (
                   <Pressable
@@ -205,8 +185,10 @@ export function DriverHomeScreen() {
                   >
                     <View style={styles.rowBetween}>
                       <Text style={styles.listTitle}>요청 #{item.requestId}</Text>
-                      <View style={[styles.statusBadge, badgeStyle.container]}>
-                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{toWasteStatusLabel(item.status)}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                        <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>
+                          {toWasteStatusLabel(item.status)}
+                        </Text>
                       </View>
                     </View>
 
@@ -487,6 +469,7 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -494,34 +477,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  statusBadgeSuccess: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
-  },
-  statusBadgeSuccessText: {
-    color: colors.success,
-  },
-  statusBadgeWarning: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
-  },
-  statusBadgeWarningText: {
-    color: '#b45309',
-  },
-  statusBadgeError: {
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
-  },
-  statusBadgeErrorText: {
-    color: colors.error,
-  },
-  statusBadgeNeutral: {
-    borderColor: colors.border,
-    backgroundColor: '#f8fafc',
-  },
-  statusBadgeNeutralText: {
-    color: colors.caption,
   },
   priorityBadge: {
     borderWidth: 1,

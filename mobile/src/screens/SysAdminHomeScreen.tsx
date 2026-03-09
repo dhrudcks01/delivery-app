@@ -1,5 +1,4 @@
-﻿import { AxiosError } from 'axios';
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import {
   approveOpsAdminApplicationForSysAdmin,
@@ -23,19 +22,12 @@ import { SysAdminHomeContentSection } from './sections/SysAdminHomeSections';
 import { ui } from '../theme/ui';
 import type { RoleApplication } from '../types/roleApplication';
 import type { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../types/opsAdmin';
-import type { ApiErrorResponse } from '../types/waste';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, resolveApplicationStatusBadgeTone } from '../utils/statusBadge';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
 
 const colors = ui.colors;
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
 
 function formatDate(dateTime: string | null): string {
   if (!dateTime) {
@@ -53,16 +45,11 @@ function getRoleApplicationSummary(application: RoleApplication): string {
 }
 
 function getApplicationStatusBadgeStyle(status: string) {
-  if (status === 'APPROVED') {
-    return { container: styles.statusBadgeSuccess, text: styles.statusBadgeSuccessText };
-  }
-  if (status === 'REJECTED') {
-    return { container: styles.statusBadgeError, text: styles.statusBadgeErrorText };
-  }
-  if (status === 'PENDING') {
-    return { container: styles.statusBadgeWarning, text: styles.statusBadgeWarningText };
-  }
-  return { container: styles.statusBadgeNeutral, text: styles.statusBadgeNeutralText };
+  const badgePalette = getStatusBadgePalette(resolveApplicationStatusBadgeTone(status));
+  return {
+    container: { backgroundColor: badgePalette.backgroundColor },
+    text: { color: badgePalette.textColor },
+  };
 }
 
 export function SysAdminHomeScreen() {
@@ -144,7 +131,7 @@ export function SysAdminHomeScreen() {
         return response.content[0]?.id ?? null;
       });
     } catch (error) {
-      setOpsAdminApplicationListError(toErrorMessage(error));
+      setOpsAdminApplicationListError(toApiErrorMessage(error));
       setOpsAdminApplications([]);
       setSelectedOpsAdminApplicationId(null);
     } finally {
@@ -171,7 +158,7 @@ export function SysAdminHomeScreen() {
         return response.content[0]?.id ?? null;
       });
     } catch (error) {
-      setSysAdminApplicationListError(toErrorMessage(error));
+      setSysAdminApplicationListError(toApiErrorMessage(error));
       setSysAdminApplications([]);
       setSelectedSysAdminApplicationId(null);
     } finally {
@@ -201,7 +188,7 @@ export function SysAdminHomeScreen() {
         return response.content[0]?.userId ?? null;
       });
     } catch (error) {
-      setGrantCandidateError(toErrorMessage(error));
+      setGrantCandidateError(toApiErrorMessage(error));
       setOpsAdminGrantCandidates([]);
       setSelectedGrantCandidateId(null);
     } finally {
@@ -227,7 +214,7 @@ export function SysAdminHomeScreen() {
         return response.content[0]?.userId ?? null;
       });
     } catch (error) {
-      setSysAdminGrantCandidateError(toErrorMessage(error));
+      setSysAdminGrantCandidateError(toApiErrorMessage(error));
       setSysAdminGrantCandidates([]);
       setSelectedSysAdminGrantCandidateId(null);
     } finally {
@@ -252,7 +239,7 @@ export function SysAdminHomeScreen() {
       );
       await loadOpsAdminGrantCandidates();
     } catch (error) {
-      setRoleErrorMessage(toErrorMessage(error));
+      setRoleErrorMessage(toApiErrorMessage(error));
     } finally {
       setIsGranting(false);
     }
@@ -275,7 +262,7 @@ export function SysAdminHomeScreen() {
       );
       await loadSysAdminGrantCandidates();
     } catch (error) {
-      setRoleErrorMessage(toErrorMessage(error));
+      setRoleErrorMessage(toApiErrorMessage(error));
     } finally {
       setIsGrantingSysAdminRole(false);
     }
@@ -295,7 +282,7 @@ export function SysAdminHomeScreen() {
       await revokeOpsAdminRole(parsedUserId);
       setRoleResultMessage(`사용자 #${parsedUserId} 의 OPS_ADMIN 권한을 회수했습니다.`);
     } catch (error) {
-      setRoleErrorMessage(toErrorMessage(error));
+      setRoleErrorMessage(toApiErrorMessage(error));
     } finally {
       setIsRevoking(false);
     }
@@ -316,7 +303,7 @@ export function SysAdminHomeScreen() {
       setOpsAdminApplicationActionResult(`OPS_ADMIN 신청 #${response.id} 승인 완료`);
       await loadOpsAdminApplications();
     } catch (error) {
-      setOpsAdminApplicationActionError(toErrorMessage(error));
+      setOpsAdminApplicationActionError(toApiErrorMessage(error));
     } finally {
       setIsProcessingOpsAdminApplication(false);
     }
@@ -337,7 +324,7 @@ export function SysAdminHomeScreen() {
       setOpsAdminApplicationActionResult(`OPS_ADMIN 신청 #${response.id} 반려 완료`);
       await loadOpsAdminApplications();
     } catch (error) {
-      setOpsAdminApplicationActionError(toErrorMessage(error));
+      setOpsAdminApplicationActionError(toApiErrorMessage(error));
     } finally {
       setIsProcessingOpsAdminApplication(false);
     }
@@ -358,7 +345,7 @@ export function SysAdminHomeScreen() {
       setSysAdminApplicationActionResult(`SYS_ADMIN 신청 #${response.id} 승인 완료`);
       await loadSysAdminApplications();
     } catch (error) {
-      setSysAdminApplicationActionError(toErrorMessage(error));
+      setSysAdminApplicationActionError(toApiErrorMessage(error));
     } finally {
       setIsProcessingSysAdminApplication(false);
     }
@@ -379,7 +366,7 @@ export function SysAdminHomeScreen() {
       setSysAdminApplicationActionResult(`SYS_ADMIN 신청 #${response.id} 반려 완료`);
       await loadSysAdminApplications();
     } catch (error) {
-      setSysAdminApplicationActionError(toErrorMessage(error));
+      setSysAdminApplicationActionError(toApiErrorMessage(error));
     } finally {
       setIsProcessingSysAdminApplication(false);
     }
@@ -743,6 +730,7 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -750,34 +738,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  statusBadgeSuccess: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
-  },
-  statusBadgeSuccessText: {
-    color: colors.success,
-  },
-  statusBadgeWarning: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
-  },
-  statusBadgeWarningText: {
-    color: '#b45309',
-  },
-  statusBadgeError: {
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
-  },
-  statusBadgeErrorText: {
-    color: colors.error,
-  },
-  statusBadgeNeutral: {
-    borderColor: colors.border,
-    backgroundColor: '#f8fafc',
-  },
-  statusBadgeNeutralText: {
-    color: colors.caption,
   },
   resultBox: {
     borderWidth: 1,
@@ -793,3 +753,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+

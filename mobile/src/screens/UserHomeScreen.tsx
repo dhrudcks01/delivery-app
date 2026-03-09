@@ -1,6 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getUserServiceAreaAvailability } from '../api/serviceAreaApi';
@@ -13,7 +12,9 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import type { UserAddress } from '../types/userAddress';
-import type { ApiErrorResponse, WasteRequest } from '../types/waste';
+import type { WasteRequest } from '../types/waste';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import { toUserWasteStatusLabel } from '../utils/wasteStatusLabel';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 
@@ -47,38 +48,11 @@ const colors = ui.colors;
 const SUCCESS_BANNER_TIMEOUT_MS = 2500;
 const PRIMARY_ADDRESS_MISSING_MESSAGE = '대표 주소가 없습니다. 내정보 > 주소 관리에서 대표 주소를 등록해 주세요.';
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    if (error.code === 'ECONNABORTED') {
-      return '요청 시간이 초과되었습니다. 다시 시도해 주세요.';
-    }
-    if (!error.response) {
-      return '네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
-    }
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
-
 function formatDate(dateTime: string | null): string {
   if (!dateTime) {
     return '-';
   }
   return new Date(dateTime).toLocaleString();
-}
-
-function getStatusBadgeStyle(status: WasteRequest['status']) {
-  if (status === 'COMPLETED' || status === 'PAID') {
-    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
-  }
-  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
-    return { container: styles.badgeError, text: styles.badgeErrorText };
-  }
-  if (status === 'REQUESTED' || status === 'ASSIGNED' || status === 'MEASURED' || status === 'PAYMENT_PENDING') {
-    return { container: styles.badgeWarning, text: styles.badgeWarningText };
-  }
-  return { container: styles.badgeNeutral, text: styles.badgeNeutralText };
 }
 
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
@@ -199,7 +173,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       setPrimaryAddress(selected);
     } catch (error) {
       setPrimaryAddress(null);
-      setPrimaryAddressError(toErrorMessage(error));
+      setPrimaryAddressError(toApiErrorMessage(error));
     } finally {
       setIsLoadingPrimaryAddress(false);
     }
@@ -213,7 +187,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       const data = await getMyWasteRequests();
       setRequests(data);
     } catch (error) {
-      setListError(toErrorMessage(error));
+      setListError(toApiErrorMessage(error));
     } finally {
       setIsLoadingList(false);
     }
@@ -286,7 +260,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       });
       void refreshRequests();
     } catch (error) {
-      setSubmitError(toErrorMessage(error));
+      setSubmitError(toApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -496,7 +470,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
           )}
 
           {requests.map((item) => {
-            const badgeStyle = getStatusBadgeStyle(item.status);
+            const badgePalette = getStatusBadgePalette(resolveWasteStatusBadgeTone(item.status));
 
             return (
               <Pressable
@@ -506,8 +480,10 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
               >
                 <View style={styles.rowBetween}>
                   <Text style={styles.requestTitle}>#{item.id}</Text>
-                  <View style={[styles.statusBadge, badgeStyle.container]}>
-                    <Text style={[styles.statusBadgeText, badgeStyle.text]}>{toUserWasteStatusLabel(item.status)}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                    <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>
+                      {toUserWasteStatusLabel(item.status)}
+                    </Text>
                   </View>
                 </View>
                 <Text style={styles.requestAddress}>{item.address}</Text>
@@ -705,30 +681,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  badgeSuccess: {
-    backgroundColor: '#dcfce7',
-  },
-  badgeSuccessText: {
-    color: '#166534',
-  },
-  badgeWarning: {
-    backgroundColor: '#fef3c7',
-  },
-  badgeWarningText: {
-    color: '#92400e',
-  },
-  badgeError: {
-    backgroundColor: '#fee2e2',
-  },
-  badgeErrorText: {
-    color: '#991b1b',
-  },
-  badgeNeutral: {
-    backgroundColor: '#e2e8f0',
-  },
-  badgeNeutralText: {
-    color: '#334155',
   },
   emptyStateCard: {
     borderRadius: 12,

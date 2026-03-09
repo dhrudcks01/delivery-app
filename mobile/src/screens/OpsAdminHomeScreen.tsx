@@ -1,6 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
@@ -20,23 +19,22 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { SectionHeader } from '../components/SectionHeader';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
-import { DriverApplication } from '../types/driverApplication';
-import { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
-import { ApiErrorResponse } from '../types/waste';
+import type { DriverApplication } from '../types/driverApplication';
+import type { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import {
+  getStatusBadgePalette,
+  resolveApplicationStatusBadgeTone,
+  resolveWasteStatusBadgeTone,
+} from '../utils/statusBadge';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 const colors = ui.colors;
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    if (error.response?.status === 403) {
-      return '권한이 없습니다. OPS_ADMIN 권한을 확인해 주세요.';
-    }
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
+const OPS_ERROR_MESSAGE_OPTIONS = {
+  statusMessages: {
+    403: '권한이 없습니다. OPS_ADMIN 권한을 확인해 주세요.',
+  },
+};
 
 function formatDate(dateTime: string | null): string {
   if (!dateTime) {
@@ -45,28 +43,6 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
-function getApplicationStatusBadgeStyle(status: string) {
-  if (status === 'APPROVED') {
-    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
-  }
-  if (status === 'REJECTED') {
-    return { container: styles.badgeError, text: styles.badgeErrorText };
-  }
-  return { container: styles.badgeWarning, text: styles.badgeWarningText };
-}
-
-function getWasteStatusBadgeStyle(status: string) {
-  if (status === 'COMPLETED' || status === 'PAID' || status === 'PICKED_UP') {
-    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
-  }
-  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
-    return { container: styles.badgeError, text: styles.badgeErrorText };
-  }
-  if (status === 'REQUESTED' || status === 'ASSIGNED' || status === 'PAYMENT_PENDING') {
-    return { container: styles.badgeWarning, text: styles.badgeWarningText };
-  }
-  return { container: styles.badgeNeutral, text: styles.badgeNeutralText };
-}
 
 export function OpsAdminHomeScreen() {
   const { me } = useAuth();
@@ -105,7 +81,7 @@ export function OpsAdminHomeScreen() {
       });
       setOpsWasteRequests(response.content);
     } catch (error) {
-      setWasteListError(toErrorMessage(error));
+      setWasteListError(toApiErrorMessage(error, OPS_ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoadingWasteList(false);
     }
@@ -118,7 +94,7 @@ export function OpsAdminHomeScreen() {
       const response = await getFailedPaymentsForOps(0, 20);
       setFailedPayments(response.content);
     } catch (error) {
-      setFailedPaymentError(toErrorMessage(error));
+      setFailedPaymentError(toApiErrorMessage(error, OPS_ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoadingFailedPayments(false);
     }
@@ -145,7 +121,7 @@ export function OpsAdminHomeScreen() {
           : (response.content[0]?.id ?? null);
       });
     } catch (error) {
-      setApplicationListError(toErrorMessage(error));
+      setApplicationListError(toApiErrorMessage(error, OPS_ERROR_MESSAGE_OPTIONS));
       setApplications([]);
       setSelectedApplicationId(null);
     } finally {
@@ -168,7 +144,7 @@ export function OpsAdminHomeScreen() {
       setApplicationResultMessage(`요청 #${response.id} 승인 완료 (${response.userEmail})`);
       await loadPendingApplications();
     } catch (error) {
-      setApplicationActionError(toErrorMessage(error));
+      setApplicationActionError(toApiErrorMessage(error, OPS_ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmittingApprove(false);
     }
@@ -189,7 +165,7 @@ export function OpsAdminHomeScreen() {
       setApplicationResultMessage(`요청 #${response.id} 반려 완료 (${response.userEmail})`);
       await loadPendingApplications();
     } catch (error) {
-      setApplicationActionError(toErrorMessage(error));
+      setApplicationActionError(toApiErrorMessage(error, OPS_ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmittingReject(false);
     }
@@ -206,7 +182,7 @@ export function OpsAdminHomeScreen() {
       await loadFailedPayments();
       await loadWasteRequests();
     } catch (error) {
-      setFailedPaymentError(toErrorMessage(error));
+      setFailedPaymentError(toApiErrorMessage(error, OPS_ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsRetryingPayment(null);
     }
@@ -314,7 +290,7 @@ export function OpsAdminHomeScreen() {
           {!isLoadingApplications && !applicationListError && applications.length > 0 && (
             <View style={styles.listWrap}>
               {applications.map((item) => {
-                const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+                const badgePalette = getStatusBadgePalette(resolveApplicationStatusBadgeTone(item.status));
                 const isSelected = selectedApplicationId === item.id;
                 return (
                   <Pressable
@@ -329,8 +305,8 @@ export function OpsAdminHomeScreen() {
                   >
                     <View style={styles.rowBetween}>
                       <Text style={styles.listTitle}>요청 #{item.id}</Text>
-                      <View style={[styles.statusBadge, badgeStyle.container]}>
-                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                        <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>{item.status}</Text>
                       </View>
                     </View>
                     <Text style={styles.listSub}>신청자: {item.userDisplayName} ({item.userEmail})</Text>
@@ -461,7 +437,7 @@ export function OpsAdminHomeScreen() {
           {!isLoadingWasteList && !wasteListError && opsWasteRequests.length > 0 && (
             <View style={styles.listWrap}>
               {opsWasteRequests.map((item) => {
-                const badgeStyle = getWasteStatusBadgeStyle(item.status);
+                const badgePalette = getStatusBadgePalette(resolveWasteStatusBadgeTone(item.status));
                 return (
                   <Pressable
                     key={item.id}
@@ -470,8 +446,10 @@ export function OpsAdminHomeScreen() {
                   >
                     <View style={styles.rowBetween}>
                       <Text style={styles.listTitle}>#{item.id}</Text>
-                      <View style={[styles.statusBadge, badgeStyle.container]}>
-                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{toWasteStatusLabel(item.status)}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                        <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>
+                          {toWasteStatusLabel(item.status)}
+                        </Text>
                       </View>
                     </View>
                     <Text style={styles.listSub}>{item.address}</Text>
@@ -532,16 +510,18 @@ export function OpsAdminHomeScreen() {
 
           {!isLoadingFailedPayments && !failedPaymentError && failedPayments.length > 0 && (
             <View style={styles.listWrap}>
-              {failedPayments.map((item) => (
-                <View key={item.paymentId} style={styles.listItem}>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.listTitle}>결제 #{item.paymentId}</Text>
-                    <View style={[styles.statusBadge, styles.badgeError]}>
-                      <Text style={[styles.statusBadgeText, styles.badgeErrorText]}>실패</Text>
+              {failedPayments.map((item) => {
+                const badgePalette = getStatusBadgePalette('error');
+                return (
+                  <View key={item.paymentId} style={styles.listItem}>
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>결제 #{item.paymentId}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                        <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>실패</Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text style={styles.listSub}>요청 ID: {item.wasteRequestId}</Text>
-                  <Text style={styles.listSub}>실패코드: {item.failureCode ?? '-'}</Text>
+                    <Text style={styles.listSub}>요청 ID: {item.wasteRequestId}</Text>
+                    <Text style={styles.listSub}>실패코드: {item.failureCode ?? '-'}</Text>
                   <Text style={styles.listSub}>실패사유: {item.failureMessage ?? '-'}</Text>
                   <Text style={styles.listSub}>갱신시각: {formatDate(item.updatedAt)}</Text>
                   <Pressable
@@ -553,8 +533,9 @@ export function OpsAdminHomeScreen() {
                       {isRetryingPayment === item.wasteRequestId ? '재시도 중...' : '결제 재시도'}
                     </Text>
                   </Pressable>
-                </View>
-              ))}
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
@@ -830,6 +811,7 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -837,34 +819,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  badgeSuccess: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
-  },
-  badgeSuccessText: {
-    color: colors.success,
-  },
-  badgeWarning: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
-  },
-  badgeWarningText: {
-    color: '#b45309',
-  },
-  badgeError: {
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
-  },
-  badgeErrorText: {
-    color: colors.error,
-  },
-  badgeNeutral: {
-    borderColor: colors.border,
-    backgroundColor: '#f8fafc',
-  },
-  badgeNeutralText: {
-    color: colors.caption,
   },
   infoCard: {
     borderWidth: 1,
