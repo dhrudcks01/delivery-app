@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { API_BASE_URL } from '../api/config';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
-import { RootStackParamList } from '../navigation/RootNavigator';
-import { ui } from '../theme/ui';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -42,150 +35,193 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   return (
-    <KeyboardAwareScrollScreen
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.hero}>
-        <Text style={styles.badge}>오늘수거 스타일 MVP</Text>
-        <Text style={styles.title}>빠르게 로그인하고 수거를 시작하세요</Text>
-        <Text style={styles.description}>계정 정보를 입력하면 역할에 맞는 화면으로 이동합니다.</Text>
-      </View>
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.badge}>오늘수거 MVP</Text>
+          <Text style={styles.title}>로그인</Text>
+          <Text style={styles.description}>아이디로 로그인하고 수거 서비스를 이용해 보세요.</Text>
+          <Text style={styles.meta}>연결 서버: {API_BASE_URL}</Text>
+        </View>
 
-      <View style={styles.form}>
-        <Text style={styles.meta}>API: {API_BASE_URL}</Text>
-        <Text style={styles.label}>아이디</Text>
-        <TextInput
-          style={styles.input}
-          value={loginId}
-          onChangeText={setLoginId}
-          autoCapitalize="none"
-          keyboardType="default"
-          placeholder="아이디"
-          placeholderTextColor="#94a3b8"
-          returnKeyType="next"
-          onSubmitEditing={() => passwordInputRef.current?.focus()}
-          blurOnSubmit={false}
-        />
+        <View style={styles.contentCard}>
+          <Text style={styles.sectionTitle}>계정 정보</Text>
 
-        <Text style={styles.label}>비밀번호</Text>
-        <TextInput
-          ref={passwordInputRef}
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="비밀번호"
-          placeholderTextColor="#94a3b8"
-          returnKeyType="done"
-          onSubmitEditing={handleLogin}
-        />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>아이디</Text>
+            <TextInput
+              style={styles.input}
+              value={loginId}
+              onChangeText={setLoginId}
+              autoCapitalize="none"
+              keyboardType="default"
+              placeholder="아이디를 입력해 주세요"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
+              blurOnSubmit={false}
+            />
+          </View>
 
-        {(formError || errorMessage) && <Text style={styles.error}>{formError ?? errorMessage}</Text>}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>비밀번호</Text>
+            <TextInput
+              ref={passwordInputRef}
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="비밀번호를 입력해 주세요"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+            />
+          </View>
 
-        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin}>
-          <Text style={styles.buttonText}>{isLoading ? '로그인 중...' : '로그인'}</Text>
-        </Pressable>
+          {(formError || errorMessage) && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{formError ?? errorMessage}</Text>
+            </View>
+          )}
 
-        <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Signup')}>
-          <Text style={styles.linkText}>회원가입</Text>
-        </Pressable>
+          <Pressable
+            style={[styles.primaryButton, isLoading && styles.primaryButtonDisabled]}
+            disabled={isLoading}
+            onPress={handleLogin}
+          >
+            {isLoading && <ActivityIndicator size="small" color="#ffffff" />}
+            <Text style={styles.primaryButtonText}>{isLoading ? '로그인 중...' : '로그인'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.footer}>
+          <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('Signup')}>
+            <Text style={styles.secondaryButtonText}>회원가입</Text>
+          </Pressable>
+        </View>
       </View>
     </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+    backgroundColor: '#f9fafb',
+    paddingHorizontal: 16,
     paddingVertical: 24,
-    gap: 14,
   },
-  hero: {
-    backgroundColor: '#e6f4f2',
-    borderRadius: ui.radius.card,
+  screenContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 24,
+  },
+  headerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#b7dfd9',
+    borderColor: '#e5e7eb',
     padding: 16,
-    gap: 8,
+    gap: 12,
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ccfbf1',
-    color: '#134e4a',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     fontSize: 12,
     fontWeight: '700',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: '#0f172a',
   },
   description: {
     fontSize: 14,
-    color: ui.colors.text,
+    color: '#334155',
   },
   meta: {
-    marginBottom: 8,
     fontSize: 12,
-    color: ui.colors.textMuted,
+    color: '#64748b',
   },
-  form: {
-    backgroundColor: ui.colors.card,
-    borderRadius: ui.radius.card,
+  contentCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
+    borderColor: '#e5e7eb',
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  fieldGroup: {
+    gap: 8,
   },
   label: {
     fontSize: 14,
-    color: ui.colors.textStrong,
-    marginBottom: 6,
+    color: '#0f172a',
     fontWeight: '600',
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
+    fontSize: 14,
+  },
+  errorCard: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: ui.colors.textStrong,
-    marginBottom: 12,
-    backgroundColor: '#ffffff',
   },
-  error: {
-    marginBottom: 12,
-    color: ui.colors.error,
+  errorText: {
+    color: '#dc2626',
     fontSize: 13,
   },
-  button: {
-    marginTop: 6,
-    borderRadius: ui.radius.control,
-    paddingVertical: 12,
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: ui.colors.primary,
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#2563eb',
   },
-  buttonDisabled: {
-    opacity: 0.65,
+  primaryButtonDisabled: {
+    opacity: 0.7,
   },
-  buttonText: {
+  primaryButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
-  linkButton: {
-    marginTop: 10,
+  footer: {
+    gap: 12,
+  },
+  secondaryButton: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
   },
-  linkText: {
-    color: ui.colors.primary,
+  secondaryButtonText: {
+    color: '#334155',
+    fontSize: 14,
     fontWeight: '700',
-    fontSize: 13,
   },
 });
