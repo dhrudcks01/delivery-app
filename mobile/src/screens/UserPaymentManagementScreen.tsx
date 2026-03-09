@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -11,17 +11,29 @@ import {
 import { getMyPaymentMethodStatus, startPaymentMethodRegistration } from '../api/paymentApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
-import { ui } from '../theme/ui';
 import { PaymentMethodStatusResponse, PaymentMethodType } from '../types/payment';
 import { ApiErrorResponse } from '../types/waste';
 
 type CardOwnerType = 'PERSONAL' | 'BUSINESS';
 
 const METHOD_OPTIONS: Array<{ type: PaymentMethodType; title: string; subtitle: string }> = [
-  { type: 'CARD', title: '카드 직접 등록', subtitle: '소유한 카드 직접 등록' },
-  { type: 'TRANSFER_TOSS', title: '계좌이체', subtitle: '토스로 간편 계좌 등록' },
-  { type: 'KAKAOPAY', title: '카카오페이', subtitle: '카카오페이로 간편 카드 등록' },
+  { type: 'CARD', title: '카드 직접 등록', subtitle: '소유한 카드를 직접 연결합니다.' },
+  { type: 'TRANSFER_TOSS', title: '계좌이체(토스)', subtitle: '토스 페이지에서 계좌를 연결합니다.' },
+  { type: 'KAKAOPAY', title: '카카오페이', subtitle: '카카오페이 간편결제로 연결합니다.' },
 ];
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -70,6 +82,16 @@ function isValidExpiry(rawInput: string): boolean {
   return month >= 1 && month <= 12;
 }
 
+function getMethodStatusBadgeStyle(status: string) {
+  if (status.includes('ACTIVE') || status.includes('REGISTERED')) {
+    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
+  }
+  if (status.includes('FAILED') || status.includes('ERROR')) {
+    return { container: styles.badgeError, text: styles.badgeErrorText };
+  }
+  return { container: styles.badgeWarning, text: styles.badgeWarningText };
+}
+
 export function UserPaymentManagementScreen() {
   const { me } = useAuth();
 
@@ -94,7 +116,7 @@ export function UserPaymentManagementScreen() {
 
   const cardNumberDisplay = useMemo(() => formatCardNumberForDisplay(cardNumber), [cardNumber]);
 
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -106,11 +128,11 @@ export function UserPaymentManagementScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadStatus();
-  }, []);
+  }, [loadStatus]);
 
   const resetCardForm = () => {
     setCardOwnerType('PERSONAL');
@@ -209,12 +231,12 @@ export function UserPaymentManagementScreen() {
 
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>결제수단 관리</Text>
-      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-
-      {isLoading && <Text style={styles.meta}>결제수단 상태를 조회하는 중입니다.</Text>}
-      {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
-      {resultMessage && <Text style={styles.success}>{resultMessage}</Text>}
+      <View style={styles.headerCard}>
+        <Text style={styles.badge}>결제관리</Text>
+        <Text style={styles.title}>결제수단 관리</Text>
+        <Text style={styles.description}>등록된 결제수단을 확인하고 기본 결제수단을 관리할 수 있습니다.</Text>
+        <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
+      </View>
 
       <View style={styles.policyCard}>
         <Text style={styles.policyTitle}>자동결제 정책</Text>
@@ -222,60 +244,121 @@ export function UserPaymentManagementScreen() {
         <Text style={styles.policyText}>계좌이체(토스), 카카오페이는 등록 후 수동 결제로 사용합니다.</Text>
       </View>
 
-      {!hasPaymentMethods && !isLoading && (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>등록된 결제수단이 없어요</Text>
-          <Text style={styles.emptyDescription}>결제시 사용할 결제수단을 등록해 주세요</Text>
+      {isLoading && !status && (
+        <View style={styles.loadingGroup}>
+          <View style={styles.loadingCard}>
+            <View style={styles.skeletonLineShort} />
+            <View style={styles.skeletonLineLong} />
+            <View style={styles.skeletonLineLong} />
+          </View>
+          <View style={styles.loadingCard}>
+            <View style={styles.skeletonLineShort} />
+            <View style={styles.skeletonLineLong} />
+            <View style={styles.skeletonLineLong} />
+          </View>
+        </View>
+      )}
+
+      {errorMessage && (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      )}
+
+      {errorMessage && (
+        <Pressable style={styles.secondaryButton} onPress={() => void loadStatus()}>
+          <Text style={styles.secondaryButtonText}>다시 시도</Text>
+        </Pressable>
+      )}
+
+      {resultMessage && (
+        <View style={styles.successCard}>
+          <Text style={styles.successText}>{resultMessage}</Text>
+        </View>
+      )}
+
+      <View style={styles.card}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>등록된 결제수단</Text>
+          <Pressable
+            style={[styles.secondaryButtonCompact, (isLoading || isSubmitting) && styles.buttonDisabled]}
+            onPress={() => void loadStatus()}
+            disabled={isLoading || isSubmitting}
+          >
+            <Text style={styles.secondaryButtonCompactText}>{isLoading ? '불러오는 중...' : '새로고침'}</Text>
+          </Pressable>
+        </View>
+
+        {!hasPaymentMethods && !isLoading && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>[]</Text>
+            <Text style={styles.emptyTitle}>등록된 결제수단이 없습니다</Text>
+            <Text style={styles.emptyDescription}>결제 시 사용할 결제수단을 먼저 등록해 주세요.</Text>
+            <Pressable
+              style={[styles.primaryButton, (!canRegisterMethod || isSubmitting) && styles.buttonDisabled]}
+              onPress={handleOpenMethodModal}
+              disabled={!canRegisterMethod || isSubmitting}
+            >
+              <Text style={styles.primaryButtonText}>결제수단 등록하기</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {hasPaymentMethods && (
+          <View style={styles.methodList}>
+            {status?.paymentMethods.map((item, index) => {
+              const badgeStyle = getMethodStatusBadgeStyle(item.status);
+              return (
+                <View
+                  key={item.id}
+                  style={[styles.methodCard, index === 0 && styles.primaryMethodCard]}
+                >
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.methodTitle}>{toMethodLabel(item.methodType)}</Text>
+                    <View style={styles.badgeRow}>
+                      {index === 0 && (
+                        <View style={styles.primaryBadge}>
+                          <Text style={styles.primaryBadgeText}>기본</Text>
+                        </View>
+                      )}
+                      <View style={[styles.statusBadge, badgeStyle.container]}>
+                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={styles.methodMeta}>타입: {item.methodType}</Text>
+                  <Text style={styles.methodMeta}>제공사: {item.provider}</Text>
+                  <Text style={styles.methodMeta}>등록일: {formatDate(item.createdAt)}</Text>
+                  <Text style={styles.methodMeta}>갱신일: {formatDate(item.updatedAt)}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {hasPaymentMethods && (
           <Pressable
             style={[styles.primaryButton, (!canRegisterMethod || isSubmitting) && styles.buttonDisabled]}
             onPress={handleOpenMethodModal}
             disabled={!canRegisterMethod || isSubmitting}
           >
-            <Text style={styles.primaryButtonText}>+ 결제수단 등록하기</Text>
+            <Text style={styles.primaryButtonText}>결제수단 등록/변경</Text>
           </Pressable>
-        </View>
-      )}
-
-      {hasPaymentMethods && (
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>등록된 결제수단</Text>
-            <Pressable style={styles.ghostButton} onPress={loadStatus}>
-              <Text style={styles.ghostButtonText}>상태 새로고침</Text>
-            </Pressable>
-          </View>
-          {status?.paymentMethods.map((item) => (
-            <View key={item.id} style={styles.listItem}>
-              <Text style={styles.listTitle}>{toMethodLabel(item.methodType)}</Text>
-              <Text style={styles.listSub}>타입: {item.methodType}</Text>
-              <Text style={styles.listSub}>제공사: {item.provider}</Text>
-              <Text style={styles.listSub}>상태: {item.status}</Text>
-              <Text style={styles.listSub}>등록일: {formatDate(item.createdAt)}</Text>
-              <Text style={styles.listSub}>갱신일: {formatDate(item.updatedAt)}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {hasPaymentMethods && (
-        <Pressable
-          style={[styles.primaryButton, (!canRegisterMethod || isSubmitting) && styles.buttonDisabled]}
-          onPress={handleOpenMethodModal}
-          disabled={!canRegisterMethod || isSubmitting}
-        >
-          <Text style={styles.primaryButtonText}>결제수단 등록/변경</Text>
-        </Pressable>
-      )}
+        )}
+      </View>
 
       {!canRegisterMethod && (
-        <Text style={styles.meta}>
-          현재 상태에서는 결제수단 재등록이 제한됩니다. 결제 실패 상태 또는 운영 정책을 확인해 주세요.
-        </Text>
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>재등록 제한</Text>
+          <Text style={styles.warningText}>현재 상태에서는 결제수단 재등록이 제한됩니다. 결제 실패 상태 또는 운영 정책을 확인해 주세요.</Text>
+        </View>
       )}
 
       {isMethodPickerVisible && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>결제수단 선택</Text>
+          <Text style={styles.sectionTitle}>결제수단 선택</Text>
+          <Text style={styles.caption}>등록할 수단을 선택한 뒤 다음 단계로 진행하세요.</Text>
+
           {METHOD_OPTIONS.map((option) => {
             const selected = option.type === selectedMethodType;
             return (
@@ -288,24 +371,27 @@ export function UserPaymentManagementScreen() {
                   <Text style={styles.methodOptionTitle}>{option.title}</Text>
                   <Text style={styles.methodOptionSubtitle}>{option.subtitle}</Text>
                 </View>
-                <View style={[styles.radio, selected && styles.radioSelected]} />
+                <View style={[styles.radio, selected && styles.radioSelected]}>
+                  <Text style={[styles.radioMark, selected && styles.radioMarkSelected]}>{selected ? '✓' : ''}</Text>
+                </View>
               </Pressable>
             );
           })}
-          <View style={styles.rowGap8}>
+
+          <View style={styles.buttonRow}>
             <Pressable
-              style={[styles.secondaryButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
+              style={[styles.secondaryButton, styles.flexButton, isSubmitting && styles.buttonDisabled]}
               onPress={() => setIsMethodPickerVisible(false)}
               disabled={isSubmitting}
             >
               <Text style={styles.secondaryButtonText}>닫기</Text>
             </Pressable>
             <Pressable
-              style={[styles.modalSubmitButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
+              style={[styles.primaryButton, styles.flexButton, isSubmitting && styles.buttonDisabled]}
               onPress={() => void handleSubmitMethodSelection()}
               disabled={isSubmitting}
             >
-              <Text style={styles.modalSubmitButtonText}>{isSubmitting ? '처리 중..' : '선택하기'}</Text>
+              <Text style={styles.primaryButtonText}>{isSubmitting ? '처리 중...' : '선택하기'}</Text>
             </Pressable>
           </View>
         </View>
@@ -313,12 +399,11 @@ export function UserPaymentManagementScreen() {
 
       {isCardFormVisible && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>카드 추가</Text>
+          <Text style={styles.sectionTitle}>카드 추가</Text>
+          <Text style={styles.caption}>카드 정보를 입력하면 등록 페이지로 이동합니다.</Text>
 
           <View style={styles.cardPreview}>
-            <Text style={styles.cardPreviewNumber}>
-              {cardNumberDisplay || '**** **** **** ****'}
-            </Text>
+            <Text style={styles.cardPreviewNumber}>{cardNumberDisplay || '**** **** **** ****'}</Text>
           </View>
 
           <View style={styles.ownerTypeRow}>
@@ -340,6 +425,7 @@ export function UserPaymentManagementScreen() {
             </Pressable>
           </View>
 
+          <Text style={styles.fieldLabel}>카드번호</Text>
           <TextInput
             style={styles.input}
             value={cardNumberDisplay}
@@ -350,29 +436,38 @@ export function UserPaymentManagementScreen() {
             maxLength={19}
             returnKeyType="next"
           />
+
           <View style={styles.rowGap8}>
-            <TextInput
-              style={[styles.input, styles.flexInput]}
-              value={expiry}
-              onChangeText={(value) => setExpiry(normalizeExpiry(value))}
-              keyboardType="number-pad"
-              placeholder="MM/YY"
-              placeholderTextColor="#94a3b8"
-              maxLength={5}
-              returnKeyType="next"
-            />
-            <TextInput
-              style={[styles.input, styles.flexInput]}
-              value={passwordTwoDigits}
-              onChangeText={(value) => setPasswordTwoDigits(value.replace(/[^0-9]/g, '').slice(0, 2))}
-              keyboardType="number-pad"
-              secureTextEntry
-              placeholder="비밀번호 앞 2자리"
-              placeholderTextColor="#94a3b8"
-              maxLength={2}
-              returnKeyType="next"
-            />
+            <View style={styles.flexButton}>
+              <Text style={styles.fieldLabel}>유효기간</Text>
+              <TextInput
+                style={styles.input}
+                value={expiry}
+                onChangeText={(value) => setExpiry(normalizeExpiry(value))}
+                keyboardType="number-pad"
+                placeholder="MM/YY"
+                placeholderTextColor="#94a3b8"
+                maxLength={5}
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.flexButton}>
+              <Text style={styles.fieldLabel}>비밀번호 앞 2자리</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordTwoDigits}
+                onChangeText={(value) => setPasswordTwoDigits(value.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                secureTextEntry
+                placeholder="두 자리"
+                placeholderTextColor="#94a3b8"
+                maxLength={2}
+                returnKeyType="next"
+              />
+            </View>
           </View>
+
+          <Text style={styles.fieldLabel}>{cardOwnerType === 'BUSINESS' ? '사업자번호 앞 6자리' : '주민등록번호 앞 6자리'}</Text>
           <TextInput
             style={styles.input}
             value={ownerIdentity}
@@ -384,9 +479,9 @@ export function UserPaymentManagementScreen() {
             returnKeyType="done"
           />
 
-          <View style={styles.rowGap8}>
+          <View style={styles.buttonRow}>
             <Pressable
-              style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
+              style={[styles.secondaryButton, styles.flexButton, isSubmitting && styles.buttonDisabled]}
               onPress={() => {
                 setIsCardFormVisible(false);
                 resetCardForm();
@@ -396,11 +491,11 @@ export function UserPaymentManagementScreen() {
               <Text style={styles.secondaryButtonText}>취소</Text>
             </Pressable>
             <Pressable
-              style={[styles.primaryButton, styles.flexInput, isSubmitting && styles.buttonDisabled]}
+              style={[styles.primaryButton, styles.flexButton, isSubmitting && styles.buttonDisabled]}
               onPress={() => void handleSubmitCardForm()}
               disabled={isSubmitting}
             >
-              <Text style={styles.primaryButtonText}>{isSubmitting ? '등록 중..' : '카드 추가'}</Text>
+              <Text style={styles.primaryButtonText}>{isSubmitting ? '등록 중...' : '카드 추가'}</Text>
             </Pressable>
           </View>
         </View>
@@ -411,139 +506,341 @@ export function UserPaymentManagementScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: colors.background,
+    gap: 24,
+  },
+  headerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     padding: 16,
-    backgroundColor: ui.colors.screen,
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  meta: {
-    fontSize: 13,
-    color: ui.colors.text,
-  },
-  error: {
-    color: ui.colors.error,
-    fontSize: 13,
-  },
-  success: {
-    color: ui.colors.success,
-    fontSize: 13,
-  },
-  policyCard: {
-    backgroundColor: '#fff7ed',
-    borderWidth: 1,
-    borderColor: '#fdba74',
-    borderRadius: ui.radius.card,
-    padding: 12,
-    gap: 4,
-  },
-  policyTitle: {
-    color: '#9a3412',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  policyText: {
-    color: '#9a3412',
-    fontSize: 12,
-  },
-  emptyCard: {
-    backgroundColor: ui.colors.card,
-    borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 20,
-    alignItems: 'center',
     gap: 10,
   },
-  emptyTitle: {
-    fontSize: 22,
+  badge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
     fontWeight: '700',
-    color: ui.colors.textStrong,
   },
-  emptyDescription: {
-    color: ui.colors.text,
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textStrong,
+  },
+  description: {
     fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.caption,
+    lineHeight: 18,
   },
   card: {
-    backgroundColor: ui.colors.card,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: ui.radius.card,
-    padding: 14,
-    gap: 8,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 12,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  rowBetween: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
   },
-  ghostButton: {
-    borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textStrong,
   },
-  ghostButtonText: {
-    color: ui.colors.text,
+  policyCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    backgroundColor: '#fffbeb',
+    padding: 12,
+    gap: 4,
+  },
+  policyTitle: {
+    color: '#92400e',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  policyText: {
+    color: '#92400e',
     fontSize: 12,
+    lineHeight: 18,
+  },
+  loadingGroup: {
+    gap: 10,
+  },
+  loadingCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    gap: 8,
+  },
+  skeletonLineShort: {
+    height: 10,
+    width: '42%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  skeletonLineLong: {
+    height: 10,
+    width: '78%',
+    borderRadius: 999,
+    backgroundColor: '#dbe2ea',
+  },
+  errorCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  successCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#86efac',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  successText: {
+    color: colors.success,
+    fontSize: 13,
     fontWeight: '600',
   },
-  listItem: {
+  emptyCard: {
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 2,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    alignItems: 'center',
+    gap: 6,
   },
-  listTitle: {
-    color: ui.colors.textStrong,
+  emptyIcon: {
+    color: colors.caption,
+    fontSize: 16,
+  },
+  emptyTitle: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyDescription: {
+    color: colors.caption,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  warningCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    backgroundColor: '#fffbeb',
+    padding: 12,
+    gap: 4,
+  },
+  warningTitle: {
+    color: '#92400e',
+    fontSize: 14,
     fontWeight: '700',
   },
-  listSub: {
-    color: ui.colors.text,
+  warningText: {
+    color: '#b45309',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  methodList: {
+    gap: 8,
+  },
+  methodCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
+    backgroundColor: '#ffffff',
+  },
+  primaryMethodCard: {
+    borderColor: '#93c5fd',
+    backgroundColor: '#f8fbff',
+  },
+  methodTitle: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 14,
+    flex: 1,
+  },
+  methodMeta: {
+    color: colors.caption,
     fontSize: 12,
   },
-  primaryButton: {
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
+  badgeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f97316',
+    gap: 6,
+  },
+  primaryBadge: {
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  primaryBadgeText: {
+    color: '#166534',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  statusBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  badgeSuccess: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeSuccessText: {
+    color: '#166534',
+  },
+  badgeWarning: {
+    backgroundColor: '#fef3c7',
+  },
+  badgeWarningText: {
+    color: '#92400e',
+  },
+  badgeError: {
+    backgroundColor: '#fee2e2',
+  },
+  badgeErrorText: {
+    color: '#991b1b',
+  },
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
   },
   primaryButtonText: {
     color: '#ffffff',
+    fontSize: 14,
     fontWeight: '700',
   },
   secondaryButton: {
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#94a3b8',
-    borderRadius: ui.radius.control,
-    paddingVertical: 11,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: '#334155',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  secondaryButtonCompact: {
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  secondaryButtonCompactText: {
+    color: colors.primary,
+    fontSize: 12,
     fontWeight: '700',
   },
   buttonDisabled: {
-    opacity: 0.65,
+    opacity: 0.7,
+  },
+  methodOptionCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  methodOptionCardSelected: {
+    borderColor: '#93c5fd',
+    backgroundColor: '#eff6ff',
+  },
+  methodOptionTextWrap: {
+    gap: 3,
+    flex: 1,
+  },
+  methodOptionTitle: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  methodOptionSubtitle: {
+    color: colors.caption,
+    fontSize: 12,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    borderColor: '#60a5fa',
+    backgroundColor: '#dbeafe',
+  },
+  radioMark: {
+    color: 'transparent',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  radioMarkSelected: {
+    color: '#1d4ed8',
   },
   cardPreview: {
     height: 96,
-    backgroundColor: '#0b0b0f',
+    backgroundColor: '#0f172a',
     borderRadius: 12,
     justifyContent: 'center',
     paddingHorizontal: 14,
@@ -562,89 +859,50 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingVertical: 9,
+    borderRadius: 12,
+    paddingVertical: 11,
     alignItems: 'center',
     backgroundColor: '#ffffff',
   },
   ownerTypeButtonSelected: {
-    borderColor: '#f97316',
-    backgroundColor: '#fff7ed',
+    borderColor: '#93c5fd',
+    backgroundColor: '#eff6ff',
   },
   ownerTypeText: {
-    color: ui.colors.text,
+    color: colors.text,
     fontWeight: '600',
+    fontSize: 13,
   },
   ownerTypeTextSelected: {
-    color: '#c2410c',
+    color: '#1d4ed8',
     fontWeight: '700',
+  },
+  fieldLabel: {
+    color: colors.textStrong,
+    fontSize: 13,
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: colors.textStrong,
     backgroundColor: '#ffffff',
+    fontSize: 14,
   },
   rowGap8: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
   },
-  flexInput: {
-    flex: 1,
-  },
-  methodOptionCard: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    padding: 12,
+  buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 8,
   },
-  methodOptionCardSelected: {
-    borderColor: '#f97316',
-    backgroundColor: '#fff7ed',
-  },
-  methodOptionTextWrap: {
-    gap: 2,
+  flexButton: {
     flex: 1,
-  },
-  methodOptionTitle: {
-    color: ui.colors.textStrong,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  methodOptionSubtitle: {
-    color: ui.colors.textMuted,
-    fontSize: 13,
-  },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#ffffff',
-  },
-  radioSelected: {
-    borderColor: '#f97316',
-    backgroundColor: '#f97316',
-  },
-  modalSubmitButton: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    paddingHorizontal: 12,
-  },
-  modalSubmitButtonText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 16,
   },
 });

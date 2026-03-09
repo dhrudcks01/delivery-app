@@ -1615,7 +1615,7 @@
 - Empty/Loading/Error 상태 및 재시도 버튼 위치를 일관화한다.
 - iOS/Android에서 주소 등록/수정/대표 변경 흐름을 수동 검증한다.
 
-### [ ] T-0566 UserPaymentManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0566 UserPaymentManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 결제수단 관리 화면의 카드 목록/기본수단/동작 버튼 UI를 UI_SYSTEM에 맞춘다.
 
