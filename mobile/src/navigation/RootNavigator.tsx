@@ -129,16 +129,34 @@ function TabHomeScreen({
   primaryRole: AppRole;
 }) {
   return (
-    <ScrollView contentContainerStyle={styles.tabContainer}>
-      <Text style={styles.tabTitle}>공통 홈</Text>
-      <Text style={styles.tabMeta}>로그인 아이디: {loginId ?? '-'}</Text>
-      <Text style={styles.tabMeta}>보유 권한: {roles.join(', ')}</Text>
-      <Text style={styles.tabMeta}>적용 권한(최고 권한): {primaryRole}</Text>
-      <View style={styles.tabCard}>
-        <Text style={styles.tabCardTitle}>탭 정책</Text>
-        <Text style={styles.tabCardText}>신청: 수거 신청 생성 전용</Text>
-        <Text style={styles.tabCardText}>이용내역: 신청/처리 이력 확인</Text>
-        <Text style={styles.tabCardText}>내정보: 주소관리/결제수단/설정(로그아웃)</Text>
+    <ScrollView contentContainerStyle={styles.homeContainer}>
+      <View style={styles.homeHeaderCard}>
+        <Text style={styles.homeBadge}>USER</Text>
+        <Text style={styles.homeTitle}>공통 홈</Text>
+        <Text style={styles.homeCaption}>USER 권한 기준으로 신청/이력/내정보 동선을 확인합니다.</Text>
+      </View>
+
+      <View style={styles.homeSummaryCard}>
+        <Text style={styles.homeSectionTitle}>계정 요약</Text>
+        <View style={styles.homeInfoRow}>
+          <Text style={styles.homeInfoLabel}>로그인 아이디</Text>
+          <Text style={styles.homeInfoValue}>{loginId ?? '-'}</Text>
+        </View>
+        <View style={styles.homeInfoRow}>
+          <Text style={styles.homeInfoLabel}>보유 권한</Text>
+          <Text style={styles.homeInfoValue}>{roles.join(', ')}</Text>
+        </View>
+        <View style={styles.homeInfoRow}>
+          <Text style={styles.homeInfoLabel}>적용 권한(최고 권한)</Text>
+          <Text style={styles.homeInfoValue}>{primaryRole}</Text>
+        </View>
+      </View>
+
+      <View style={styles.homeGuideCard}>
+        <Text style={styles.homeSectionTitle}>탭 정책</Text>
+        <Text style={styles.homeGuideText}>신청: 수거 신청 생성 전용</Text>
+        <Text style={styles.homeGuideText}>이용내역: 신청/처리 이력 확인</Text>
+        <Text style={styles.homeGuideText}>내정보: 주소관리/결제수단/설정(로그아웃)</Text>
       </View>
     </ScrollView>
   );
@@ -469,6 +487,78 @@ const styles = StyleSheet.create({
   tabCardText: {
     fontSize: 13,
     color: ui.colors.text,
+  },
+  homeContainer: {
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    gap: 16,
+  },
+  homeHeaderCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  homeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    color: '#1D4ED8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  homeTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  homeCaption: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  homeSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  homeSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  homeInfoRow: {
+    gap: 4,
+  },
+  homeInfoLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  homeInfoValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    lineHeight: 20,
+  },
+  homeGuideCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  homeGuideText: {
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 20,
   },
   menuButton: {
     borderRadius: 10,

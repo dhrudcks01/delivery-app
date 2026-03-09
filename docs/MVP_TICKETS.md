@@ -1736,7 +1736,7 @@
 - iOS 안전영역(하단 인셋)과 Android 제스처 영역에서 탭 버튼이 잘리지 않도록 조정한다.
 - iOS/Android에서 탭 전환(홈↔신청↔이용내역↔내정보) 수동 검증을 완료한다.
 
-### [ ] T-0577 TabHomeScreen(USER 홈 탭) UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0577 TabHomeScreen(USER 홈 탭) UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - USER 권한 기준 `홈` 탭 화면(`TabHomeScreen`)의 정보 배치와 카드 UI를 UI_SYSTEM 기준으로 정리한다.
 
