@@ -1844,6 +1844,60 @@
 - `수거 요청 시작` 버튼으로 신청 플로우를 시작한 이후(`started=true`)에는 주소 마커가 노출되지 않는다.
 - 대표주소 미설정/설정 완료 상태에서 진입·복귀 시 UX가 자연스럽고, iOS/Android 양쪽에서 레이아웃 깨짐이 없어야 한다.
 
+### [ ] T-0586 모바일 UI 토큰 단일화(ui.ts 기준) 및 화면 색상 상수 제거
+**Goal**
+- 화면별 `const colors` 중복 선언을 제거하고, `mobile/src/theme/ui.ts` 기반 토큰으로 UI 색상 체계를 단일화한다.
+
+**DoD**
+- 대상: `mobile/src/screens/*.tsx` 전반 (우선순위: USER/DRIVER/OPS/SYS 핵심 홈·상세 화면)
+- 각 화면의 `const colors` 제거 또는 최소화하고, `ui.colors` 참조로 일관화한다.
+- `docs/UI_SYSTEM.md`의 핵심 토큰(Primary/Success/Warning/Error/Background/Border)과 충돌하지 않도록 정렬한다.
+- 토큰 변경 후 주요 화면(홈/신청/이용내역/내정보/운영 상세) 시각 회귀를 iOS/Android에서 수동 검증한다.
+
+### [ ] T-0587 공통 UI 컴포넌트 계층 도입(Card/Button/SectionHeader/State)
+**Goal**
+- 중복되는 카드/버튼/섹션헤더/상태(Loading/Empty/Error) UI를 공통 컴포넌트로 추출해 화면 간 일관성을 강화한다.
+
+**DoD**
+- 대상: `mobile/src/components/` 신규 컴포넌트 + 기존 주요 화면 적용
+- 최소 컴포넌트 세트: `Card`, `PrimaryButton`, `SecondaryButton`, `SectionHeader`, `ScreenState(Loading/Empty/Error)` 제공
+- 기존 화면의 반복 스타일 블록을 공통 컴포넌트 사용으로 대체(기능 로직 변경 금지)
+- 터치 영역(최소 44px), spacing(8px grid), 카드 규격(border/radius/padding) UI_SYSTEM 준수
+
+### [ ] T-0588 탭 상단 헤더 공통화(TabHeaderCard) 및 네비게이션 분리 정리
+**Goal**
+- 탭별 상단 헤더 패턴을 공통 컴포넌트로 통일하고, `RootNavigator` 내 UI 구현을 화면 파일로 분리해 네비게이션 응집도를 높인다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`, `mobile/src/screens/` 신규/기존 탭 화면
+- `TabHeaderCard` 공통 컴포넌트 도입(배지/타이틀/설명/메타 슬롯)
+- `TabHomeScreen`, `TabProfileScreen`를 `RootNavigator.tsx`에서 분리해 전용 화면 파일로 이동
+- 홈/신청/이용내역/내정보 탭 상단 헤더 스타일과 문구 구조를 동일 규칙으로 정렬
+- 탭 라우팅/권한 분기/기능 동작은 변경하지 않는다.
+
+### [ ] T-0589 화면 대형 파일 분해(컨테이너/섹션/훅 분리) 1차
+**Goal**
+- 800~1300라인 수준의 대형 화면 파일을 역할별로 분해해 유지보수성과 테스트 용이성을 높인다.
+
+**DoD**
+- 우선 대상: `ServiceAreaManagementScreen`, `SysAdminHomeScreen`, `UserWasteRequestCreateScreen`
+- 분해 기준:
+  - 컨테이너(데이터/상태/이벤트)
+  - 프레젠테이션 섹션 컴포넌트
+  - 공통 훅(필터/페이징/요약 계산 등)
+- 기능 동작/권한 정책/API 계약 변경 금지
+- 타입체크 통과 + 핵심 시나리오 수동 회귀 점검
+
+### [ ] T-0590 에러/상태배지 정책 공통 모듈화
+**Goal**
+- 화면마다 중복된 `toErrorMessage`, 상태 배지 스타일 계산 함수를 공통 유틸/컴포넌트로 통합해 정책 일관성을 확보한다.
+
+**DoD**
+- 대상: `mobile/src/screens/*.tsx`의 에러 메시지 파서/상태 배지 계산 로직
+- `mobile/src/utils/` 또는 `mobile/src/components/`에 공통 모듈(`errorMessage`, `statusBadge`) 생성
+- 최소 USER/DRIVER/OPS/SYS 대표 화면에 공통 모듈 적용
+- 상태 라벨/색상/문구 정책 변경 시 한 지점 수정으로 반영되는 구조 보장
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
