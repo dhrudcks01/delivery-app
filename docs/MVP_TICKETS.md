@@ -1772,6 +1772,50 @@
 - 상태 배지/캡션/본문 타이포를 UI_SYSTEM 규칙에 맞춰 재정렬한다.
 - iOS/Android에서 설정 화면 진입 시 프로필/인증 정보가 동일 규칙으로 표시되는지 수동 검증한다.
 
+### [ ] T-0580 AppTabs Home 탭 아이콘 적용(UI 리팩토링, 기능 변경 금지)
+**Goal**
+- 하단 네비게이션 `홈` 탭에 화면 의미와 일치하는 아이콘을 적용해 탐색 인지성을 높인다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `AppTabs.Screen(name="HomeTab")`
+- 기존 라우팅 이름/권한 분기/`headerShown` 조건/화면 렌더링 로직은 변경하지 않는다.
+- 아이콘은 `tabBarIcon`으로만 추가하고, 라벨(`홈`) 텍스트 정책은 유지한다.
+- 활성/비활성 색상은 UI_SYSTEM Color System(`Primary #2563EB`, 비활성 톤)과 일치시킨다.
+- iOS/Android에서 탭 전환 시 홈 아이콘이 정상 표시되고 터치 영역(최소 44px) 회귀가 없는지 수동 검증한다.
+
+### [ ] T-0581 AppTabs 신청 탭 아이콘 적용(UI 리팩토링, 기능 변경 금지)
+**Goal**
+- 하단 네비게이션 `신청` 탭에 목적에 맞는 아이콘을 적용해 첫 진입 사용자의 액션 인지성을 높인다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `AppTabs.Screen(name="RequestTab")`
+- 수거신청 화면 진입 로직/USER 권한 가드/안내 화면 분기 로직은 변경하지 않는다.
+- 아이콘은 `tabBarIcon`으로만 추가하고, 라벨(`신청`)과 탭 순서는 유지한다.
+- 아이콘 크기/여백은 기존 탭바 높이/패딩(T-0576)과 충돌 없이 UI_SYSTEM spacing 규칙을 준수한다.
+- iOS/Android에서 신청 탭 아이콘 표시/탭 이동 동선을 수동 검증한다.
+
+### [ ] T-0582 AppTabs 이용내역 탭 아이콘 적용(UI 리팩토링, 기능 변경 금지)
+**Goal**
+- 하단 네비게이션 `이용내역` 탭에 의미가 명확한 아이콘을 적용해 히스토리 탐색성을 개선한다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `AppTabs.Screen(name="HistoryTab")`
+- 이용내역 화면 진입/권한 분기/기존 목록 로직은 변경하지 않는다.
+- 아이콘은 `tabBarIcon`으로만 추가하고, 라벨(`이용내역`) 텍스트는 유지한다.
+- 활성/비활성 상태에서 아이콘 대비가 충분하도록 색상 토큰을 UI_SYSTEM 기준으로 정렬한다.
+- iOS/Android에서 이용내역 탭 아이콘 표시 및 전환 동작을 수동 검증한다.
+
+### [ ] T-0583 AppTabs 내정보 탭 아이콘 적용(UI 리팩토링, 기능 변경 금지)
+**Goal**
+- 하단 네비게이션 `내정보` 탭에 프로필 성격의 아이콘을 적용해 정보/설정 진입 동선을 직관적으로 만든다.
+
+**DoD**
+- 대상: `mobile/src/navigation/RootNavigator.tsx`의 `AppTabs.Screen(name="ProfileTab")`
+- 내정보 화면 렌더링/설정 화면 이동/권한 조건 로직은 변경하지 않는다.
+- 아이콘은 `tabBarIcon`으로만 추가하고, 라벨(`내정보`) 및 탭 라우팅 계약은 유지한다.
+- 탭바에서 4개 아이콘 스타일(두께/크기/정렬)이 시각적으로 일관되도록 맞춘다.
+- iOS/Android에서 내정보 탭 아이콘 노출과 탭 이동 회귀 여부를 수동 검증한다.
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
