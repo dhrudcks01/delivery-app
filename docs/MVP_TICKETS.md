@@ -1637,7 +1637,7 @@
 - Empty/Loading/Error 상태 UI를 공통 컴포넌트로 정리한다.
 - iOS/Android에서 역할별 진입/전환/상세 이동을 수동 검증한다.
 
-### [ ] T-0568 ProfileSettingsScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0568 ProfileSettingsScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 설정 화면 메뉴 구조와 정보카드 UI를 UI_SYSTEM 기준으로 통일한다.
 
