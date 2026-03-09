@@ -17,6 +17,14 @@ const colors = {
   caption: '#64748B',
 };
 
+function formatValue(value: string | null | undefined): string {
+  if (!value) {
+    return '-';
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : '-';
+}
+
 function formatDateTime(dateTime: string | null | undefined): string {
   if (!dateTime) {
     return '-';
@@ -30,8 +38,13 @@ export function ProfileSettingsScreen() {
   const roles = me?.roles ?? [];
   const canManageServiceArea = roles.includes('OPS_ADMIN') || roles.includes('SYS_ADMIN');
   const hasProfile = Boolean(me);
-  const identityLabel = me?.loginId ?? me?.email ?? '-';
-  const hasRoles = roles.length > 0;
+  const identityLabel = formatValue(me?.loginId ?? me?.email ?? null);
+  const displayName = formatValue(me?.displayName);
+  const emailLabel = formatValue(me?.email);
+  const roleLabel = roles.length > 0 ? roles.join(', ') : 'USER';
+  const phoneNumberLabel = formatValue(me?.phoneNumber);
+  const phoneVerificationProviderLabel = formatValue(me?.phoneVerificationProvider);
+  const isPhoneVerified = Boolean(me?.phoneVerifiedAt);
 
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} includeTopInset>
@@ -57,7 +70,6 @@ export function ProfileSettingsScreen() {
 
         {!isLoading && !hasProfile && !errorMessage && (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>[]</Text>
             <Text style={styles.emptyTitle}>표시할 계정 정보가 없습니다</Text>
             <Text style={styles.emptyDescription}>로그인 세션을 확인한 뒤 다시 시도해 주세요.</Text>
           </View>
@@ -66,35 +78,23 @@ export function ProfileSettingsScreen() {
         {hasProfile && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>프로필 정보</Text>
+            <Text style={styles.sectionCaption}>계정 식별과 사용자 기본 정보를 확인합니다.</Text>
 
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>로그인 아이디</Text>
-              <Text style={styles.metaValue}>{identityLabel}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>로그인 아이디</Text>
+              <Text style={styles.infoValue}>{identityLabel}</Text>
             </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>표시 이름</Text>
-              <Text style={styles.metaValue}>{me?.displayName ?? '-'}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>표시 이름</Text>
+              <Text style={styles.infoValue}>{displayName}</Text>
             </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>이메일</Text>
-              <Text style={styles.metaValue}>{me?.email ?? '-'}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>이메일</Text>
+              <Text style={styles.infoValue}>{emailLabel}</Text>
             </View>
-
-            <View style={styles.roleGroup}>
-              <Text style={styles.metaLabel}>보유 권한</Text>
-              <View style={styles.roleBadgeRow}>
-                {hasRoles
-                  ? roles.map((role) => (
-                    <View key={role} style={styles.roleBadge}>
-                      <Text style={styles.roleBadgeText}>{role}</Text>
-                    </View>
-                    ))
-                  : (
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleBadgeText}>USER</Text>
-                    </View>
-                    )}
-              </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>보유 권한</Text>
+              <Text style={styles.infoValue}>{roleLabel}</Text>
             </View>
           </View>
         )}
@@ -102,32 +102,33 @@ export function ProfileSettingsScreen() {
         {hasProfile && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>인증 정보</Text>
+            <Text style={styles.sectionCaption}>휴대폰 본인인증 상태와 인증 메타 정보를 표시합니다.</Text>
 
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>휴대폰 번호</Text>
-              <Text style={styles.metaValue}>{me?.phoneNumber ?? '-'}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>휴대폰 번호</Text>
+              <Text style={styles.infoValue}>{phoneNumberLabel}</Text>
             </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>인증 일시</Text>
-              <Text style={styles.metaValue}>{formatDateTime(me?.phoneVerifiedAt)}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>인증 일시</Text>
+              <Text style={styles.infoValue}>{formatDateTime(me?.phoneVerifiedAt)}</Text>
             </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>인증 수단</Text>
-              <Text style={styles.metaValue}>{me?.phoneVerificationProvider ?? '-'}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>인증 수단</Text>
+              <Text style={styles.infoValue}>{phoneVerificationProviderLabel}</Text>
             </View>
             <View
               style={[
                 styles.statusBadge,
-                !me?.phoneVerifiedAt && styles.statusBadgeWarning,
+                !isPhoneVerified && styles.statusBadgeWarning,
               ]}
             >
               <Text
                 style={[
                   styles.statusBadgeText,
-                  !me?.phoneVerifiedAt && styles.statusBadgeWarningText,
+                  !isPhoneVerified && styles.statusBadgeWarningText,
                 ]}
               >
-                {me?.phoneVerifiedAt ? '인증 완료' : '인증 필요'}
+                {isPhoneVerified ? '인증 완료' : '인증 필요'}
               </Text>
             </View>
           </View>
@@ -214,38 +215,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textStrong,
   },
-  metaRow: {
-    gap: 4,
+  sectionCaption: {
+    fontSize: 12,
+    color: colors.caption,
+    lineHeight: 18,
   },
-  metaLabel: {
+  infoRow: {
+    minHeight: 28,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  infoLabel: {
+    width: 92,
     fontSize: 12,
     color: colors.caption,
     fontWeight: '600',
+    lineHeight: 20,
   },
-  metaValue: {
+  infoValue: {
+    flex: 1,
     fontSize: 14,
     color: colors.textStrong,
-  },
-  roleGroup: {
-    gap: 8,
-  },
-  roleBadgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
-  },
-  roleBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1d4ed8',
+    lineHeight: 20,
+    textAlign: 'right',
   },
   statusBadge: {
     alignSelf: 'flex-start',
@@ -308,11 +302,6 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 18,
-    color: colors.caption,
-    fontWeight: '700',
   },
   emptyTitle: {
     fontSize: 16,

@@ -1760,7 +1760,7 @@
 - Empty/Loading/Error 상태가 필요한 경우 공통 패턴으로 처리한다.
 - iOS/Android에서 내정보 탭 진입 및 각 메뉴 이동 수동 검증을 완료한다.
 
-### [ ] T-0579 ProfileSettingsScreen 프로필/인증정보 표시 정합성 UI 수정(기능 변경 금지)
+### [x] T-0579 ProfileSettingsScreen 프로필/인증정보 표시 정합성 UI 수정(기능 변경 금지)
 **Goal**
 - 설정 화면에서 프로필 정보와 인증정보가 어색하게 보이는 UI 문제를 정리해 정보 가독성과 정합성을 개선한다.
 
