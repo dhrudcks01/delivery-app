@@ -1864,7 +1864,7 @@
 - 기존 화면의 반복 스타일 블록을 공통 컴포넌트 사용으로 대체(기능 로직 변경 금지)
 - 터치 영역(최소 44px), spacing(8px grid), 카드 규격(border/radius/padding) UI_SYSTEM 준수
 
-### [ ] T-0588 탭 상단 헤더 공통화(TabHeaderCard) 및 네비게이션 분리 정리
+### [x] T-0588 탭 상단 헤더 공통화(TabHeaderCard) 및 네비게이션 분리 정리
 **Goal**
 - 탭별 상단 헤더 패턴을 공통 컴포넌트로 통일하고, `RootNavigator` 내 UI 구현을 화면 파일로 분리해 네비게이션 응집도를 높인다.
 

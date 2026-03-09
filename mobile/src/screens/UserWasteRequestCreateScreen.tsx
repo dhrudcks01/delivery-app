@@ -13,6 +13,7 @@ import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
+import { TabHeaderCard } from '../components/TabHeaderCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
@@ -318,22 +319,23 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
   if (!started) {
     return (
       <KeyboardAwareScrollScreen contentContainerStyle={styles.container} includeTopInset={includeTopInset}>
-        <View style={styles.entryTopRow}>
-          <Pressable
-            style={styles.addressMarkerButton}
-            accessibilityRole="button"
-            accessibilityLabel="대표주소 설정 화면으로 이동"
-            hitSlop={8}
-            onPress={() => navigation.navigate('UserAddressManagement')}
-          >
-            <Ionicons name="location-outline" size={20} color={colors.primary} />
-          </Pressable>
-        </View>
-
-        <View style={styles.heroCard}>
-          <Text style={styles.title}>3단계로 간편하게 신청해요</Text>
-          <Text style={styles.description}>수거 품목 선택 → 특이사항 입력 → 신청 정보 확인 순서로 진행됩니다.</Text>
-        </View>
+        <TabHeaderCard
+          badge="수거 요청"
+          title="수거 요청"
+          description="대표 주소를 기준으로 수거 신청을 진행할 수 있어요."
+          rightSlot={(
+            <Pressable
+              style={styles.addressMarkerButton}
+              accessibilityRole="button"
+              accessibilityLabel="대표주소 설정 화면으로 이동"
+              hitSlop={8}
+              onPress={() => navigation.navigate('UserAddressManagement')}
+            >
+              <Ionicons name="location-outline" size={20} color={colors.primary} />
+            </Pressable>
+          )}
+          meta={<Text style={styles.caption}>수거 품목 선택 → 특이사항 입력 → 신청 정보 확인 순서로 진행됩니다.</Text>}
+        />
 
         {isCheckingServiceArea && (
           <View style={styles.loadingCard}>
@@ -626,11 +628,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     gap: 24,
   },
-  entryTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  },
   addressMarkerButton: {
     width: 44,
     height: 44,
@@ -640,14 +637,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  heroCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    padding: 16,
-    gap: 12,
   },
   stepCard: {
     borderRadius: 12,
@@ -675,20 +664,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textStrong,
-  },
   stepTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.textStrong,
-  },
-  description: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 16,

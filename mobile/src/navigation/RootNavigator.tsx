@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { DriverAssignedRequestDetailScreen } from '../screens/DriverAssignedRequestDetailScreen';
@@ -19,6 +19,8 @@ import { ServiceAreaBrowseScreen } from '../screens/ServiceAreaBrowseScreen';
 import { ServiceAreaManagementScreen } from '../screens/ServiceAreaManagementScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { SysAdminHomeScreen } from '../screens/SysAdminHomeScreen';
+import { TabHomeScreen } from '../screens/TabHomeScreen';
+import { TabProfileScreen } from '../screens/TabProfileScreen';
 import { UserAddressManagementScreen } from '../screens/UserAddressManagementScreen';
 import { UserWasteRequestCreateScreen } from '../screens/UserWasteRequestCreateScreen';
 import { UserHomeScreen } from '../screens/UserHomeScreen';
@@ -73,13 +75,6 @@ function getHighestRole(roles: AppRole[]): AppRole {
   return ROLE_PRIORITY_ORDER.find((role) => roles.includes(role)) ?? 'USER';
 }
 
-function formatDateTime(dateTime: string | null): string {
-  if (!dateTime) {
-    return '-';
-  }
-  return new Date(dateTime).toLocaleString();
-}
-
 function renderOperationalScreen(role: AppRole) {
   if (role === 'DRIVER') {
     return <DriverHomeScreen />;
@@ -120,48 +115,6 @@ function HeaderlessScreenContainer({ children }: { children: ReactNode }) {
   );
 }
 
-function TabHomeScreen({
-  loginId,
-  roles,
-  primaryRole,
-}: {
-  loginId: string | null;
-  roles: AppRole[];
-  primaryRole: AppRole;
-}) {
-  return (
-    <ScrollView contentContainerStyle={styles.homeContainer}>
-      <View style={styles.homeHeaderCard}>
-        <Text style={styles.homeBadge}>USER</Text>
-        <Text style={styles.homeTitle}>공통 홈</Text>
-        <Text style={styles.homeCaption}>USER 권한 기준으로 신청/이력/내정보 동선을 확인합니다.</Text>
-      </View>
-
-      <View style={styles.homeSummaryCard}>
-        <Text style={styles.homeSectionTitle}>계정 요약</Text>
-        <View style={styles.homeInfoRow}>
-          <Text style={styles.homeInfoLabel}>로그인 아이디</Text>
-          <Text style={styles.homeInfoValue}>{loginId ?? '-'}</Text>
-        </View>
-        <View style={styles.homeInfoRow}>
-          <Text style={styles.homeInfoLabel}>보유 권한</Text>
-          <Text style={styles.homeInfoValue}>{roles.join(', ')}</Text>
-        </View>
-        <View style={styles.homeInfoRow}>
-          <Text style={styles.homeInfoLabel}>적용 권한(최고 권한)</Text>
-          <Text style={styles.homeInfoValue}>{primaryRole}</Text>
-        </View>
-      </View>
-
-      <View style={styles.homeGuideCard}>
-        <Text style={styles.homeSectionTitle}>탭 정책</Text>
-        <Text style={styles.homeGuideText}>신청: 수거 신청 생성 전용</Text>
-        <Text style={styles.homeGuideText}>이용내역: 신청/처리 이력 확인</Text>
-        <Text style={styles.homeGuideText}>내정보: 주소관리/결제수단/설정(로그아웃)</Text>
-      </View>
-    </ScrollView>
-  );
-}
 
 type TabBarIconProps = {
   color: string;
@@ -202,127 +155,6 @@ const renderHomeTabIcon = renderTabIcon('HomeTab');
 const renderRequestTabIcon = renderTabIcon('RequestTab');
 const renderHistoryTabIcon = renderTabIcon('HistoryTab');
 const renderProfileTabIcon = renderTabIcon('ProfileTab');
-
-function TabProfileScreen({
-  loginId,
-  roles,
-  primaryRole,
-  phoneNumber,
-  phoneVerifiedAt,
-  phoneVerificationProvider,
-  hasUserRole,
-  onOpenAddressManagement,
-  onOpenPaymentManagement,
-  onOpenRoleCenter,
-  onOpenSettings,
-}: {
-  loginId: string | null;
-  roles: AppRole[];
-  primaryRole: AppRole;
-  phoneNumber: string | null;
-  phoneVerifiedAt: string | null;
-  phoneVerificationProvider: string | null;
-  hasUserRole: boolean;
-  onOpenAddressManagement: () => void;
-  onOpenPaymentManagement: () => void;
-  onOpenRoleCenter: () => void;
-  onOpenSettings: () => void;
-}) {
-  return (
-    <ScrollView contentContainerStyle={styles.profileContainer}>
-      <View style={styles.profileHeaderCard}>
-        <Text style={styles.profileBadge}>내정보</Text>
-        <Text style={styles.profileTitle}>계정 및 설정</Text>
-        <Text style={styles.profileDescription}>계정 상태를 확인하고 주요 설정 메뉴로 이동할 수 있습니다.</Text>
-      </View>
-
-      <View style={styles.profileSectionCard}>
-        <Text style={styles.profileSectionTitle}>로그인 정보</Text>
-        <View style={styles.profileInfoRow}>
-          <Text style={styles.profileInfoLabel}>로그인 아이디</Text>
-          <Text style={styles.profileInfoValue}>{loginId ?? '-'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.profileSectionCard}>
-        <Text style={styles.profileSectionTitle}>권한 정보</Text>
-        <View style={styles.profileInfoRow}>
-          <Text style={styles.profileInfoLabel}>보유 권한</Text>
-          <Text style={styles.profileInfoValue}>{roles.length > 0 ? roles.join(', ') : '-'}</Text>
-        </View>
-        <View style={styles.profileInfoRow}>
-          <Text style={styles.profileInfoLabel}>적용 권한(최고 권한)</Text>
-          <Text style={styles.profileInfoValue}>{primaryRole}</Text>
-        </View>
-      </View>
-
-      <View style={styles.profileSectionCard}>
-        <Text style={styles.profileSectionTitle}>휴대폰 인증정보</Text>
-        <View style={styles.profileInfoRow}>
-          <Text style={styles.profileInfoLabel}>휴대폰 번호</Text>
-          <Text style={styles.profileInfoValue}>{phoneNumber ?? '-'}</Text>
-        </View>
-        <View style={styles.profileInfoRow}>
-          <Text style={styles.profileInfoLabel}>인증 일시</Text>
-          <Text style={styles.profileInfoValue}>{formatDateTime(phoneVerifiedAt)}</Text>
-        </View>
-        <View style={styles.profileInfoRow}>
-          <Text style={styles.profileInfoLabel}>인증 수단</Text>
-          <Text style={styles.profileInfoValue}>{phoneVerificationProvider ?? '-'}</Text>
-        </View>
-        <View style={[styles.profileStatusBadge, !phoneVerifiedAt && styles.profileStatusBadgeWarning]}>
-          <Text style={[styles.profileStatusText, !phoneVerifiedAt && styles.profileStatusTextWarning]}>
-            {phoneVerifiedAt ? '인증 완료' : '인증 필요'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.profileSectionCard}>
-        <Text style={styles.profileSectionTitle}>메뉴</Text>
-        {hasUserRole && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.profileSecondaryButton,
-              pressed && styles.profileButtonPressed,
-            ]}
-            onPress={onOpenAddressManagement}
-          >
-            <Text style={styles.profileSecondaryButtonText}>주소관리</Text>
-          </Pressable>
-        )}
-        {hasUserRole && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.profileSecondaryButton,
-              pressed && styles.profileButtonPressed,
-            ]}
-            onPress={onOpenPaymentManagement}
-          >
-            <Text style={styles.profileSecondaryButtonText}>결제수단 관리</Text>
-          </Pressable>
-        )}
-        <Pressable
-          style={({ pressed }) => [
-            styles.profileSecondaryButton,
-            pressed && styles.profileButtonPressed,
-          ]}
-          onPress={onOpenRoleCenter}
-        >
-          <Text style={styles.profileSecondaryButtonText}>권한 신청/승인</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.profilePrimaryButton,
-            pressed && styles.profilePrimaryButtonPressed,
-          ]}
-          onPress={onOpenSettings}
-        >
-          <Text style={styles.profilePrimaryButtonText}>설정</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
-  );
-}
 
 function AppTabsScreen() {
   const { me } = useAuth();
@@ -604,206 +436,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: ui.colors.text,
   },
-  homeContainer: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    gap: 16,
-  },
-  homeHeaderCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  homeBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EFF6FF',
-    color: '#1D4ED8',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  homeTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  homeCaption: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
-  },
-  homeSummaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-  },
-  homeSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  homeInfoRow: {
-    gap: 4,
-  },
-  homeInfoLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  homeInfoValue: {
-    fontSize: 14,
-    color: '#0F172A',
-    lineHeight: 20,
-  },
-  homeGuideCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  homeGuideText: {
-    fontSize: 14,
-    color: '#334155',
-    lineHeight: 20,
-  },
   tabBarIcon: {
     textAlign: 'center',
-  },
-  profileContainer: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    gap: 16,
-  },
-  profileHeaderCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  profileBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EFF6FF',
-    color: '#1D4ED8',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  profileTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  profileDescription: {
-    fontSize: 14,
-    color: '#334155',
-    lineHeight: 20,
-  },
-  profileSectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-  },
-  profileSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  profileInfoRow: {
-    gap: 4,
-  },
-  profileInfoLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  profileInfoValue: {
-    fontSize: 14,
-    color: '#0F172A',
-    lineHeight: 20,
-  },
-  profileStatusBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  profileStatusBadgeWarning: {
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFBEB',
-  },
-  profileStatusText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  profileStatusTextWarning: {
-    color: '#B45309',
-  },
-  profileSecondaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  profileSecondaryButtonText: {
-    color: '#2563EB',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  profilePrimaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: '#2563EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  profilePrimaryButtonPressed: {
-    backgroundColor: '#1D4ED8',
-  },
-  profilePrimaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  profileButtonPressed: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  menuButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: ui.colors.primary,
-    paddingVertical: 11,
-    alignItems: 'center',
-    backgroundColor: '#eef8f6',
-  },
-  menuButtonText: {
-    color: ui.colors.primary,
-    fontWeight: '700',
   },
 });

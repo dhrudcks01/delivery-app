@@ -8,6 +8,7 @@ import { createUserAddress, getUserAddresses } from '../api/userAddressApi';
 import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { TabHeaderCard } from '../components/TabHeaderCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
@@ -329,13 +330,17 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       keyboardShouldPersistTaps="handled"
       includeTopInset={includeTopInset}
     >
-      <View style={styles.headerCard}>
-        <Text style={styles.badgeLabel}>{headerCopy.badge}</Text>
-        <Text style={styles.title}>{headerCopy.title}</Text>
-        <Text style={styles.description}>{headerCopy.description}</Text>
-        <Text style={styles.caption}>로그인 ID: {me?.loginId ?? me?.email ?? '-'}</Text>
-        <Text style={styles.caption}>권한: {me?.roles.join(', ') ?? '-'}</Text>
-      </View>
+      <TabHeaderCard
+        badge={headerCopy.badge}
+        title={headerCopy.title}
+        description={headerCopy.description}
+        meta={(
+          <>
+            <Text style={styles.caption}>로그인 ID: {me?.loginId ?? me?.email ?? '-'}</Text>
+            <Text style={styles.caption}>권한: {me?.roles.join(', ') ?? '-'}</Text>
+          </>
+        )}
+      />
 
       {showRequestForm && (
         <View style={styles.card}>
@@ -521,34 +526,6 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: colors.background,
     gap: 24,
-  },
-  headerCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    padding: 16,
-    gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textStrong,
-  },
-  badgeLabel: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  description: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
   },
   caption: {
     fontSize: 12,
