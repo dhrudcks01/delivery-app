@@ -1626,7 +1626,7 @@
 - Empty/Loading/Error 상태와 재시도 동선을 공통 패턴으로 정리한다.
 - iOS/Android에서 결제수단 목록/선택/삭제 동선을 수동 검증한다.
 
-### [ ] T-0567 RoleCenterScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0567 RoleCenterScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - 권한 신청/승인 허브 화면의 정보 배치와 액션 UI를 UI_SYSTEM 기준으로 리팩토링한다.
 
