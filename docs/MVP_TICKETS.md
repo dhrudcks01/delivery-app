@@ -1931,6 +1931,50 @@
 - 외부 계약(API payload/response, 라우팅 파라미터, 권한 정책) 변경 금지
 - 타입체크 및 핵심 사용자 시나리오 수동 회귀 점검 체크리스트를 티켓에 함께 남김
 
+### [ ] T-0594 대형 화면 3차 분해(잔여 600+ 화면)
+**Goal**
+- T-0593 이후에도 남아있는 600라인 이상 화면을 추가 분해해 단일 책임 원칙을 강화하고 화면별 변경 영향 범위를 줄인다.
+
+**DoD**
+- 우선 대상: `UserHomeScreen`, `UserWasteRequestDetailScreen`, `PhoneVerificationScreen`, `RoleCenterScreen`, `DriverAssignedRequestDetailScreen`
+- 분해 기준:
+  - 컨테이너: 데이터 로드/이벤트 핸들러/권한 분기
+  - 섹션 컴포넌트: 카드/리스트/폼 블록 렌더링
+  - 훅/유틸: 파생 상태 계산, 유효성 검증, 에러 매핑
+- 기존 API 계약/네비게이션/문구/권한 정책은 변경하지 않는다.
+- 타입체크 통과 + 핵심 사용자 시나리오 수동 회귀 점검
+
+### [ ] T-0595 색상 리터럴 전면 정리 및 토큰 참조 강제
+**Goal**
+- 화면/컴포넌트/유틸에 남아있는 hex 색상 리터럴을 정리하고 `ui.colors` 중심으로 참조를 강제해 테마 일관성과 유지보수성을 확보한다.
+
+**DoD**
+- 대상: `mobile/src/screens`, `mobile/src/components`, `mobile/src/navigation`, `mobile/src/utils`
+- hard-coded hex 색상(`#[0-9A-Fa-f]{6}`)을 원칙적으로 제거하고 `ui.colors` 또는 토큰 매핑으로 전환
+- `statusBadge` 유틸의 배지 팔레트도 토큰 기반 참조 구조로 정리
+- 불가피한 예외(브랜드 색상/외부 SDK 요구)가 있으면 예외 목록과 사유를 문서에 명시
+- iOS/Android에서 주요 화면 대비/가독성/상태색 표현 수동 검증
+
+### [ ] T-0596 에러/상태 정책 공통화 마무리(래퍼/중복 함수 제거)
+**Goal**
+- T-0590/0592 이후 남은 화면별 래퍼 함수와 중복 상태 계산 로직을 제거해 정책 변경 지점을 완전히 단일화한다.
+
+**DoD**
+- 대상: `SysAdminHomeScreen` 포함 잔여 화면의 `get*StatusBadgeStyle`, `toErrorMessage` 파생 래퍼
+- 공통 모듈(`errorMessage.ts`, `statusBadge.ts`) 외 정책 함수 신규 추가 금지
+- 화면에서는 공통 모듈 호출 + 필요한 뷰 매핑만 수행하도록 정리
+- 기존 에러 메시지/상태 배지 동작 회귀 없이 동일 UX 유지
+
+### [ ] T-0597 모바일 접근성(A11y) 기본선 정비
+**Goal**
+- 주요 터치 요소에 접근성 속성을 체계적으로 부여해 스크린리더 사용성과 접근성 품질의 최소 기준을 맞춘다.
+
+**DoD**
+- 대상: 탭/주요 CTA/아이콘 버튼/목록 항목 액션(우선 USER/DRIVER/OPS/SYS 핵심 화면)
+- `TouchableOpacity`/`Pressable`에 `accessibilityRole`, `accessibilityLabel`(필요 시 `accessibilityHint`)를 정책적으로 추가
+- 최소 터치 영역 44px 보장 및 의미 없는 중복 포커스 요소 정리
+- iOS VoiceOver/Android TalkBack 기준으로 핵심 시나리오 수동 점검 체크리스트 작성
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
