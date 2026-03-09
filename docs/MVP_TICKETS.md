@@ -1714,7 +1714,7 @@
 - Empty/Loading/Error 상태와 처리 결과 메시지를 표준화한다.
 - iOS/Android에서 상세 진입/배정/재배정 UI 동선을 수동 검증한다.
 
-### [ ] T-0575 SysAdminHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0575 SysAdminHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - SYS_ADMIN 운영 화면의 신청 목록/승인 동선 UI를 UI_SYSTEM 기준으로 통일한다.
 

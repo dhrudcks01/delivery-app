@@ -1,6 +1,6 @@
 import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveOpsAdminApplicationForSysAdmin,
   approveSysAdminApplicationForSysAdmin,
@@ -17,12 +17,25 @@ import {
   revokeOpsAdminRole,
 } from '../api/sysAdminRoleApi';
 import { useAuth } from '../auth/AuthContext';
-import { ui } from '../theme/ui';
+import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { RoleApplication } from '../types/roleApplication';
 import { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../types/opsAdmin';
 import { ApiErrorResponse } from '../types/waste';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
+
+const colors = {
+  primary: '#2563EB',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  background: '#F9FAFB',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  textStrong: '#0F172A',
+  text: '#334155',
+  caption: '#64748B',
+};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -45,6 +58,19 @@ function resolveLoginId(loginId?: string | null, email?: string | null): string 
 
 function getRoleApplicationSummary(application: RoleApplication): string {
   return `이름: ${application.userDisplayName} / 아이디: ${resolveLoginId(application.userLoginId, application.userEmail)}`;
+}
+
+function getApplicationStatusBadgeStyle(status: string) {
+  if (status === 'APPROVED') {
+    return { container: styles.statusBadgeSuccess, text: styles.statusBadgeSuccessText };
+  }
+  if (status === 'REJECTED') {
+    return { container: styles.statusBadgeError, text: styles.statusBadgeErrorText };
+  }
+  if (status === 'PENDING') {
+    return { container: styles.statusBadgeWarning, text: styles.statusBadgeWarningText };
+  }
+  return { container: styles.statusBadgeNeutral, text: styles.statusBadgeNeutralText };
 }
 
 export function SysAdminHomeScreen() {
@@ -381,355 +407,506 @@ export function SysAdminHomeScreen() {
     void loadSysAdminGrantCandidates();
   }, []);
 
+  const pendingOpsCount = useMemo(
+    () => opsAdminApplications.filter((item) => item.status === 'PENDING').length,
+    [opsAdminApplications],
+  );
+  const pendingSysCount = useMemo(
+    () => sysAdminApplications.filter((item) => item.status === 'PENDING').length,
+    [sysAdminApplications],
+  );
+
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-      contentInsetAdjustmentBehavior="always"
-    >
-      <Text style={styles.title}>SYS_ADMIN 홈</Text>
-      <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-      <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-      <View style={styles.statusCard}>
-        <Text style={styles.statusTitle}>화면 상태 점검</Text>
-        <Text style={styles.statusText}>
-          OPS 신청 로딩: {isLoadingOpsAdminApplications ? '진행 중' : '대기'} / SYS 신청 로딩: {isLoadingSysAdminApplications ? '진행 중' : '대기'}
-        </Text>
-        <Text style={styles.statusText}>
-          OPS 대상 로딩: {isLoadingGrantCandidates ? '진행 중' : '대기'} / SYS 대상 로딩: {isLoadingSysAdminGrantCandidates ? '진행 중' : '대기'}
-        </Text>
-      </View>
+    <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" includeTopInset>
+      <View style={styles.screenContainer}>
+        <View style={styles.headerCard}>
+          <Text style={styles.badge}>SYS_ADMIN</Text>
+          <Text style={styles.title}>운영 권한 관리</Text>
+          <Text style={styles.description}>신청 승인/반려와 역할 부여를 한 화면에서 처리합니다.</Text>
+          <Text style={styles.meta}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
+          <Text style={styles.meta}>역할: {me?.roles.join(', ') ?? '-'}</Text>
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>상태 필터</Text>
-        <View style={styles.filterRow}>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>OPS 신청</Text>
+            <Text style={styles.summaryValue}>{opsAdminApplications.length}건</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>SYS 신청</Text>
+            <Text style={styles.summaryValue}>{sysAdminApplications.length}건</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>PENDING</Text>
+            <Text style={styles.summaryValue}>{pendingOpsCount + pendingSysCount}건</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>상태 필터</Text>
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, applicationStatusFilter === 'PENDING' && styles.filterChipActive]}
+              onPress={() => setApplicationStatusFilter('PENDING')}
+            >
+              <Text style={[styles.filterChipText, applicationStatusFilter === 'PENDING' && styles.filterChipTextActive]}>
+                PENDING
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, applicationStatusFilter === 'ALL' && styles.filterChipActive]}
+              onPress={() => setApplicationStatusFilter('ALL')}
+            >
+              <Text style={[styles.filterChipText, applicationStatusFilter === 'ALL' && styles.filterChipTextActive]}>
+                전체
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitle}>OPS_ADMIN 권한 신청 승인</Text>
+            <Pressable style={[styles.ghostButton, isLoadingOpsAdminApplications && styles.buttonDisabled]} onPress={loadOpsAdminApplications} disabled={isLoadingOpsAdminApplications}>
+              <Text style={styles.ghostButtonText}>새로고침</Text>
+            </Pressable>
+          </View>
+          {isLoadingOpsAdminApplications && (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingText}>OPS_ADMIN 신청 목록 로딩 중...</Text>
+            </View>
+          )}
+          {opsAdminApplicationListError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{opsAdminApplicationListError}</Text>
+            </View>
+          )}
+          {!isLoadingOpsAdminApplications && !opsAdminApplicationListError && opsAdminApplications.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>조회된 OPS_ADMIN 신청이 없습니다.</Text>
+              <Text style={styles.emptyDescription}>새 신청이 접수되면 여기에 표시됩니다.</Text>
+            </View>
+          )}
+          {!isLoadingOpsAdminApplications && !opsAdminApplicationListError && opsAdminApplications.length > 0 && (
+            <View style={styles.listWrap}>
+              {opsAdminApplications.map((item) => {
+                const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={[styles.listItem, selectedOpsAdminApplicationId === item.id && styles.listItemActive]}
+                    onPress={() => {
+                      setSelectedOpsAdminApplicationId(item.id);
+                      setOpsAdminApplicationActionError(null);
+                      setOpsAdminApplicationActionResult(null);
+                    }}
+                  >
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>신청 #{item.id}</Text>
+                      <View style={[styles.statusBadge, badgeStyle.container]}>
+                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
+                    <Text style={styles.listSub}>신청일: {formatDate(item.createdAt)}</Text>
+                    <Text style={styles.listSub}>처리자 아이디: {resolveLoginId(item.processedByLoginId, item.processedByEmail)}</Text>
+                    <Text style={styles.listSub}>처리시각: {formatDate(item.processedAt)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+          {selectedOpsAdminApplication && (
+            <View style={styles.resultBox}>
+              <Text style={styles.detailText}>신청자: {getRoleApplicationSummary(selectedOpsAdminApplication)}</Text>
+              <Text style={styles.detailText}>사유: {selectedOpsAdminApplication.reason}</Text>
+            </View>
+          )}
+          {opsAdminApplicationActionResult && (
+            <View style={styles.successCard}>
+              <Text style={styles.success}>{opsAdminApplicationActionResult}</Text>
+            </View>
+          )}
+          {opsAdminApplicationActionError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{opsAdminApplicationActionError}</Text>
+            </View>
+          )}
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={[styles.button, isProcessingOpsAdminApplication && styles.buttonDisabled]}
+              onPress={handleApproveOpsAdminApplication}
+              disabled={isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId}
+            >
+              <Text style={styles.buttonText}>승인</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.rejectButton, isProcessingOpsAdminApplication && styles.buttonDisabled]}
+              onPress={handleRejectOpsAdminApplication}
+              disabled={isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId}
+            >
+              <Text style={styles.buttonText}>반려</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청 승인</Text>
+            <Pressable style={[styles.ghostButton, isLoadingSysAdminApplications && styles.buttonDisabled]} onPress={loadSysAdminApplications} disabled={isLoadingSysAdminApplications}>
+              <Text style={styles.ghostButtonText}>새로고침</Text>
+            </Pressable>
+          </View>
+          {isLoadingSysAdminApplications && (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingText}>SYS_ADMIN 신청 목록 로딩 중...</Text>
+            </View>
+          )}
+          {sysAdminApplicationListError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{sysAdminApplicationListError}</Text>
+            </View>
+          )}
+          {!isLoadingSysAdminApplications && !sysAdminApplicationListError && sysAdminApplications.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>조회된 SYS_ADMIN 신청이 없습니다.</Text>
+              <Text style={styles.emptyDescription}>새 신청이 접수되면 여기에 표시됩니다.</Text>
+            </View>
+          )}
+          {!isLoadingSysAdminApplications && !sysAdminApplicationListError && sysAdminApplications.length > 0 && (
+            <View style={styles.listWrap}>
+              {sysAdminApplications.map((item) => {
+                const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={[styles.listItem, selectedSysAdminApplicationId === item.id && styles.listItemActive]}
+                    onPress={() => {
+                      setSelectedSysAdminApplicationId(item.id);
+                      setSysAdminApplicationActionError(null);
+                      setSysAdminApplicationActionResult(null);
+                    }}
+                  >
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.listTitle}>신청 #{item.id}</Text>
+                      <View style={[styles.statusBadge, badgeStyle.container]}>
+                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
+                    <Text style={styles.listSub}>신청일: {formatDate(item.createdAt)}</Text>
+                    <Text style={styles.listSub}>처리자 아이디: {resolveLoginId(item.processedByLoginId, item.processedByEmail)}</Text>
+                    <Text style={styles.listSub}>처리시각: {formatDate(item.processedAt)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+          {selectedSysAdminApplication && (
+            <View style={styles.resultBox}>
+              <Text style={styles.detailText}>신청자: {getRoleApplicationSummary(selectedSysAdminApplication)}</Text>
+              <Text style={styles.detailText}>사유: {selectedSysAdminApplication.reason}</Text>
+            </View>
+          )}
+          {sysAdminApplicationActionResult && (
+            <View style={styles.successCard}>
+              <Text style={styles.success}>{sysAdminApplicationActionResult}</Text>
+            </View>
+          )}
+          {sysAdminApplicationActionError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{sysAdminApplicationActionError}</Text>
+            </View>
+          )}
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={[styles.button, isProcessingSysAdminApplication && styles.buttonDisabled]}
+              onPress={handleApproveSysAdminApplication}
+              disabled={isProcessingSysAdminApplication || !selectedSysAdminApplicationId}
+            >
+              <Text style={styles.buttonText}>승인</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.rejectButton, isProcessingSysAdminApplication && styles.buttonDisabled]}
+              onPress={handleRejectSysAdminApplication}
+              disabled={isProcessingSysAdminApplication || !selectedSysAdminApplicationId}
+            >
+              <Text style={styles.buttonText}>반려</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>SYS_ADMIN 권한 부여 대상 검색 (비 SYS_ADMIN)</Text>
+          <Text style={styles.meta}>SYS_ADMIN 미보유 계정만 검색됩니다. 자기 자신의 권한은 변경할 수 없습니다.</Text>
+          <Text style={styles.label}>검색어 (아이디/이름)</Text>
+          <View style={styles.buttonRow}>
+            <TextInput
+              style={[styles.input, styles.flexInput]}
+              value={sysAdminGrantQuery}
+              onChangeText={setSysAdminGrantQuery}
+              placeholder="예: admin"
+              placeholderTextColor="#94a3b8"
+            />
+            <Pressable style={styles.secondaryButton} onPress={loadSysAdminGrantCandidates}>
+              <Text style={styles.secondaryButtonText}>검색</Text>
+            </Pressable>
+          </View>
+
+          {isLoadingSysAdminGrantCandidates && (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingText}>SYS_ADMIN 부여 대상 조회 중...</Text>
+            </View>
+          )}
+          {sysAdminGrantCandidateError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{sysAdminGrantCandidateError}</Text>
+            </View>
+          )}
+          {sysAdminGrantCandidates.map((item) => (
+            <Pressable
+              key={item.userId}
+              style={[styles.listItem, selectedSysAdminGrantCandidateId === item.userId && styles.listItemActive]}
+              onPress={() => setSelectedSysAdminGrantCandidateId(item.userId)}
+            >
+              <Text style={styles.listTitle}>이름: {item.name}</Text>
+              <Text style={styles.listSub}>아이디: {item.loginId}</Text>
+              <Text style={styles.listSub}>사용자 번호: {item.userId}</Text>
+            </Pressable>
+          ))}
+          {!isLoadingSysAdminGrantCandidates && sysAdminGrantCandidates.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>조회된 SYS_ADMIN 부여 대상이 없습니다.</Text>
+              <Text style={styles.emptyDescription}>검색어를 변경해 다시 시도해 주세요.</Text>
+            </View>
+          )}
+
+          {selectedSysAdminGrantCandidate && (
+            <View style={styles.resultBox}>
+              <Text style={styles.detailText}>선택 이름: {selectedSysAdminGrantCandidate.name}</Text>
+              <Text style={styles.detailText}>선택 아이디: {selectedSysAdminGrantCandidate.loginId}</Text>
+              <Text style={styles.detailText}>사용자 번호: {selectedSysAdminGrantCandidate.userId}</Text>
+            </View>
+          )}
+
           <Pressable
-            style={[styles.filterChip, applicationStatusFilter === 'PENDING' && styles.filterChipActive]}
-            onPress={() => setApplicationStatusFilter('PENDING')}
+            style={[styles.button, isGrantingSysAdminRole && styles.buttonDisabled]}
+            onPress={handleGrantSysAdminRole}
+            disabled={isGrantingSysAdminRole || !selectedSysAdminGrantCandidateId}
           >
-            <Text style={[styles.filterChipText, applicationStatusFilter === 'PENDING' && styles.filterChipTextActive]}>
-              PENDING
+            <Text style={styles.buttonText}>
+              {isGrantingSysAdminRole ? 'SYS_ADMIN 부여 중...' : '선택 대상 SYS_ADMIN 권한 부여'}
             </Text>
           </Pressable>
-          <Pressable
-            style={[styles.filterChip, applicationStatusFilter === 'ALL' && styles.filterChipActive]}
-            onPress={() => setApplicationStatusFilter('ALL')}
-          >
-            <Text style={[styles.filterChipText, applicationStatusFilter === 'ALL' && styles.filterChipTextActive]}>
-              전체
-            </Text>
-          </Pressable>
         </View>
-      </View>
 
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>OPS_ADMIN 권한 신청 승인</Text>
-          <Pressable style={styles.ghostButton} onPress={loadOpsAdminApplications}>
-            <Text style={styles.ghostButtonText}>새로고침</Text>
-          </Pressable>
-        </View>
-        {isLoadingOpsAdminApplications && <Text style={styles.meta}>OPS_ADMIN 신청 목록 로딩 중..</Text>}
-        {opsAdminApplicationListError && <Text style={styles.error}>{opsAdminApplicationListError}</Text>}
-        {opsAdminApplications.map((item) => (
-          <Pressable
-            key={item.id}
-            style={[styles.listItem, selectedOpsAdminApplicationId === item.id && styles.listItemActive]}
-            onPress={() => {
-              setSelectedOpsAdminApplicationId(item.id);
-              setOpsAdminApplicationActionError(null);
-              setOpsAdminApplicationActionResult(null);
-            }}
-          >
-            <Text style={styles.listTitle}>신청 #{item.id} ({item.status})</Text>
-            <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
-            <Text style={styles.listSub}>신청일: {formatDate(item.createdAt)}</Text>
-            <Text style={styles.listSub}>처리자 아이디: {resolveLoginId(item.processedByLoginId, item.processedByEmail)}</Text>
-            <Text style={styles.listSub}>처리시각: {formatDate(item.processedAt)}</Text>
-          </Pressable>
-        ))}
-        {!isLoadingOpsAdminApplications && opsAdminApplications.length === 0 && (
-          <Text style={styles.meta}>조회된 OPS_ADMIN 신청이 없습니다.</Text>
-        )}
-        {selectedOpsAdminApplication && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>신청자: {getRoleApplicationSummary(selectedOpsAdminApplication)}</Text>
-            <Text style={styles.detailText}>사유: {selectedOpsAdminApplication.reason}</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>OPS_ADMIN 권한 부여 대상 검색 (DRIVER)</Text>
+          <Text style={styles.meta}>DRIVER 권한 보유 + OPS_ADMIN 미보유 계정만 검색됩니다.</Text>
+          <Text style={styles.label}>검색어 (아이디/이름)</Text>
+          <View style={styles.buttonRow}>
+            <TextInput
+              style={[styles.input, styles.flexInput]}
+              value={opsAdminGrantQuery}
+              onChangeText={setOpsAdminGrantQuery}
+              placeholder="예: driver"
+              placeholderTextColor="#94a3b8"
+            />
+            <Pressable style={styles.secondaryButton} onPress={loadOpsAdminGrantCandidates}>
+              <Text style={styles.secondaryButtonText}>검색</Text>
+            </Pressable>
           </View>
-        )}
-        {opsAdminApplicationActionResult && <Text style={styles.success}>{opsAdminApplicationActionResult}</Text>}
-        {opsAdminApplicationActionError && <Text style={styles.error}>{opsAdminApplicationActionError}</Text>}
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={[styles.button, isProcessingOpsAdminApplication && styles.buttonDisabled]}
-            onPress={handleApproveOpsAdminApplication}
-            disabled={isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId}
-          >
-            <Text style={styles.buttonText}>승인</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.rejectButton, isProcessingOpsAdminApplication && styles.buttonDisabled]}
-            onPress={handleRejectOpsAdminApplication}
-            disabled={isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId}
-          >
-            <Text style={styles.buttonText}>반려</Text>
-          </Pressable>
-        </View>
-      </View>
 
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청 승인</Text>
-          <Pressable style={styles.ghostButton} onPress={loadSysAdminApplications}>
-            <Text style={styles.ghostButtonText}>새로고침</Text>
-          </Pressable>
-        </View>
-        {isLoadingSysAdminApplications && <Text style={styles.meta}>SYS_ADMIN 신청 목록 로딩 중..</Text>}
-        {sysAdminApplicationListError && <Text style={styles.error}>{sysAdminApplicationListError}</Text>}
-        {sysAdminApplications.map((item) => (
-          <Pressable
-            key={item.id}
-            style={[styles.listItem, selectedSysAdminApplicationId === item.id && styles.listItemActive]}
-            onPress={() => {
-              setSelectedSysAdminApplicationId(item.id);
-              setSysAdminApplicationActionError(null);
-              setSysAdminApplicationActionResult(null);
-            }}
-          >
-            <Text style={styles.listTitle}>신청 #{item.id} ({item.status})</Text>
-            <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
-            <Text style={styles.listSub}>신청일: {formatDate(item.createdAt)}</Text>
-            <Text style={styles.listSub}>처리자 아이디: {resolveLoginId(item.processedByLoginId, item.processedByEmail)}</Text>
-            <Text style={styles.listSub}>처리시각: {formatDate(item.processedAt)}</Text>
-          </Pressable>
-        ))}
-        {!isLoadingSysAdminApplications && sysAdminApplications.length === 0 && (
-          <Text style={styles.meta}>조회된 SYS_ADMIN 신청이 없습니다.</Text>
-        )}
-        {selectedSysAdminApplication && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>신청자: {getRoleApplicationSummary(selectedSysAdminApplication)}</Text>
-            <Text style={styles.detailText}>사유: {selectedSysAdminApplication.reason}</Text>
-          </View>
-        )}
-        {sysAdminApplicationActionResult && <Text style={styles.success}>{sysAdminApplicationActionResult}</Text>}
-        {sysAdminApplicationActionError && <Text style={styles.error}>{sysAdminApplicationActionError}</Text>}
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={[styles.button, isProcessingSysAdminApplication && styles.buttonDisabled]}
-            onPress={handleApproveSysAdminApplication}
-            disabled={isProcessingSysAdminApplication || !selectedSysAdminApplicationId}
-          >
-            <Text style={styles.buttonText}>승인</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.rejectButton, isProcessingSysAdminApplication && styles.buttonDisabled]}
-            onPress={handleRejectSysAdminApplication}
-            disabled={isProcessingSysAdminApplication || !selectedSysAdminApplicationId}
-          >
-            <Text style={styles.buttonText}>반려</Text>
-          </Pressable>
-        </View>
-      </View>
+          {isLoadingGrantCandidates && (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingText}>권한 부여 대상 조회 중...</Text>
+            </View>
+          )}
+          {grantCandidateError && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{grantCandidateError}</Text>
+            </View>
+          )}
+          {opsAdminGrantCandidates.map((item) => (
+            <Pressable
+              key={item.userId}
+              style={[styles.listItem, selectedGrantCandidateId === item.userId && styles.listItemActive]}
+              onPress={() => setSelectedGrantCandidateId(item.userId)}
+            >
+              <Text style={styles.listTitle}>이름: {item.name}</Text>
+              <Text style={styles.listSub}>아이디: {item.loginId}</Text>
+              <Text style={styles.listSub}>사용자 번호: {item.userId}</Text>
+            </Pressable>
+          ))}
+          {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>[]</Text>
+              <Text style={styles.emptyTitle}>조회된 부여 대상이 없습니다.</Text>
+              <Text style={styles.emptyDescription}>검색어를 변경해 다시 시도해 주세요.</Text>
+            </View>
+          )}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>SYS_ADMIN 권한 부여 대상 검색 (비 SYS_ADMIN)</Text>
-        <Text style={styles.meta}>SYS_ADMIN 미보유 계정만 검색됩니다. 자기 자신의 권한은 변경할 수 없습니다.</Text>
-        <Text style={styles.label}>검색어 (아이디/이름)</Text>
-        <View style={styles.buttonRow}>
+          {selectedGrantCandidate && (
+            <View style={styles.resultBox}>
+              <Text style={styles.detailText}>선택 이름: {selectedGrantCandidate.name}</Text>
+              <Text style={styles.detailText}>선택 아이디: {selectedGrantCandidate.loginId}</Text>
+              <Text style={styles.detailText}>사용자 번호: {selectedGrantCandidate.userId}</Text>
+            </View>
+          )}
+
+          <Text style={styles.label}>권한 회수용 사용자 ID</Text>
           <TextInput
-            style={[styles.input, styles.flexInput]}
-            value={sysAdminGrantQuery}
-            onChangeText={setSysAdminGrantQuery}
-            placeholder="예: admin"
+            style={styles.input}
+            value={userIdInput}
+            onChangeText={setUserIdInput}
+            placeholder="예: 12"
+            keyboardType="numeric"
             placeholderTextColor="#94a3b8"
           />
-          <Pressable style={styles.secondaryButton} onPress={loadSysAdminGrantCandidates}>
-            <Text style={styles.secondaryButtonText}>검색</Text>
-          </Pressable>
-        </View>
 
-        {isLoadingSysAdminGrantCandidates && <Text style={styles.meta}>SYS_ADMIN 부여 대상 조회 중..</Text>}
-        {sysAdminGrantCandidateError && <Text style={styles.error}>{sysAdminGrantCandidateError}</Text>}
-        {sysAdminGrantCandidates.map((item) => (
-          <Pressable
-            key={item.userId}
-            style={[styles.listItem, selectedSysAdminGrantCandidateId === item.userId && styles.listItemActive]}
-            onPress={() => setSelectedSysAdminGrantCandidateId(item.userId)}
-          >
-            <Text style={styles.listTitle}>이름: {item.name}</Text>
-            <Text style={styles.listSub}>아이디: {item.loginId}</Text>
-            <Text style={styles.listSub}>사용자 번호: {item.userId}</Text>
-          </Pressable>
-        ))}
-        {!isLoadingSysAdminGrantCandidates && sysAdminGrantCandidates.length === 0 && (
-          <Text style={styles.meta}>조회된 SYS_ADMIN 부여 대상이 없습니다.</Text>
-        )}
+          {roleResultMessage && (
+            <View style={styles.successCard}>
+              <Text style={styles.success}>{roleResultMessage}</Text>
+            </View>
+          )}
+          {roleErrorMessage && (
+            <View style={styles.errorCard}>
+              <Text style={styles.error}>{roleErrorMessage}</Text>
+            </View>
+          )}
 
-        {selectedSysAdminGrantCandidate && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>선택 이름: {selectedSysAdminGrantCandidate.name}</Text>
-            <Text style={styles.detailText}>선택 아이디: {selectedSysAdminGrantCandidate.loginId}</Text>
-            <Text style={styles.detailText}>사용자 번호: {selectedSysAdminGrantCandidate.userId}</Text>
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={[styles.button, isGranting && styles.buttonDisabled]}
+              onPress={handleGrant}
+              disabled={isGranting || isRevoking}
+            >
+              <Text style={styles.buttonText}>{isGranting ? '부여 중...' : '선택 대상 권한 부여'}</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.rejectButton, isRevoking && styles.buttonDisabled]}
+              onPress={handleRevoke}
+              disabled={isGranting || isRevoking}
+            >
+              <Text style={styles.buttonText}>{isRevoking ? '회수 중...' : '권한 회수'}</Text>
+            </Pressable>
           </View>
-        )}
-
-        <Pressable
-          style={[styles.button, isGrantingSysAdminRole && styles.buttonDisabled]}
-          onPress={handleGrantSysAdminRole}
-          disabled={isGrantingSysAdminRole || !selectedSysAdminGrantCandidateId}
-        >
-          <Text style={styles.buttonText}>
-            {isGrantingSysAdminRole ? 'SYS_ADMIN 부여 중...' : '선택 대상 SYS_ADMIN 권한 부여'}
-          </Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>OPS_ADMIN 권한 부여 대상 검색 (DRIVER)</Text>
-        <Text style={styles.meta}>DRIVER 권한 보유 + OPS_ADMIN 미보유 계정만 검색됩니다.</Text>
-        <Text style={styles.label}>검색어 (아이디/이름)</Text>
-        <View style={styles.buttonRow}>
-          <TextInput
-            style={[styles.input, styles.flexInput]}
-            value={opsAdminGrantQuery}
-            onChangeText={setOpsAdminGrantQuery}
-            placeholder="예: driver"
-            placeholderTextColor="#94a3b8"
-          />
-          <Pressable style={styles.secondaryButton} onPress={loadOpsAdminGrantCandidates}>
-            <Text style={styles.secondaryButtonText}>검색</Text>
-          </Pressable>
-        </View>
-
-        {isLoadingGrantCandidates && <Text style={styles.meta}>권한 부여 대상 조회 중..</Text>}
-        {grantCandidateError && <Text style={styles.error}>{grantCandidateError}</Text>}
-        {opsAdminGrantCandidates.map((item) => (
-          <Pressable
-            key={item.userId}
-            style={[styles.listItem, selectedGrantCandidateId === item.userId && styles.listItemActive]}
-            onPress={() => setSelectedGrantCandidateId(item.userId)}
-          >
-            <Text style={styles.listTitle}>이름: {item.name}</Text>
-            <Text style={styles.listSub}>아이디: {item.loginId}</Text>
-            <Text style={styles.listSub}>사용자 번호: {item.userId}</Text>
-          </Pressable>
-        ))}
-        {!isLoadingGrantCandidates && opsAdminGrantCandidates.length === 0 && (
-          <Text style={styles.meta}>조회된 부여 대상이 없습니다.</Text>
-        )}
-
-        {selectedGrantCandidate && (
-          <View style={styles.resultBox}>
-            <Text style={styles.detailText}>선택 이름: {selectedGrantCandidate.name}</Text>
-            <Text style={styles.detailText}>선택 아이디: {selectedGrantCandidate.loginId}</Text>
-            <Text style={styles.detailText}>사용자 번호: {selectedGrantCandidate.userId}</Text>
-          </View>
-        )}
-
-        <Text style={styles.label}>권한 회수용 사용자 ID</Text>
-        <TextInput
-          style={styles.input}
-          value={userIdInput}
-          onChangeText={setUserIdInput}
-          placeholder="예: 12"
-          keyboardType="numeric"
-          placeholderTextColor="#94a3b8"
-        />
-
-        {roleResultMessage && <Text style={styles.success}>{roleResultMessage}</Text>}
-        {roleErrorMessage && <Text style={styles.error}>{roleErrorMessage}</Text>}
-
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={[styles.button, isGranting && styles.buttonDisabled]}
-            onPress={handleGrant}
-            disabled={isGranting || isRevoking}
-          >
-            <Text style={styles.buttonText}>{isGranting ? '부여 중...' : '선택 대상 권한 부여'}</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.rejectButton, isRevoking && styles.buttonDisabled]}
-            onPress={handleRevoke}
-            disabled={isGranting || isRevoking}
-          >
-            <Text style={styles.buttonText}>{isRevoking ? '회수 중...' : '권한 회수'}</Text>
-          </Pressable>
         </View>
       </View>
-
-    </ScrollView>
+    </KeyboardAwareScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: ui.colors.screen,
+    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  screenContainer: {
+    gap: 16,
+  },
+  headerCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
     padding: 16,
-    paddingBottom: 28,
-    gap: 12,
+    gap: 8,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '700',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
+  },
+  description: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
   },
   meta: {
-    fontSize: 13,
-    color: ui.colors.text,
+    fontSize: 12,
+    color: colors.caption,
+    lineHeight: 18,
   },
-  statusCard: {
-    backgroundColor: '#eef8f6',
+  summaryCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.card,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  summaryItem: {
+    flex: 1,
     gap: 4,
   },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
-  },
-  statusText: {
+  summaryLabel: {
     fontSize: 12,
-    color: ui.colors.text,
+    color: colors.caption,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: colors.textStrong,
+    fontWeight: '700',
   },
   card: {
-    backgroundColor: ui.colors.card,
-    borderRadius: ui.radius.card,
+    backgroundColor: colors.card,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    padding: 14,
-    gap: 8,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: ui.colors.textStrong,
+    fontWeight: '600',
+    color: colors.textStrong,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderColor: '#c2d7d2',
-    borderRadius: ui.radius.control,
+    borderColor: colors.border,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
     backgroundColor: '#ffffff',
+    fontSize: 14,
   },
   success: {
     fontSize: 13,
-    color: ui.colors.success,
+    color: colors.success,
+    lineHeight: 18,
   },
   error: {
     fontSize: 13,
-    color: ui.colors.error,
+    color: colors.error,
+    lineHeight: 18,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -741,51 +918,113 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  listWrap: {
+    gap: 8,
+  },
   flexInput: {
     flex: 1,
   },
+  loadingCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: '#1d4ed8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 12,
+  },
+  successCard: {
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    padding: 12,
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  emptyIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.caption,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   button: {
     flex: 1,
-    paddingVertical: 11,
-    borderRadius: ui.radius.control,
-    backgroundColor: ui.colors.primary,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   rejectButton: {
-    backgroundColor: '#7f1d1d',
+    backgroundColor: '#b91c1c',
   },
   buttonDisabled: {
-    opacity: 0.65,
+    opacity: 0.7,
   },
   buttonText: {
     color: '#ffffff',
+    fontSize: 14,
     fontWeight: '700',
   },
   ghostButton: {
+    height: 40,
     borderWidth: 1,
-    borderColor: '#9fc2b9',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
   },
   ghostButtonText: {
-    color: ui.colors.text,
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.textStrong,
+    fontSize: 13,
+    fontWeight: '700',
   },
   secondaryButton: {
+    height: 48,
     borderWidth: 1,
-    borderColor: ui.colors.primary,
-    borderRadius: ui.radius.control,
+    borderColor: colors.border,
+    borderRadius: 12,
     paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#eef8f6',
+    backgroundColor: '#ffffff',
   },
   secondaryButtonText: {
-    color: ui.colors.primary,
+    color: colors.textStrong,
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 13,
   },
   filterRow: {
     flexDirection: 'row',
@@ -793,48 +1032,94 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     borderWidth: 1,
-    borderColor: '#c2d7d2',
+    borderColor: colors.border,
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     backgroundColor: '#ffffff',
   },
   filterChipActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
   },
   filterChipText: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   filterChipTextActive: {
-    color: ui.colors.primary,
+    color: '#1d4ed8',
   },
   listItem: {
     borderWidth: 1,
-    borderColor: ui.colors.cardBorder,
-    borderRadius: 10,
-    padding: 10,
-    gap: 2,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
   },
   listItemActive: {
-    borderColor: ui.colors.primary,
-    backgroundColor: '#eef8f6',
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
   },
   listTitle: {
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
     fontWeight: '700',
+    fontSize: 14,
   },
   listSub: {
-    color: ui.colors.text,
+    color: colors.text,
     fontSize: 12,
+    lineHeight: 18,
+  },
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statusBadgeSuccess: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+  },
+  statusBadgeSuccessText: {
+    color: colors.success,
+  },
+  statusBadgeWarning: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  statusBadgeWarningText: {
+    color: '#b45309',
+  },
+  statusBadgeError: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+  },
+  statusBadgeErrorText: {
+    color: colors.error,
+  },
+  statusBadgeNeutral: {
+    borderColor: colors.border,
+    backgroundColor: '#f8fafc',
+  },
+  statusBadgeNeutralText: {
+    color: colors.caption,
   },
   resultBox: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
     gap: 4,
+    backgroundColor: '#ffffff',
   },
   detailText: {
-    color: ui.colors.textStrong,
+    color: colors.textStrong,
     fontSize: 13,
+    lineHeight: 18,
   },
 });
