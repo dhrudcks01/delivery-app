@@ -1538,6 +1538,193 @@
   - 1->2->3 단계 이동 후 섹션/문구 노출 확인
   - 뒤로가기 후 수정값이 3단계 요약에 즉시 반영되는지 확인
 
+### [ ] T-0559 LoginScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 로그인 화면을 UI_SYSTEM 기준(SafeArea/카드/버튼/타이포/간격)으로 정렬해 일관된 첫 진입 UX를 제공한다.
+
+**DoD**
+- 기존 로그인 기능(API 호출, 검증, 에러 코드 처리, 네비게이션)은 변경하지 않는다.
+- 화면 구조를 `SafeArea -> ScreenContainer -> Header -> Content -> Footer` 패턴으로 정리한다.
+- `InputField`, `PrimaryButton`, `SecondaryButton` 스타일을 UI_SYSTEM 규격으로 통일한다.
+- Empty/Loading/Error 상태 문구 및 배치 규칙을 UI_SYSTEM에 맞춰 정리한다.
+- iOS/Android에서 키보드 가림 없는 입력 UX를 확인한다.
+
+### [ ] T-0560 SignupScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 회원가입 화면의 입력 폼/에러/CTA 구성을 UI_SYSTEM 기준으로 리팩토링한다.
+
+**DoD**
+- 기존 회원가입 로직(API/검증/중복 처리/성공 후 이동)은 변경하지 않는다.
+- 입력 섹션을 카드 단위로 재배치하고 8px spacing grid를 준수한다.
+- 라벨/입력/검증 메시지 배치를 Form UX 규칙에 맞게 통일한다.
+- 로딩/에러 상태의 버튼 비활성 및 메시지 위치를 일관화한다.
+- iOS/Android에서 입력 완료 흐름과 스크롤 동작을 수동 검증한다.
+
+### [ ] T-0561 PhoneVerificationScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 본인인증 화면을 UI_SYSTEM 기준으로 정리해 상태 표시와 재시도 동선을 명확히 한다.
+
+**DoD**
+- 본인인증 시작/완료/실패 처리 로직 및 외부 연동 계약은 변경하지 않는다.
+- 인증 진행/대기/실패 상태를 카드 + 상태 배지 + 안내문 구조로 정리한다.
+- SafeArea 및 상단 영역(노치/상태바) 레이아웃을 UI_SYSTEM 기준으로 고정한다.
+- 로딩 스켈레톤/오류/재시도 버튼을 UI 규격에 맞게 제공한다.
+- iOS/Android에서 인증 성공/실패/취소 시 UI 회귀가 없는지 검증한다.
+
+### [ ] T-0562 UserHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- USER 홈/이용내역 화면의 목록/카드/빈상태를 UI_SYSTEM 기준으로 통일한다.
+
+**DoD**
+- 요청 목록 조회/필터/상태 표시 로직은 변경하지 않는다.
+- 리스트를 카드형 패턴(SectionHeader -> CardList -> Card)으로 정렬한다.
+- 상태값은 기존 매핑을 유지하면서 StatusBadge 스타일만 UI_SYSTEM 규격으로 통일한다.
+- Empty/Loading/Error 상태를 공통 컴포넌트 기반으로 정리한다.
+- iOS/Android에서 홈 섹션 전환 및 스크롤 UX를 수동 검증한다.
+
+### [ ] T-0563 UserWasteRequestCreateScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- USER 수거신청 생성 화면의 3단계 UI를 UI_SYSTEM 기준으로 리팩토링한다.
+
+**DoD**
+- 단계 이동/검증/신청 payload/업로드 호출 등 기존 기능은 변경하지 않는다.
+- 스텝 헤더, 입력 카드, CTA 영역의 간격/타이포/컬러를 UI_SYSTEM으로 통일한다.
+- 사진 썸네일 그리드와 버튼 스타일을 Image UI 및 Button 규칙에 맞춘다.
+- Empty/Loading/Error 상태와 권한 거부 안내 UI를 공통 패턴으로 정리한다.
+- iOS/Android에서 1->2->3 단계 이동/뒤로가기/신청 완료까지 수동 검증한다.
+
+### [ ] T-0564 UserWasteRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- USER 수거요청 상세 화면의 정보 구조와 사진 섹션을 UI_SYSTEM에 맞게 정리한다.
+
+**DoD**
+- 상세 데이터 매핑/상태 표시 조건/API 호출은 변경하지 않는다.
+- 요약 정보/타임라인/사진 섹션을 카드 기반 레이아웃으로 재구성한다.
+- 참고사진/기사사진 그리드의 썸네일, 여백, 텍스트 규칙을 UI_SYSTEM으로 통일한다.
+- 로딩/빈 사진/오류 상태를 공통 Empty/Loading/Error 패턴으로 제공한다.
+- iOS/Android에서 상세 조회/사진 확대/되돌아가기 UX를 수동 검증한다.
+
+### [ ] T-0565 UserAddressManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 주소관리 화면의 목록/대표주소/입력 폼 UI를 UI_SYSTEM 기준으로 정렬한다.
+
+**DoD**
+- 주소 CRUD/대표주소 지정/마이그레이션 로직은 변경하지 않는다.
+- 주소 목록과 편집 폼을 카드형 레이아웃으로 분리하고 간격 규칙을 통일한다.
+- 대표주소 강조 스타일을 StatusBadge 또는 강조 카드 패턴으로 정리한다.
+- Empty/Loading/Error 상태 및 재시도 버튼 위치를 일관화한다.
+- iOS/Android에서 주소 등록/수정/대표 변경 흐름을 수동 검증한다.
+
+### [ ] T-0566 UserPaymentManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 결제수단 관리 화면의 카드 목록/기본수단/동작 버튼 UI를 UI_SYSTEM에 맞춘다.
+
+**DoD**
+- 결제수단 조회/등록/삭제/기본설정 기능과 API 계약은 변경하지 않는다.
+- 카드 목록을 UI_SYSTEM CardList 패턴으로 정렬하고 버튼 규격을 통일한다.
+- 기본 결제수단 표시를 배지/강조 규칙으로 표준화한다.
+- Empty/Loading/Error 상태와 재시도 동선을 공통 패턴으로 정리한다.
+- iOS/Android에서 결제수단 목록/선택/삭제 동선을 수동 검증한다.
+
+### [ ] T-0567 RoleCenterScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 권한 신청/승인 허브 화면의 정보 배치와 액션 UI를 UI_SYSTEM 기준으로 리팩토링한다.
+
+**DoD**
+- 권한 신청/조회/승인 이동 로직과 권한 체크는 변경하지 않는다.
+- 역할별 섹션을 카드 + 섹션헤더 패턴으로 재구성한다.
+- 역할 상태/처리 상태 노출을 StatusBadge 규칙으로 통일한다.
+- Empty/Loading/Error 상태 UI를 공통 컴포넌트로 정리한다.
+- iOS/Android에서 역할별 진입/전환/상세 이동을 수동 검증한다.
+
+### [ ] T-0568 ProfileSettingsScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 설정 화면 메뉴 구조와 정보카드 UI를 UI_SYSTEM 기준으로 통일한다.
+
+**DoD**
+- 설정 메뉴 진입/이동/권한별 노출 조건은 변경하지 않는다.
+- 메뉴를 카드형 리스트로 재정렬하고 버튼/타이포/간격을 표준화한다.
+- 프로필/인증 정보 표시 영역을 공통 Card 컴포넌트 기준으로 맞춘다.
+- Empty/Loading/Error 상태를 공통 패턴으로 정리한다.
+- iOS/Android에서 설정 메뉴 이동 동작 회귀 없음을 확인한다.
+
+### [ ] T-0569 ServiceAreaBrowseScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 서비스 가능지역 안내 화면의 검색/목록/안내 UI를 UI_SYSTEM 기준으로 개선한다.
+
+**DoD**
+- 지역 조회/검색/판정 결과 로직은 변경하지 않는다.
+- 검색 입력, 결과 리스트, 안내 메시지를 카드 기반으로 재배치한다.
+- 상태 배지/텍스트 컬러를 Color System과 Status UI 규칙에 맞춘다.
+- Empty/Loading/Error 상태를 UI_SYSTEM 표준으로 정리한다.
+- iOS/Android에서 검색/상세 이동/뒤로가기 동작을 수동 검증한다.
+
+### [ ] T-0570 ServiceAreaManagementScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- 서비스 신청지역 관리 화면의 선택/등록/상태 표시 UI를 UI_SYSTEM 기준으로 정리한다.
+
+**DoD**
+- 지역 등록/비활성/재활성/삭제 기능 및 API 계약은 변경하지 않는다.
+- 시/구/동 선택 패널과 결과 리스트를 카드형 섹션으로 분리한다.
+- 등록/일괄추가/상태변경 CTA를 버튼 규칙(Primary/Secondary)으로 통일한다.
+- Empty/Loading/Error 및 부분 실패 메시지를 공통 패턴으로 정리한다.
+- iOS/Android에서 선택/등록/상태변경 동선을 수동 검증한다.
+
+### [ ] T-0571 DriverHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- DRIVER 홈(배정 목록/측정 입력 진입) UI를 UI_SYSTEM 기준으로 리팩토링한다.
+
+**DoD**
+- 배정 목록 조회/선택/측정완료 연계 로직은 변경하지 않는다.
+- 배정 목록을 카드형 리스트로 정리하고 요약 정보 배치를 통일한다.
+- 액션 버튼(상세보기/측정 관련 CTA)의 규격을 UI_SYSTEM으로 일치시킨다.
+- Empty/Loading/Error 상태를 공통 패턴으로 제공한다.
+- iOS/Android에서 배정 목록/상세 이동 흐름을 수동 검증한다.
+
+### [ ] T-0572 DriverAssignedRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- DRIVER 배정 상세 화면의 입력/사진/완료 액션 UI를 UI_SYSTEM 기준으로 정렬한다.
+
+**DoD**
+- 무게 입력/사진 업로드/측정완료 처리 로직은 변경하지 않는다.
+- 상세 정보, 사진 영역, 입력 폼을 카드 기반 섹션으로 재배치한다.
+- 썸네일 그리드/확대보기 트리거 UI를 Image UI 규칙에 맞춘다.
+- Empty/Loading/Error 상태 및 업로드 실패 메시지 패턴을 일관화한다.
+- iOS/Android에서 업로드/측정완료/뒤로가기 동선을 수동 검증한다.
+
+### [ ] T-0573 OpsAdminHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- OPS_ADMIN 홈(요청 목록/필터/배정 진입) UI를 UI_SYSTEM 기준으로 리팩토링한다.
+
+**DoD**
+- 요청 조회/필터/배정 대상 선택 로직은 변경하지 않는다.
+- 목록/필터/요약영역을 카드 + 섹션 구조로 정리한다.
+- 상태 배지와 우선순위 표시 스타일을 UI_SYSTEM Status 규칙으로 통일한다.
+- Empty/Loading/Error 상태와 재시도 CTA를 공통 패턴으로 제공한다.
+- iOS/Android에서 목록 필터/상세 진입 흐름을 수동 검증한다.
+
+### [ ] T-0574 OpsWasteRequestDetailScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- OPS_ADMIN 수거요청 상세 화면의 배정/재배정/상태 정보 UI를 UI_SYSTEM 기준으로 정리한다.
+
+**DoD**
+- 기사 배정/재배정/상태조회/로그 표시 로직은 변경하지 않는다.
+- 상세 정보와 기사 선택 영역을 카드 섹션으로 분리하고 정보 계층을 명확히 한다.
+- 배정 관련 액션 버튼/검색 입력 UI를 공통 컴포넌트 규격으로 정렬한다.
+- Empty/Loading/Error 상태와 처리 결과 메시지를 표준화한다.
+- iOS/Android에서 상세 진입/배정/재배정 UI 동선을 수동 검증한다.
+
+### [ ] T-0575 SysAdminHomeScreen UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+**Goal**
+- SYS_ADMIN 운영 화면의 신청 목록/승인 동선 UI를 UI_SYSTEM 기준으로 통일한다.
+
+**DoD**
+- 신청 조회/승인/반려/권한부여 기능과 서버 계약은 변경하지 않는다.
+- 목록/상세 요약/처리 버튼을 카드형 레이아웃과 공통 버튼 규격으로 정렬한다.
+- 상태 표시는 StatusBadge와 Color System 기준을 준수한다.
+- Empty/Loading/Error 상태를 공통 컴포넌트 패턴으로 구현한다.
+- iOS/Android에서 승인/반려/목록 갱신 흐름을 수동 검증한다.
+
 ---
 
 # EPIC 6) 테스트 및 문서(최소)
