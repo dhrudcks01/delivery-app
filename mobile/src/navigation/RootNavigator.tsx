@@ -174,6 +174,10 @@ function renderHistoryTabIcon({ color, size }: { color: string; size: number }) 
   return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>≣</Text>;
 }
 
+function renderProfileTabIcon({ color, size }: { color: string; size: number }) {
+  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>☺</Text>;
+}
+
 function TabProfileScreen({
   loginId,
   roles,
@@ -400,7 +404,10 @@ function AppTabsScreen() {
       />
       <AppTabs.Screen
         name="ProfileTab"
-        options={{ title: TAB_TO_LABEL.ProfileTab }}
+        options={{
+          title: TAB_TO_LABEL.ProfileTab,
+          tabBarIcon: renderProfileTabIcon,
+        }}
         children={() => (
           <TabProfileScreen
             loginId={me?.loginId ?? me?.email ?? null}
