@@ -162,6 +162,10 @@ function TabHomeScreen({
   );
 }
 
+function renderHomeTabIcon({ color, size }: { color: string; size: number }) {
+  return <Text style={[styles.homeTabIcon, { color, fontSize: Math.max(size - 2, 14) }]}>⌂</Text>;
+}
+
 function TabProfileScreen({
   loginId,
   roles,
@@ -325,7 +329,11 @@ function AppTabsScreen() {
     <AppTabs.Navigator screenOptions={sharedTabOptions}>
       <AppTabs.Screen
         name="HomeTab"
-        options={{ title: TAB_TO_LABEL.HomeTab, headerShown: isPrimaryUser }}
+        options={{
+          title: TAB_TO_LABEL.HomeTab,
+          headerShown: isPrimaryUser,
+          tabBarIcon: renderHomeTabIcon,
+        }}
         children={() =>
           isPrimaryUser
             ? (
@@ -619,6 +627,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#334155',
     lineHeight: 20,
+  },
+  homeTabIcon: {
+    fontWeight: '700',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   profileContainer: {
     padding: 16,
