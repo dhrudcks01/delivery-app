@@ -1748,7 +1748,7 @@
 - Empty/Loading/Error 상태가 필요한 경우(데이터 미존재/권한 미확인) 공통 패턴으로만 표현한다.
 - iOS/Android에서 USER 계정 홈 탭 진입 시 레이아웃 깨짐 없이 표시되는지 수동 검증한다.
 
-### [ ] T-0578 TabProfileScreen(내정보 탭) UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
+### [x] T-0578 TabProfileScreen(내정보 탭) UI_SYSTEM 정렬 리팩토링(기능 변경 금지)
 **Goal**
 - `내정보` 탭(`TabProfileScreen`)의 메뉴/정보카드 UI를 UI_SYSTEM 기준으로 통일해 탐색성을 개선한다.
 
