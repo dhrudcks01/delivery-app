@@ -1,19 +1,17 @@
 ﻿import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { AxiosError } from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, StyleSheet } from 'react-native';
 import { createWasteRequest } from '../api/wasteApi';
 import { getUserServiceAreaAvailability } from '../api/serviceAreaApi';
 import { createUserAddress, getUserAddresses } from '../api/userAddressApi';
 import { uploadImageFile } from '../api/uploadApi';
 import { useAuth } from '../auth/AuthContext';
-import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
-import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
-import { TabHeaderCard } from '../components/TabHeaderCard';
+import { useWasteRequestCreateDerived } from './hooks/useWasteRequestCreateDerived';
+import { WasteRequestEntrySection, WasteRequestStepFlowSection } from './sections/UserWasteRequestCreateSections';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
@@ -105,24 +103,23 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
     return buildWasteRequestAddress(primaryAddress);
   }, [primaryAddress]);
 
-  const selectedDisposalCodes = useMemo(
-    () => (Object.entries(counts).filter(([, value]) => value > 0).map(([key]) => key) as Code[]),
-    [counts],
-  );
-  const selectedDisposalItemSummaries = useMemo(
-    () => selectedDisposalCodes.map((code) => `${DISPOSAL_ITEM_LABEL[code]} ${counts[code]}개`),
-    [selectedDisposalCodes, counts],
-  );
-  const selectedSpecialOptionSummaries = useMemo(
-    () => (options.length > 0 ? options : ['선택 없음']),
-    [options],
-  );
+  const {
+    selectedDisposalCodes,
+    selectedDisposalItemSummaries,
+    selectedSpecialOptionSummaries,
+    canStartRequest,
+    isServiceAreaBlocked,
+  } = useWasteRequestCreateDerived({
+    counts,
+    options,
+    disposalItemLabel: DISPOSAL_ITEM_LABEL,
+    addressResolvable: Boolean(addressBuildResult?.ok),
+    isServiceAreaAvailable,
+    isCheckingServiceArea,
+    serviceAreaError,
+  });
 
   const isPhoneVerified = Boolean(me?.phoneNumber && me?.phoneVerifiedAt);
-  const isServiceAreaBlocked = isServiceAreaAvailable === false;
-  const requiresServiceAreaCheck = Boolean(addressBuildResult?.ok);
-  const canStartRequest = !requiresServiceAreaCheck
-    || (isServiceAreaAvailable === true && !isCheckingServiceArea && !serviceAreaError);
 
   const migrateLegacyAddresses = useCallback(async () => {
     if (!me?.id) {
@@ -318,304 +315,57 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
 
   if (!started) {
     return (
-      <KeyboardAwareScrollScreen contentContainerStyle={styles.container} includeTopInset={includeTopInset}>
-        <TabHeaderCard
-          badge="수거 요청"
-          title="수거 요청"
-          description="대표 주소를 기준으로 수거 신청을 진행할 수 있어요."
-          rightSlot={(
-            <Pressable
-              style={styles.addressMarkerButton}
-              accessibilityRole="button"
-              accessibilityLabel="대표주소 설정 화면으로 이동"
-              hitSlop={8}
-              onPress={() => navigation.navigate('UserAddressManagement')}
-            >
-              <Ionicons name="location-outline" size={20} color={colors.primary} />
-            </Pressable>
-          )}
-          meta={<Text style={styles.caption}>수거 품목 선택 → 특이사항 입력 → 신청 정보 확인 순서로 진행됩니다.</Text>}
-        />
-
-        {isCheckingServiceArea && (
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.caption}>서비스 가능 여부를 확인 중입니다.</Text>
-          </View>
-        )}
-
-        {serviceAreaError && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{serviceAreaError}</Text>
-          </View>
-        )}
-
-        {serviceAreaError && (
-          <Pressable style={styles.secondaryButton} onPress={() => setServiceAreaRetryKey((prev) => prev + 1)}>
-            <Text style={styles.secondaryButtonText}>다시 시도</Text>
-          </Pressable>
-        )}
-
-        {isServiceAreaBlocked && !isCheckingServiceArea && !serviceAreaError && (
-          <>
-            <View style={styles.warningCard}>
-              <Text style={styles.warningTitle}>{SERVICE_AREA_UNAVAILABLE_MESSAGE}</Text>
-              <Text style={styles.warningText}>현재 대표 주소지는 신청 가능한 지역이 아닙니다.</Text>
-            </View>
-            <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('ServiceAreaBrowse')}>
-              <Text style={styles.secondaryButtonText}>서비스 지역 살펴보기</Text>
-            </Pressable>
-          </>
-        )}
-
-        <Pressable
-          style={[styles.primaryButton, !canStartRequest && styles.buttonDisabled]}
-          onPress={() => setStarted(true)}
-          disabled={!canStartRequest}
-        >
-          <Text style={styles.primaryButtonText}>수거 요청 시작</Text>
-        </Pressable>
-      </KeyboardAwareScrollScreen>
+      <WasteRequestEntrySection
+        includeTopInset={includeTopInset}
+        styles={styles}
+        primaryColor={colors.primary}
+        canStartRequest={canStartRequest}
+        isCheckingServiceArea={isCheckingServiceArea}
+        serviceAreaError={serviceAreaError}
+        isServiceAreaBlocked={isServiceAreaBlocked}
+        serviceAreaUnavailableMessage={SERVICE_AREA_UNAVAILABLE_MESSAGE}
+        onOpenAddressManagement={() => navigation.navigate('UserAddressManagement')}
+        onOpenServiceAreaBrowse={() => navigation.navigate('ServiceAreaBrowse')}
+        onRetryServiceArea={() => setServiceAreaRetryKey((prev) => prev + 1)}
+        onStartRequest={() => setStarted(true)}
+      />
     );
   }
 
   return (
     <>
-      <KeyboardAwareScrollScreen contentContainerStyle={styles.container} includeTopInset={includeTopInset}>
-        <View style={styles.stepCard}>
-          <Text style={styles.badge}>신청 단계</Text>
-          <Text style={styles.stepTitle}>{step + 1}. {STEP_TITLES[step]}</Text>
-
-          <View style={styles.progressRow}>
-            {STEP_TITLES.map((title, index) => (
-              <View key={title} style={styles.progressItem}>
-                <View style={[styles.progressDot, step >= index && styles.progressDotActive]} />
-                <View style={[styles.progressBar, step >= index && styles.progressBarActive]} />
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.progressLabelRow}>
-            {STEP_TITLES.map((title, index) => (
-              <Text
-                key={`${title}-label`}
-                style={[styles.progressLabel, step === index && styles.progressLabelActive]}
-                numberOfLines={1}
-              >
-                {index + 1}단계
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        {step === 0 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>수거 품목 선택</Text>
-
-            <View style={styles.selectionCard}>
-              <View style={styles.selectionTextWrap}>
-                <Text style={styles.selectionTitle}>혼합 쓰레기</Text>
-                <Text style={styles.selectionDescription}>기본 수거 품목입니다.</Text>
-              </View>
-              <View style={styles.counter}>
-                <Pressable style={styles.counterButton} onPress={() => adjustCount('GENERAL', -1)}>
-                  <Text style={styles.counterButtonText}>-</Text>
-                </Pressable>
-                <Text style={styles.counterValue}>{counts.GENERAL}</Text>
-                <Pressable style={styles.counterButton} onPress={() => adjustCount('GENERAL', 1)}>
-                  <Text style={styles.counterButtonText}>+</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.selectionCard}>
-              <View style={styles.selectionTextWrap}>
-                <Text style={styles.selectionTitle}>택배 박스</Text>
-                <Text style={styles.selectionDescription}>함께 배출할 박스 수량을 선택해 주세요.</Text>
-              </View>
-              <View style={styles.counter}>
-                <Pressable style={styles.counterButton} onPress={() => adjustCount('BOX', -1)}>
-                  <Text style={styles.counterButtonText}>-</Text>
-                </Pressable>
-                <Text style={styles.counterValue}>{counts.BOX}</Text>
-                <Pressable style={styles.counterButton} onPress={() => adjustCount('BOX', 1)}>
-                  <Text style={styles.counterButtonText}>+</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <Text style={styles.sectionTitle}>비닐 배송 요청</Text>
-            <View style={styles.selectionCard}>
-              <View style={styles.selectionTextWrap}>
-                <Text style={styles.selectionTitle}>전용 수거비닐</Text>
-                <Text style={styles.selectionDescription}>필요한 수량을 선택해 주세요.</Text>
-              </View>
-              <View style={styles.counter}>
-                <Pressable style={styles.counterButton} onPress={() => setBagCount((prev) => Math.max(0, prev - 1))}>
-                  <Text style={styles.counterButtonText}>-</Text>
-                </Pressable>
-                <Text style={styles.counterValue}>{bagCount}</Text>
-                <Pressable style={styles.counterButton} onPress={() => setBagCount((prev) => prev + 1)}>
-                  <Text style={styles.counterButtonText}>+</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {step === 1 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>특이사항</Text>
-            {SPECIAL_OPTIONS.map((option) => {
-              const selected = options.includes(option);
-              return (
-                <Pressable
-                  key={option}
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={`${option} 선택`}
-                  accessibilityState={{ checked: selected }}
-                  hitSlop={8}
-                  style={[styles.optionChoice, selected && styles.optionChoiceSelected]}
-                  onPress={() => toggleOption(option)}
-                >
-                  <Text style={[styles.optionChoiceText, selected && styles.optionChoiceTextSelected]}>{option}</Text>
-                  <View style={[styles.optionBadge, selected && styles.optionBadgeSelected]}>
-                    <Text style={[styles.optionBadgeText, selected && styles.optionBadgeTextSelected]}>
-                      {selected ? '선택됨' : '미선택'}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-
-            <View style={styles.rowBetween}>
-              <Text style={styles.sectionTitle}>참고사진 ({referencePhotoUrls.length})</Text>
-              <Pressable
-                style={[styles.secondaryButtonCompact, isUploadingPhoto && styles.buttonDisabled]}
-                disabled={isUploadingPhoto}
-                onPress={() => void pickReferencePhoto()}
-              >
-                <Text style={styles.secondaryButtonCompactText}>{isUploadingPhoto ? '업로드 중...' : '사진 추가'}</Text>
-              </Pressable>
-            </View>
-
-            {photoUploadError && (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorText}>{photoUploadError}</Text>
-              </View>
-            )}
-
-            {photoUploadError && (
-              <Pressable
-                style={[styles.secondaryButton, isUploadingPhoto && styles.buttonDisabled]}
-                disabled={isUploadingPhoto}
-                onPress={() => void pickReferencePhoto()}
-              >
-                <Text style={styles.secondaryButtonText}>다시 시도</Text>
-              </Pressable>
-            )}
-
-            {referencePhotoUrls.length === 0 && (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyIcon}>+</Text>
-                <Text style={styles.emptyTitle}>참고사진이 없습니다.</Text>
-                <Text style={styles.emptyDescription}>필요하면 사진을 추가해 기사에게 전달해 주세요.</Text>
-              </View>
-            )}
-
-            <View style={styles.photoGrid}>
-              {referencePhotoUrls.map((url, index) => (
-                <PhotoThumbnailCard
-                  key={`${url}-${index}`}
-                  photoUrl={url}
-                  label={`참고사진 ${index + 1}`}
-                  onPress={() => setSelectedPhotoUrl(url)}
-                  onRemove={() => setReferencePhotoUrls((prev) => prev.filter((_, i) => i !== index))}
-                  containerStyle={styles.referencePhotoCard}
-                  imageStyle={styles.referencePhotoImage}
-                />
-              ))}
-            </View>
-
-            <View style={styles.noteSection}>
-              <Text style={styles.label}>요청사항</Text>
-              <TextInput
-                style={styles.noteInput}
-                value={note}
-                onChangeText={setNote}
-                maxLength={300}
-                multiline
-                placeholder="요청사항을 입력해 주세요."
-                placeholderTextColor="#94A3B8"
-              />
-              <Text style={styles.caption}>{note.length}/300</Text>
-            </View>
-          </View>
-        )}
-
-        {step === 2 && (
-          <View style={styles.card}>
-            <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>방문일정</Text>
-              <Text style={styles.summaryValueStrong}>{VISIT_SCHEDULE_NOTICE}</Text>
-            </View>
-
-            <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>주소</Text>
-              <Text style={styles.summaryValue}>
-                {addressBuildResult?.ok ? addressBuildResult.address : '대표 주소지를 설정해 주세요.'}
-              </Text>
-              {serviceAreaError && <Text style={styles.errorText}>{serviceAreaError}</Text>}
-            </View>
-
-            <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>신청정보</Text>
-
-              <Text style={styles.summaryLabel}>수거 품목</Text>
-              {selectedDisposalItemSummaries.map((item) => (
-                <Text key={item} style={styles.summaryBulletText}>• {item}</Text>
-              ))}
-
-              <Text style={styles.summaryLabel}>배출 특이사항</Text>
-              {selectedSpecialOptionSummaries.map((item) => (
-                <Text key={item} style={styles.summaryBulletText}>• {item}</Text>
-              ))}
-            </View>
-
-            <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>결제수단</Text>
-              <Text style={styles.summaryValue}>카드 자동결제</Text>
-            </View>
-
-            <Pressable style={styles.agreementRow} onPress={() => setAgreed((prev) => !prev)}>
-              <View style={[styles.agreementCheckbox, agreed && styles.agreementCheckboxChecked]}>
-                <Text style={[styles.agreementCheckboxText, agreed && styles.agreementCheckboxTextChecked]}>
-                  {agreed ? '✓' : ''}
-                </Text>
-              </View>
-              <Text style={styles.agreementText}>유의사항을 확인했습니다.</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {error && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <View style={styles.footerRow}>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => (step === 0 ? setStarted(false) : setStep((prev) => (prev - 1) as Step))}
-          >
-            <Text style={styles.secondaryButtonText}>{step === 0 ? '취소' : '이전'}</Text>
-          </Pressable>
-          <Pressable style={[styles.primaryButton, (isSubmitting || isUploadingPhoto) && styles.buttonDisabled]} disabled={isSubmitting || isUploadingPhoto} onPress={onNext}>
-            <Text style={styles.primaryButtonText}>{step === 2 ? (isSubmitting ? '요청 중...' : '수거 요청하기') : '다음'}</Text>
-          </Pressable>
-        </View>
-      </KeyboardAwareScrollScreen>
+      <WasteRequestStepFlowSection
+        includeTopInset={includeTopInset}
+        styles={styles}
+        step={step}
+        stepTitles={STEP_TITLES}
+        specialOptions={SPECIAL_OPTIONS}
+        counts={counts}
+        bagCount={bagCount}
+        options={options}
+        referencePhotoUrls={referencePhotoUrls}
+        isUploadingPhoto={isUploadingPhoto}
+        photoUploadError={photoUploadError}
+        note={note}
+        selectedDisposalItemSummaries={selectedDisposalItemSummaries}
+        selectedSpecialOptionSummaries={selectedSpecialOptionSummaries}
+        addressSummaryText={addressBuildResult?.ok ? addressBuildResult.address : '대표 주소지를 설정해 주세요.'}
+        serviceAreaError={serviceAreaError}
+        agreed={agreed}
+        error={error}
+        isSubmitting={isSubmitting}
+        onAdjustCount={adjustCount}
+        onAdjustBagCount={(delta) => setBagCount((prev) => Math.max(0, prev + delta))}
+        onToggleOption={toggleOption}
+        onAddPhoto={() => void pickReferencePhoto()}
+        onRetryPhotoUpload={() => void pickReferencePhoto()}
+        onRemovePhoto={(index) => setReferencePhotoUrls((prev) => prev.filter((_, i) => i !== index))}
+        onSelectPhoto={setSelectedPhotoUrl}
+        onChangeNote={setNote}
+        onToggleAgreement={() => setAgreed((prev) => !prev)}
+        onBack={() => (step === 0 ? setStarted(false) : setStep((prev) => (prev - 1) as Step))}
+        onNext={onNext}
+      />
       <PhotoPreviewModal photoUrl={selectedPhotoUrl} onClose={() => setSelectedPhotoUrl(null)} />
     </>
   );
