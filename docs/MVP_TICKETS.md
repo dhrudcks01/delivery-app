@@ -2365,7 +2365,7 @@
 
 ---
 
-### [ ] T-0811 쿠폰 만료 예정 알림 (쿠폰 기능 연계)
+### [x] T-0811 쿠폰 만료 예정 알림 (쿠폰 기능 연계)
 **Goal**
 - 추후 쿠폰 기능 도입 시, 만료 예정 쿠폰에 대해 사전 알림을 발송할 수 있는 기반을 만든다.
 
@@ -2377,6 +2377,22 @@
 - 배치 또는 스케줄러 기반 발송 구조 설계
 - 현재는 쿠폰 기능(T-0701~T-0704) 완료 전까지 feature flag 또는 비활성 상태로 유지 가능
 - 쿠폰 도메인 도입 이후 바로 연결 가능한 payload 규격 문서화
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] 알림 스케줄러 구조 추가: `CouponExpiringNotificationScheduler`
+- [x] 알림 서비스/중복 방지 구조 추가: `CouponExpiringNotificationService`
+- [x] 쿠폰 타깃 조회 연동 포트 추가 + 기본 no-op 구현:
+  - `CouponExpiringNotificationTargetReader`
+  - `NoOpCouponExpiringNotificationTargetReader`
+- [x] feature flag 기본 비활성 설정 추가:
+  - `app.notification.coupon-expiring.enabled=false`
+- [x] 발송 정책(3일 전/1일 전) 반영:
+  - `app.notification.coupon-expiring.days-before-expiry=3,1`
+- [x] payload 규격 문서화:
+  - `docs/notifications/COUPON_EXPIRING_PAYLOAD.md`
+- [ ] IntelliJ에서 서버 테스트 실행으로 회귀 확인:
+  - `CouponExpiringNotificationServiceTest`
+  - `CouponExpiringNotificationSchedulerTest`
 
 ---
 
