@@ -23,7 +23,6 @@ import { ui } from '../theme/ui';
 import type { RoleApplication } from '../types/roleApplication';
 import type { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../types/opsAdmin';
 import { toApiErrorMessage } from '../utils/errorMessage';
-import { getStatusBadgePalette, resolveApplicationStatusBadgeTone } from '../utils/statusBadge';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
 
@@ -42,14 +41,6 @@ function resolveLoginId(loginId?: string | null, email?: string | null): string 
 
 function getRoleApplicationSummary(application: RoleApplication): string {
   return `이름: ${application.userDisplayName} / 아이디: ${resolveLoginId(application.userLoginId, application.userEmail)}`;
-}
-
-function getApplicationStatusBadgeStyle(status: string) {
-  const badgePalette = getStatusBadgePalette(resolveApplicationStatusBadgeTone(status));
-  return {
-    container: { backgroundColor: badgePalette.backgroundColor },
-    text: { color: badgePalette.textColor },
-  };
 }
 
 export function SysAdminHomeScreen() {
@@ -453,7 +444,6 @@ export function SysAdminHomeScreen() {
           setSysAdminApplicationActionResult(null);
         }}
         getRoleApplicationSummary={getRoleApplicationSummary}
-        getApplicationStatusBadgeStyle={getApplicationStatusBadgeStyle}
         formatDate={formatDate}
         resolveLoginId={resolveLoginId}
       />

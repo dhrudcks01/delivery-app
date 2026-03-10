@@ -1982,7 +1982,7 @@
 **예외 목록**
 - 없음 (대상 범위에서 hard-coded hex 색상 제거 완료)
 
-### [ ] T-0596 에러/상태 정책 공통화 마무리(래퍼/중복 함수 제거)
+### [x] T-0596 에러/상태 정책 공통화 마무리(래퍼/중복 함수 제거)
 **Goal**
 - T-0590/0592 이후 남은 화면별 래퍼 함수와 중복 상태 계산 로직을 제거해 정책 변경 지점을 완전히 단일화한다.
 
@@ -1991,6 +1991,12 @@
 - 공통 모듈(`errorMessage.ts`, `statusBadge.ts`) 외 정책 함수 신규 추가 금지
 - 화면에서는 공통 모듈 호출 + 필요한 뷰 매핑만 수행하도록 정리
 - 기존 에러 메시지/상태 배지 동작 회귀 없이 동일 UX 유지
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `cd mobile && npm run typecheck` 통과
+- [x] `SysAdminHomeScreen`의 `getApplicationStatusBadgeStyle` 래퍼 제거 및 섹션에서 공통 `statusBadge` 유틸 직접 호출 확인
+- [x] `UserPaymentManagementScreen` 결제수단 상태 톤 매핑을 `statusBadge.ts` 공통 모듈로 이동 확인
+- [ ] SYS_ADMIN/USER 주요 화면에서 상태 배지 색상/문구 회귀 수동 확인(iOS/Android)
 
 ### [ ] T-0597 모바일 접근성(A11y) 기본선 정비
 **Goal**

@@ -13,7 +13,7 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { PaymentMethodStatusResponse, PaymentMethodType } from '../types/payment';
 import { ui } from '../theme/ui';
 import { toApiErrorMessage } from '../utils/errorMessage';
-import { getStatusBadgePalette, type StatusBadgeTone } from '../utils/statusBadge';
+import { getStatusBadgePalette, resolvePaymentMethodStatusBadgeTone } from '../utils/statusBadge';
 import { useUserPaymentManagementDerived } from './hooks/useUserPaymentManagementDerived';
 import { UserPaymentManagementIntroSection } from './sections/UserPaymentManagementSections';
 
@@ -68,16 +68,6 @@ function isValidExpiry(rawInput: string): boolean {
   }
   const month = Number(digits.slice(0, 2));
   return month >= 1 && month <= 12;
-}
-
-function resolveMethodStatusBadgeTone(status: string): StatusBadgeTone {
-  if (status.includes('ACTIVE') || status.includes('REGISTERED')) {
-    return 'success';
-  }
-  if (status.includes('FAILED') || status.includes('ERROR')) {
-    return 'error';
-  }
-  return 'warning';
 }
 
 export function UserPaymentManagementScreen() {
@@ -285,7 +275,7 @@ export function UserPaymentManagementScreen() {
         {hasPaymentMethods && (
           <View style={styles.methodList}>
             {status?.paymentMethods.map((item, index) => {
-              const badgePalette = getStatusBadgePalette(resolveMethodStatusBadgeTone(item.status));
+              const badgePalette = getStatusBadgePalette(resolvePaymentMethodStatusBadgeTone(item.status));
               return (
                 <View
                   key={item.id}

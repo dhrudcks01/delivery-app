@@ -44,6 +44,13 @@ const APPLICATION_STATUS_TONE_MAP: Record<string, StatusBadgeTone> = {
   REJECTED: 'error',
 };
 
+const PAYMENT_METHOD_STATUS_TONE_RULES: Array<{ keyword: string; tone: StatusBadgeTone }> = [
+  { keyword: 'ACTIVE', tone: 'success' },
+  { keyword: 'REGISTERED', tone: 'success' },
+  { keyword: 'FAILED', tone: 'error' },
+  { keyword: 'ERROR', tone: 'error' },
+];
+
 export function getStatusBadgePalette(tone: StatusBadgeTone): BadgePalette {
   return BADGE_PALETTE_BY_TONE[tone];
 }
@@ -54,6 +61,15 @@ export function resolveWasteStatusBadgeTone(status: string): StatusBadgeTone {
 
 export function resolveApplicationStatusBadgeTone(status: string): StatusBadgeTone {
   return APPLICATION_STATUS_TONE_MAP[status] ?? 'neutral';
+}
+
+export function resolvePaymentMethodStatusBadgeTone(status: string): StatusBadgeTone {
+  const normalizedStatus = status.toUpperCase();
+  const matchedRule = PAYMENT_METHOD_STATUS_TONE_RULES.find((rule) => normalizedStatus.includes(rule.keyword));
+  if (matchedRule) {
+    return matchedRule.tone;
+  }
+  return 'warning';
 }
 
 

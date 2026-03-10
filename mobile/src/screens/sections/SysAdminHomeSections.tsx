@@ -4,6 +4,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import type { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../../types/opsAdmin';
 import type { RoleApplication } from '../../types/roleApplication';
 import { ui } from '../../theme/ui';
+import { getStatusBadgePalette, resolveApplicationStatusBadgeTone } from '../../utils/statusBadge';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
 type ScreenStyles = Record<string, any>;
@@ -70,7 +71,6 @@ type SysAdminHomeContentSectionProps = {
   onSelectOpsAdminApplication: (id: number) => void;
   onSelectSysAdminApplication: (id: number) => void;
   getRoleApplicationSummary: (application: RoleApplication) => string;
-  getApplicationStatusBadgeStyle: (status: string) => { container: any; text: any };
   formatDate: (dateTime: string | null) => string;
   resolveLoginId: (loginId?: string | null, email?: string | null) => string;
 };
@@ -137,7 +137,6 @@ export function SysAdminHomeContentSection({
   onSelectOpsAdminApplication,
   onSelectSysAdminApplication,
   getRoleApplicationSummary,
-  getApplicationStatusBadgeStyle,
   formatDate,
   resolveLoginId,
 }: SysAdminHomeContentSectionProps) {
@@ -224,7 +223,7 @@ export function SysAdminHomeContentSection({
         {!isLoadingOpsAdminApplications && !opsAdminApplicationListError && opsAdminApplications.length > 0 && (
           <View style={styles.listWrap}>
             {opsAdminApplications.map((item) => {
-              const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+              const badgePalette = getStatusBadgePalette(resolveApplicationStatusBadgeTone(item.status));
               return (
                 <Pressable
                   key={item.id}
@@ -233,8 +232,8 @@ export function SysAdminHomeContentSection({
                 >
                   <View style={styles.rowBetween}>
                     <Text style={styles.listTitle}>신청 #{item.id}</Text>
-                    <View style={[styles.statusBadge, badgeStyle.container]}>
-                      <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                      <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>{item.status}</Text>
                     </View>
                   </View>
                   <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
@@ -312,7 +311,7 @@ export function SysAdminHomeContentSection({
         {!isLoadingSysAdminApplications && !sysAdminApplicationListError && sysAdminApplications.length > 0 && (
           <View style={styles.listWrap}>
             {sysAdminApplications.map((item) => {
-              const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+              const badgePalette = getStatusBadgePalette(resolveApplicationStatusBadgeTone(item.status));
               return (
                 <Pressable
                   key={item.id}
@@ -321,8 +320,8 @@ export function SysAdminHomeContentSection({
                 >
                   <View style={styles.rowBetween}>
                     <Text style={styles.listTitle}>신청 #{item.id}</Text>
-                    <View style={[styles.statusBadge, badgeStyle.container]}>
-                      <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                      <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>{item.status}</Text>
                     </View>
                   </View>
                   <Text style={styles.listSub}>{getRoleApplicationSummary(item)}</Text>
