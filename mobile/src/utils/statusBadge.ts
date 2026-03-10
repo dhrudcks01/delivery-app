@@ -1,3 +1,5 @@
+﻿import { ui } from '../theme/ui';
+
 export type StatusBadgeTone = 'success' | 'warning' | 'error' | 'neutral';
 
 type BadgePalette = {
@@ -7,20 +9,20 @@ type BadgePalette = {
 
 const BADGE_PALETTE_BY_TONE: Record<StatusBadgeTone, BadgePalette> = {
   success: {
-    backgroundColor: '#DCFCE7',
-    textColor: '#166534',
+    backgroundColor: ui.colors.successBadgeBackground,
+    textColor: ui.colors.successTextStrong,
   },
   warning: {
-    backgroundColor: '#FEF3C7',
-    textColor: '#92400E',
+    backgroundColor: ui.colors.warningSoftBackground,
+    textColor: ui.colors.warningText,
   },
   error: {
-    backgroundColor: '#FEE2E2',
-    textColor: '#991B1B',
+    backgroundColor: ui.colors.errorTintBackground,
+    textColor: ui.colors.errorDark,
   },
   neutral: {
-    backgroundColor: '#E2E8F0',
-    textColor: '#334155',
+    backgroundColor: ui.colors.neutralBorderSoft,
+    textColor: ui.colors.text,
   },
 };
 
@@ -53,3 +55,5 @@ export function resolveWasteStatusBadgeTone(status: string): StatusBadgeTone {
 export function resolveApplicationStatusBadgeTone(status: string): StatusBadgeTone {
   return APPLICATION_STATUS_TONE_MAP[status] ?? 'neutral';
 }
+
+

@@ -1,4 +1,5 @@
-import { Image, Modal, Pressable, StyleSheet, Text } from 'react-native';
+﻿import { Image, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { ui } from '../theme/ui';
 
 type Props = {
   photoUrl: string | null;
@@ -37,7 +38,9 @@ const styles = StyleSheet.create({
     height: '78%',
   },
   modalHint: {
-    color: '#e2e8f0',
+    color: ui.colors.neutralBorderSoft,
     fontSize: 13,
   },
 });
+
+

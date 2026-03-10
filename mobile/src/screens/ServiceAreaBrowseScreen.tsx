@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getUserServiceAreas } from '../api/serviceAreaApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
@@ -85,7 +85,7 @@ export function ServiceAreaBrowseScreen() {
             value={queryInput}
             onChangeText={setQueryInput}
             placeholder="시/구/동을 입력해 주세요"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             returnKeyType="search"
             onSubmitEditing={handleSearch}
           />
@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: ui.colors.infoSoftBackground,
+    color: ui.colors.primaryPressed,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     color: ui.colors.textStrong,
     fontSize: 14,
   },
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#ffffff',
+    color: ui.colors.card,
   },
   secondaryButton: {
     flex: 1,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -281,25 +281,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   infoBadge: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: ui.colors.infoSoftBorder,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   infoBadgeText: {
     fontSize: 12,
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontWeight: '700',
   },
   loadingGroup: {
     gap: 8,
   },
   loadingCard: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: ui.colors.infoSoftBorder,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontWeight: '600',
   },
   skeletonCard: {
@@ -317,24 +317,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   skeletonLineShort: {
     height: 10,
     width: '36%',
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: ui.colors.border,
   },
   skeletonLineLong: {
     height: 10,
     width: '82%',
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: ui.colors.border,
   },
   errorCard: {
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     borderRadius: 12,
     padding: 12,
     gap: 10,
@@ -348,14 +348,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#ffffff',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   retryButtonText: {
     fontSize: 13,
-    color: '#b91c1c',
+    color: ui.colors.errorStrong,
     fontWeight: '700',
   },
   emptyCard: {
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   emptyIcon: {
     fontSize: 18,
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   listTitle: {
     flex: 1,
@@ -417,18 +417,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statusBadgeSuccess: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successSoftBorder,
+    backgroundColor: ui.colors.successSoftBackground,
   },
   statusBadgeSuccessText: {
     color: ui.colors.success,
   },
   statusBadgeWarning: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderSoft,
+    backgroundColor: ui.colors.warningBg,
   },
   statusBadgeWarningText: {
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
   },
 });
+
+
 

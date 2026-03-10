@@ -1,4 +1,4 @@
-import { Pressable, StyleProp, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+﻿import { Pressable, StyleProp, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
 import { ui } from '../theme/ui';
 
 type SecondaryButtonTone = 'primary' | 'neutral' | 'danger';
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.border,
   },
   buttonDanger: {
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
   },
   buttonPressed: {
     opacity: 0.85,
@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
     color: ui.colors.textStrong,
   },
   textDanger: {
-    color: '#b91c1c',
+    color: ui.colors.errorStrong,
   },
 });
+

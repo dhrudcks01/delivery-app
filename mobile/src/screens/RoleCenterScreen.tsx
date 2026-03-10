@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createDriverApplication, getMyDriverApplications } from '../api/driverApplicationApi';
 import { getOpsAdminGrantCandidates, grantOpsAdminRole } from '../api/sysAdminRoleApi';
@@ -167,7 +167,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
             onChangeText={setDriverReason}
             multiline
             placeholder="DRIVER 신청 사유를 입력해 주세요"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             editable={!isSubmittingDriverApplication}
           />
 
@@ -255,7 +255,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
               value={opsAdminGrantQuery}
               onChangeText={setOpsAdminGrantQuery}
               placeholder="검색어(아이디/이름)"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={ui.colors.placeholder}
               editable={!isLoadingGrantCandidates}
             />
             <Pressable
@@ -370,8 +370,8 @@ const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
+    backgroundColor: ui.colors.primarySoftBackground,
+    color: ui.colors.primaryPressed,
     paddingHorizontal: 10,
     paddingVertical: 4,
     fontSize: 12,
@@ -390,12 +390,12 @@ const styles = StyleSheet.create({
   roleBadge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   roleBadgeText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     color: ui.colors.textStrong,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   textArea: {
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     padding: 12,
     gap: 8,
   },
@@ -465,19 +465,19 @@ const styles = StyleSheet.create({
     height: 10,
     width: '45%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   skeletonLineLong: {
     height: 10,
     width: '78%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   emptyCard: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 16,
     alignItems: 'center',
     gap: 6,
@@ -503,11 +503,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   listCardSelected: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.primarySoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   listTitle: {
     color: ui.colors.textStrong,
@@ -521,12 +521,12 @@ const styles = StyleSheet.create({
   },
   selectedBadge: {
     borderRadius: 999,
-    backgroundColor: '#dbeafe',
+    backgroundColor: ui.colors.primarySoftBackground,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   selectedBadgeText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
@@ -572,8 +572,8 @@ const styles = StyleSheet.create({
   successCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#86efac',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -585,8 +585,8 @@ const styles = StyleSheet.create({
   errorCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -596,4 +596,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+
 

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+﻿import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TabHeaderCard } from '../components/TabHeaderCard';
 import { ui } from '../theme/ui';
 
@@ -62,9 +62,9 @@ const styles = StyleSheet.create({
     color: ui.colors.caption,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -72,24 +72,25 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: ui.colors.textStrong,
   },
   infoRow: {
     gap: 4,
   },
   infoLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: ui.colors.caption,
     fontWeight: '600',
   },
   infoValue: {
     fontSize: 14,
-    color: '#0F172A',
+    color: ui.colors.textStrong,
     lineHeight: 20,
   },
   guideText: {
     fontSize: 14,
-    color: '#334155',
+    color: ui.colors.text,
     lineHeight: 20,
   },
 });
+

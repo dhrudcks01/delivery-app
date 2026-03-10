@@ -1,4 +1,4 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+﻿import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -373,7 +373,7 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
                 onChangeText={setNote}
                 multiline
                 placeholder="요청사항을 입력해 주세요"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={ui.colors.placeholder}
                 returnKeyType="done"
                 maxLength={300}
               />
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 12,
     gap: 4,
   },
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: colors.textStrong,
     textAlignVertical: 'top',
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   primaryButton: {
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
@@ -576,25 +576,25 @@ const styles = StyleSheet.create({
   warningCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fcd34d',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderStrong,
+    backgroundColor: ui.colors.warningBg,
     padding: 12,
     gap: 4,
   },
   warningTitle: {
-    color: '#92400e',
+    color: ui.colors.warningText,
     fontSize: 14,
     fontWeight: '700',
   },
   warningText: {
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
     fontSize: 12,
   },
   successCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#86efac',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -606,8 +606,8 @@ const styles = StyleSheet.create({
   errorCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 12,
     gap: 6,
   },
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 16,
     alignItems: 'center',
     gap: 6,
@@ -683,14 +683,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     height: 76,
   },
   skeletonCard: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     padding: 12,
     gap: 8,
   },
@@ -698,12 +698,14 @@ const styles = StyleSheet.create({
     height: 10,
     width: '50%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   skeletonLineLong: {
     height: 10,
     width: '78%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
 });
+
+

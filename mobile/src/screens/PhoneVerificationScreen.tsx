@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useMemo, useRef, useState } from 'react';
 import { AxiosError } from 'axios';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,14 +98,14 @@ function buildPhoneVerificationHtml(session: VerificationSession): string {
         margin: 0;
         padding: 24px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #f8fafc;
-        color: #0f172a;
+        background: ${ui.colors.surfaceMuted};
+        color: ${ui.colors.textStrong};
       }
       .box {
-        border: 1px solid #cbd5e1;
+        border: 1px solid ${ui.colors.neutralBorder};
         border-radius: 12px;
         padding: 16px;
-        background: #ffffff;
+        background: ${ui.colors.card};
       }
       .title {
         margin: 0 0 6px;
@@ -115,7 +115,7 @@ function buildPhoneVerificationHtml(session: VerificationSession): string {
       .desc {
         margin: 0;
         font-size: 13px;
-        color: #334155;
+        color: ${ui.colors.text};
         line-height: 1.5;
       }
     </style>
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   successBadge: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: ui.colors.successBadgeBackground,
   },
   successBadgeText: {
     fontSize: 12,
@@ -529,18 +529,18 @@ const styles = StyleSheet.create({
     color: ui.colors.success,
   },
   warningBadge: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: ui.colors.warningSoftBackground,
   },
   warningBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
   },
   skeletonCard: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     padding: 16,
     gap: 10,
     alignItems: 'flex-start',
@@ -549,13 +549,13 @@ const styles = StyleSheet.create({
     height: 10,
     width: '42%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   skeletonLineLong: {
     height: 10,
     width: '72%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   webViewFrame: {
     flex: 1,
@@ -564,11 +564,11 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   webView: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   actionRow: {
     gap: 12,
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -617,8 +617,8 @@ const styles = StyleSheet.create({
   errorCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -645,4 +645,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
 

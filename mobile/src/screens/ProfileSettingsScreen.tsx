@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+﻿import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: ui.colors.infoSoftBackground,
+    color: ui.colors.primaryPressed,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successSoftBorder,
+    backgroundColor: ui.colors.successSoftBackground,
   },
   statusBadgeText: {
     fontSize: 12,
@@ -245,11 +245,11 @@ const styles = StyleSheet.create({
     color: ui.colors.success,
   },
   statusBadgeWarning: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderSoft,
+    backgroundColor: ui.colors.warningBg,
   },
   statusBadgeWarningText: {
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
   },
   descriptionText: {
     fontSize: 14,
@@ -257,9 +257,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   loadingCard: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: ui.colors.infoSoftBorder,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -268,13 +268,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontWeight: '600',
   },
   errorCard: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: ui.colors.errorSoftBackground,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: ui.colors.errorSoftBorder,
     borderRadius: 12,
     padding: 12,
   },
@@ -313,21 +313,22 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#ffffff',
+    color: ui.colors.card,
   },
   dangerButton: {
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dangerButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#b91c1c',
+    color: ui.colors.errorStrong,
   },
 });
+
 

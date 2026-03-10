@@ -481,8 +481,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: ui.colors.infoSoftBackground,
+    color: ui.colors.primaryPressed,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     color: colors.textStrong,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   success: {
@@ -582,9 +582,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingCard: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: ui.colors.infoSoftBorder,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
@@ -592,21 +592,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 13,
     fontWeight: '600',
   },
   errorCard: {
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     borderRadius: 12,
     padding: 12,
   },
   successCard: {
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successSoftBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     borderRadius: 12,
     padding: 12,
   },
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   emptyIcon: {
     fontSize: 18,
@@ -645,13 +645,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rejectButton: {
-    backgroundColor: '#b91c1c',
+    backgroundColor: ui.colors.errorStrong,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   secondaryButtonText: {
     color: colors.textStrong,
@@ -693,11 +693,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   filterChipActive: {
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.infoSoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   filterChipText: {
     color: colors.text,
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   filterChipTextActive: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
   },
   listItem: {
     borderWidth: 1,
@@ -715,8 +715,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   listItemActive: {
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.infoSoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   listTitle: {
     color: colors.textStrong,
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   detailText: {
     color: colors.textStrong,
@@ -753,5 +753,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
 
 

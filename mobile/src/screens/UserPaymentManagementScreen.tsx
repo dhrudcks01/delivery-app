@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -410,7 +410,7 @@ export function UserPaymentManagementScreen() {
             onChangeText={(value) => setCardNumber(normalizeCardNumber(value))}
             keyboardType="number-pad"
             placeholder="카드번호"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             maxLength={19}
             returnKeyType="next"
           />
@@ -424,7 +424,7 @@ export function UserPaymentManagementScreen() {
                 onChangeText={(value) => setExpiry(normalizeExpiry(value))}
                 keyboardType="number-pad"
                 placeholder="MM/YY"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={ui.colors.placeholder}
                 maxLength={5}
                 returnKeyType="next"
               />
@@ -438,7 +438,7 @@ export function UserPaymentManagementScreen() {
                 keyboardType="number-pad"
                 secureTextEntry
                 placeholder="두 자리"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={ui.colors.placeholder}
                 maxLength={2}
                 returnKeyType="next"
               />
@@ -452,7 +452,7 @@ export function UserPaymentManagementScreen() {
             onChangeText={(value) => setOwnerIdentity(value.replace(/[^0-9]/g, '').slice(0, 6))}
             keyboardType="number-pad"
             placeholder={cardOwnerType === 'BUSINESS' ? '사업자번호 앞 6자리' : '주민등록번호 앞 6자리'}
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             maxLength={6}
             returnKeyType="done"
           />
@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
+    backgroundColor: ui.colors.primarySoftBackground,
+    color: ui.colors.primaryPressed,
     paddingHorizontal: 10,
     paddingVertical: 4,
     fontSize: 12,
@@ -544,18 +544,18 @@ const styles = StyleSheet.create({
   policyCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fcd34d',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderStrong,
+    backgroundColor: ui.colors.warningBg,
     padding: 12,
     gap: 4,
   },
   policyTitle: {
-    color: '#92400e',
+    color: ui.colors.warningText,
     fontWeight: '700',
     fontSize: 14,
   },
   policyText: {
-    color: '#92400e',
+    color: ui.colors.warningText,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     padding: 12,
     gap: 8,
   },
@@ -574,19 +574,19 @@ const styles = StyleSheet.create({
     height: 10,
     width: '42%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   skeletonLineLong: {
     height: 10,
     width: '78%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   errorCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -598,8 +598,8 @@ const styles = StyleSheet.create({
   successCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#86efac',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 16,
     alignItems: 'center',
     gap: 6,
@@ -636,18 +636,18 @@ const styles = StyleSheet.create({
   warningCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fcd34d',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderStrong,
+    backgroundColor: ui.colors.warningBg,
     padding: 12,
     gap: 4,
   },
   warningTitle: {
-    color: '#92400e',
+    color: ui.colors.warningText,
     fontSize: 14,
     fontWeight: '700',
   },
   warningText: {
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -660,11 +660,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   primaryMethodCard: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#f8fbff',
+    borderColor: ui.colors.primarySoftBorder,
+    backgroundColor: ui.colors.primaryTintBackground,
   },
   methodTitle: {
     color: ui.colors.textStrong,
@@ -683,12 +683,12 @@ const styles = StyleSheet.create({
   },
   primaryBadge: {
     borderRadius: 999,
-    backgroundColor: '#dcfce7',
+    backgroundColor: ui.colors.successBadgeBackground,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   primaryBadgeText: {
-    color: '#166534',
+    color: ui.colors.successTextStrong,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
@@ -757,11 +757,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   methodOptionCardSelected: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.primarySoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   methodOptionTextWrap: {
     gap: 3,
@@ -781,14 +781,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#ffffff',
+    borderColor: ui.colors.neutralBorder,
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: '#60a5fa',
-    backgroundColor: '#dbeafe',
+    borderColor: ui.colors.primaryAccent,
+    backgroundColor: ui.colors.primarySoftBackground,
   },
   radioMark: {
     color: 'transparent',
@@ -796,17 +796,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   radioMarkSelected: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
   },
   cardPreview: {
     height: 96,
-    backgroundColor: '#0f172a',
+    backgroundColor: ui.colors.textStrong,
     borderRadius: 12,
     justifyContent: 'center',
     paddingHorizontal: 14,
   },
   cardPreviewNumber: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 2,
@@ -818,15 +818,15 @@ const styles = StyleSheet.create({
   ownerTypeButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: ui.colors.neutralBorder,
     borderRadius: 12,
     paddingVertical: 11,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   ownerTypeButtonSelected: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.primarySoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   ownerTypeText: {
     color: ui.colors.text,
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   ownerTypeTextSelected: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontWeight: '700',
   },
   fieldLabel: {
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     color: ui.colors.textStrong,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   rowGap8: {
@@ -866,6 +866,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+
 
 
 

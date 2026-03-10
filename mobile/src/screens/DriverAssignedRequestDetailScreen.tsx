@@ -1,4 +1,4 @@
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+﻿import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useState } from 'react';
@@ -274,7 +274,7 @@ export function DriverAssignedRequestDetailScreen() {
               onChangeText={setMeasuredWeightKgText}
               keyboardType="decimal-pad"
               placeholder="예: 3.75"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={ui.colors.placeholder}
               editable={Boolean(canMeasureSelected) && !isMeasuring}
             />
 
@@ -363,8 +363,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: ui.colors.infoSoftBackground,
+    color: ui.colors.primaryPressed,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -428,15 +428,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingCard: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: ui.colors.infoSoftBorder,
     borderRadius: 12,
     padding: 12,
   },
   loadingText: {
     fontSize: 13,
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontWeight: '600',
   },
   skeletonCard: {
@@ -445,19 +445,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   skeletonLineShort: {
     height: 10,
     width: '36%',
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: ui.colors.border,
   },
   skeletonLineLong: {
     height: 10,
     width: '82%',
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: ui.colors.border,
   },
   infoGroup: {
     gap: 6,
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     color: colors.textStrong,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   statusBadge: {
@@ -494,32 +494,32 @@ const styles = StyleSheet.create({
   },
   warningCard: {
     borderWidth: 1,
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderSoft,
+    backgroundColor: ui.colors.warningBg,
     borderRadius: 12,
     padding: 12,
   },
   warningText: {
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
     fontSize: 13,
     lineHeight: 18,
   },
   progressCard: {
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.infoSoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
     borderRadius: 12,
     padding: 12,
   },
   progressText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 13,
     lineHeight: 18,
   },
   errorCard: {
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     borderRadius: 12,
     padding: 12,
     gap: 8,
@@ -533,14 +533,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#ffffff',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   retryButtonText: {
     fontSize: 13,
-    color: '#b91c1c',
+    color: ui.colors.errorStrong,
     fontWeight: '700',
   },
   emptyCard: {
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   emptyIcon: {
     fontSize: 18,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   photoGrid: {
     flexDirection: 'row',
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -600,3 +600,5 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
+
+

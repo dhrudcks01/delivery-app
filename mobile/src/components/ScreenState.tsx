@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+﻿import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { ui } from '../theme/ui';
 import { Card } from './Card';
 import { SecondaryButton } from './SecondaryButton';
@@ -59,8 +59,8 @@ export function ScreenState({
 
 const styles = StyleSheet.create({
   loadingCard: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: ui.colors.infoSoftBackground,
+    borderColor: ui.colors.infoSoftBorder,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   loadingTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
   },
   loadingDescription: {
     fontSize: 12,
@@ -104,3 +104,4 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
+

@@ -1,4 +1,4 @@
-import { Pressable, StyleProp, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+﻿import { Pressable, StyleProp, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
 import { ui } from '../theme/ui';
 
 type PrimaryButtonProps = {
@@ -56,8 +56,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   text: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
 });
+

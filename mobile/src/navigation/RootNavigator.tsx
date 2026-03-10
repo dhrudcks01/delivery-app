@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -91,7 +91,7 @@ function renderOperationalScreen(role: AppRole) {
 function LoadingScreen() {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#0f172a" />
+      <ActivityIndicator size="large" color={ui.colors.textStrong} />
       <Text style={styles.loadingText}>인증 상태를 확인하고 있습니다.</Text>
     </View>
   );
@@ -170,8 +170,8 @@ function AppTabsScreen() {
     headerTitleAlign: 'center' as const,
     tabBarShowIcon: true,
     tabBarHideOnKeyboard: true,
-    tabBarActiveTintColor: '#2563EB',
-    tabBarInactiveTintColor: '#64748B',
+    tabBarActiveTintColor: ui.colors.primary,
+    tabBarInactiveTintColor: ui.colors.caption,
     tabBarLabelStyle: {
       fontWeight: '700' as const,
       fontSize: 12,
@@ -188,9 +188,9 @@ function AppTabsScreen() {
       height: 64 + tabBarBottomInset,
       paddingTop: 8,
       paddingBottom: tabBarBottomInset,
-      backgroundColor: '#ffffff',
+      backgroundColor: ui.colors.card,
       borderTopWidth: 1,
-      borderTopColor: '#E5E7EB',
+      borderTopColor: ui.colors.border,
     },
   };
 
@@ -394,12 +394,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#334155',
+    color: ui.colors.text,
   },
   headerlessScreenContainer: {
     flex: 1,
@@ -440,3 +440,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+

@@ -1,4 +1,4 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+﻿import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -359,7 +359,7 @@ export function OpsAdminHomeScreen() {
             value={wasteStatusFilter}
             onChangeText={setWasteStatusFilter}
             placeholder="상태 필터 (기본: REQUESTED)"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
           />
           <View style={styles.chipWrap}>
             <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('REQUESTED')}>
@@ -535,8 +535,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: ui.colors.infoSoftBackground,
+    color: ui.colors.primaryPressed,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   secondaryButtonCompactText: {
     color: colors.textStrong,
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     color: colors.textStrong,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   chipWrap: {
@@ -641,14 +641,14 @@ const styles = StyleSheet.create({
   },
   quickChip: {
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.infoSoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   quickChipText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -656,9 +656,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingCard: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: ui.colors.infoSoftBackground,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: ui.colors.infoSoftBorder,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -676,19 +676,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   skeletonLineShort: {
     height: 10,
     width: '38%',
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: ui.colors.border,
   },
   skeletonLineLong: {
     height: 10,
     width: '82%',
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: ui.colors.border,
   },
   emptyCard: {
     borderWidth: 1,
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   emptyIcon: {
     fontSize: 18,
@@ -718,8 +718,8 @@ const styles = StyleSheet.create({
   },
   errorCard: {
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     borderRadius: 12,
     padding: 12,
     gap: 10,
@@ -733,20 +733,20 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#ffffff',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   retryButtonText: {
-    color: '#b91c1c',
+    color: ui.colors.errorStrong,
     fontSize: 13,
     fontWeight: '700',
   },
   successCard: {
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successSoftBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     borderRadius: 12,
     padding: 12,
   },
@@ -764,11 +764,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   listItemActive: {
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.infoSoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   listTitle: {
     color: colors.textStrong,
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   infoText: {
     color: colors.textStrong,
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -828,28 +828,28 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dangerButtonText: {
-    color: '#b91c1c',
+    color: ui.colors.errorStrong,
     fontWeight: '700',
     fontSize: 14,
   },
   detailActionBadge: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.infoSoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   detailActionText: {
-    color: '#1d4ed8',
+    color: ui.colors.primaryPressed,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -857,3 +857,5 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
+
+

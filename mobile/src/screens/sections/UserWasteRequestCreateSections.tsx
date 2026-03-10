@@ -1,8 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollScreen } from '../../components/KeyboardAwareScrollScreen';
 import { PhotoThumbnailCard } from '../../components/PhotoThumbnailCard';
 import { TabHeaderCard } from '../../components/TabHeaderCard';
+import { ui } from '../../theme/ui';
 
 type Step = 0 | 1 | 2;
 type Code = 'GENERAL' | 'BOX';
@@ -330,7 +331,7 @@ export function WasteRequestStepFlowSection({
               maxLength={300}
               multiline
               placeholder="요청사항을 입력해 주세요."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={ui.colors.placeholder}
             />
             <Text style={styles.caption}>{note.length}/300</Text>
           </View>
@@ -403,3 +404,5 @@ export function WasteRequestStepFlowSection({
     </KeyboardAwareScrollScreen>
   );
 }
+
+

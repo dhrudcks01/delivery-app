@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+﻿import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TabHeaderCard } from '../components/TabHeaderCard';
 import { ui } from '../theme/ui';
 
@@ -139,9 +139,9 @@ const styles = StyleSheet.create({
     color: ui.colors.caption,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -149,75 +149,76 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: ui.colors.textStrong,
   },
   infoRow: {
     gap: 4,
   },
   infoLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: ui.colors.caption,
     fontWeight: '600',
   },
   infoValue: {
     fontSize: 14,
-    color: '#0F172A',
+    color: ui.colors.textStrong,
     lineHeight: 20,
   },
   statusBadge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
-    backgroundColor: '#F0FDF4',
+    borderColor: ui.colors.successSoftBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   statusBadgeWarning: {
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFBEB',
+    borderColor: ui.colors.warningBorderSoft,
+    backgroundColor: ui.colors.warningBg,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#15803D',
+    color: ui.colors.successStrong,
   },
   statusTextWarning: {
-    color: '#B45309',
+    color: ui.colors.warningTextStrong,
   },
   secondaryButton: {
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: '#2563EB',
+    color: ui.colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
   primaryButton: {
     minHeight: 48,
     borderRadius: 12,
-    backgroundColor: '#2563EB',
+    backgroundColor: ui.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   primaryButtonPressed: {
-    backgroundColor: '#1D4ED8',
+    backgroundColor: ui.colors.primaryPressed,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
   buttonPressed: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    backgroundColor: ui.colors.infoSoftBackground,
+    borderColor: ui.colors.infoSoftBorder,
   },
 });
+

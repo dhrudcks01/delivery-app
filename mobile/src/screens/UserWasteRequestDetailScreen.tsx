@@ -1,4 +1,4 @@
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+﻿import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     padding: 12,
     gap: 10,
   },
@@ -423,19 +423,19 @@ const styles = StyleSheet.create({
     height: 10,
     width: '48%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   skeletonLineLong: {
     height: 10,
     width: '80%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   errorCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -447,18 +447,18 @@ const styles = StyleSheet.create({
   warningCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fcd34d',
-    backgroundColor: '#fffbeb',
+    borderColor: ui.colors.warningBorderStrong,
+    backgroundColor: ui.colors.warningBg,
     padding: 12,
     gap: 4,
   },
   warningTitle: {
-    color: '#92400e',
+    color: ui.colors.warningText,
     fontSize: 14,
     fontWeight: '700',
   },
   warningText: {
-    color: '#b45309',
+    color: ui.colors.warningTextStrong,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -500,12 +500,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
   primaryButtonMuted: {
-    backgroundColor: '#64748b',
+    backgroundColor: ui.colors.caption,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
   },
   itemChipText: {
     color: colors.textStrong,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 16,
     alignItems: 'center',
     gap: 6,
@@ -605,13 +605,13 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#cbd5e1',
+    backgroundColor: ui.colors.neutralBorder,
   },
   stepDotDone: {
-    backgroundColor: '#16a34a',
+    backgroundColor: ui.colors.success,
   },
   stepDotCurrent: {
-    backgroundColor: '#0ea5e9',
+    backgroundColor: ui.colors.infoAccent,
   },
   stepText: {
     color: colors.caption,
@@ -619,10 +619,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepTextDone: {
-    color: '#166534',
+    color: ui.colors.successTextStrong,
   },
   stepTextCurrent: {
-    color: '#0369a1',
+    color: ui.colors.infoTextStrong,
     fontWeight: '700',
   },
   timelineLogBox: {
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     gap: 6,
   },
   timelineLogText: {
@@ -639,3 +639,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+

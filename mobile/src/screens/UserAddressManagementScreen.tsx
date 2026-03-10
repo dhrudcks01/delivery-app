@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
 import {
@@ -360,7 +360,7 @@ export function UserAddressManagementScreen() {
             value={addressQuery}
             onChangeText={setAddressQuery}
             placeholder="도로명 주소 검색어 입력"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             returnKeyType="search"
             onSubmitEditing={() => void handleSearchAddress()}
           />
@@ -404,7 +404,7 @@ export function UserAddressManagementScreen() {
           value={roadAddress}
           editable={false}
           placeholder="주소 검색 후 선택해 주세요"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={ui.colors.placeholder}
         />
 
         <Text style={styles.label}>상세 주소</Text>
@@ -413,7 +413,7 @@ export function UserAddressManagementScreen() {
           value={detailAddress}
           onChangeText={setDetailAddress}
           placeholder="동/호수 등 상세 주소"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={ui.colors.placeholder}
           returnKeyType="done"
         />
 
@@ -463,8 +463,8 @@ const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
+    backgroundColor: ui.colors.primarySoftBackground,
+    color: ui.colors.primaryPressed,
     paddingHorizontal: 10,
     paddingVertical: 4,
     fontSize: 12,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
     padding: 12,
     gap: 8,
   },
@@ -523,19 +523,19 @@ const styles = StyleSheet.create({
     height: 10,
     width: '46%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   skeletonLineLong: {
     height: 10,
     width: '78%',
     borderRadius: 999,
-    backgroundColor: '#dbe2ea',
+    backgroundColor: ui.colors.skeleton,
   },
   errorCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
+    borderColor: ui.colors.errorSoftBorder,
+    backgroundColor: ui.colors.errorSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -547,8 +547,8 @@ const styles = StyleSheet.create({
   successCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#86efac',
-    backgroundColor: '#f0fdf4',
+    borderColor: ui.colors.successBorder,
+    backgroundColor: ui.colors.successSoftBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 16,
     alignItems: 'center',
     gap: 6,
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     padding: 12,
     gap: 6,
   },
@@ -601,12 +601,12 @@ const styles = StyleSheet.create({
   },
   primaryBadge: {
     borderRadius: 999,
-    backgroundColor: '#dcfce7',
+    backgroundColor: ui.colors.successBadgeBackground,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   primaryBadgeText: {
-    color: '#166534',
+    color: ui.colors.successTextStrong,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
@@ -634,14 +634,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fca5a5',
-    backgroundColor: '#fff1f2',
+    borderColor: ui.colors.errorSoftAccent,
+    backgroundColor: ui.colors.roseTintBackground,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   dangerButtonSmallText: {
-    color: '#dc2626',
+    color: ui.colors.error,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     color: ui.colors.textStrong,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     fontSize: 14,
   },
   searchResultGroup: {
@@ -673,11 +673,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   searchResultCardSelected: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.primarySoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   searchResultTitle: {
     color: ui.colors.textStrong,
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ui.colors.border,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -700,22 +700,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   checkboxRowActive: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#eff6ff',
+    borderColor: ui.colors.primarySoftBorder,
+    backgroundColor: ui.colors.infoSoftBackground,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#94a3b8',
+    borderColor: ui.colors.placeholder,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
   },
   checkboxActive: {
     borderColor: ui.colors.primary,
-    backgroundColor: '#dbeafe',
+    backgroundColor: ui.colors.primarySoftBackground,
   },
   checkboxMark: {
     color: 'transparent',
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: ui.colors.card,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: ui.colors.border,
-    backgroundColor: '#ffffff',
+    backgroundColor: ui.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
@@ -775,6 +775,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
+
+
 
 
 

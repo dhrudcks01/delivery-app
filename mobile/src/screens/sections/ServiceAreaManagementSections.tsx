@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+﻿import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import type { ServiceArea, ServiceAreaMasterDong } from '../../types/serviceArea';
+import { ui } from '../../theme/ui';
 
 type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 type ScreenStyles = Record<string, any>;
@@ -165,7 +166,7 @@ export function ServiceAreaManagementContentSection({
             value={citySearchInput}
             onChangeText={onChangeCitySearchInput}
             placeholder="시/도 검색어 (예: 서울)"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             returnKeyType="search"
             onSubmitEditing={() => onSearchCity()}
           />
@@ -196,7 +197,7 @@ export function ServiceAreaManagementContentSection({
             value={districtSearchInput}
             onChangeText={onChangeDistrictSearchInput}
             placeholder={selectedCity ? '시/군/구 검색어 (예: 마포)' : '먼저 시/도를 선택해 주세요.'}
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             editable={!!selectedCity}
             returnKeyType="search"
             onSubmitEditing={() => onSearchDistrict()}
@@ -240,7 +241,7 @@ export function ServiceAreaManagementContentSection({
             value={dongSearchInput}
             onChangeText={onChangeDongSearchInput}
             placeholder={selectedDistrict ? '동 검색어 (예: 서교)' : '먼저 시/군/구를 선택해 주세요.'}
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
             editable={!!selectedDistrict}
             returnKeyType="search"
             onSubmitEditing={() => onSearchDong()}
@@ -360,7 +361,7 @@ export function ServiceAreaManagementContentSection({
           value={queryInput}
           onChangeText={onChangeQueryInput}
           placeholder="검색어(시/구/동)"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={ui.colors.placeholder}
           returnKeyType="search"
           onSubmitEditing={onSearchAreas}
         />
@@ -493,3 +494,5 @@ export function ServiceAreaManagementContentSection({
     </View>
   );
 }
+
+

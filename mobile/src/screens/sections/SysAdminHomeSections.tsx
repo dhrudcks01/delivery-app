@@ -1,8 +1,9 @@
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+﻿import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { Card } from '../../components/Card';
 import { SectionHeader } from '../../components/SectionHeader';
 import type { OpsAdminGrantCandidate, SysAdminGrantCandidate } from '../../types/opsAdmin';
 import type { RoleApplication } from '../../types/roleApplication';
+import { ui } from '../../theme/ui';
 
 type ApplicationStatusFilter = 'PENDING' | 'ALL';
 type ScreenStyles = Record<string, any>;
@@ -377,7 +378,7 @@ export function SysAdminHomeContentSection({
             value={sysAdminGrantQuery}
             onChangeText={onChangeSysAdminGrantQuery}
             placeholder="예: admin"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
           />
           <Pressable style={styles.secondaryButton} onPress={onSearchSysAdminGrantCandidates}>
             <Text style={styles.secondaryButtonText}>검색</Text>
@@ -443,7 +444,7 @@ export function SysAdminHomeContentSection({
             value={opsAdminGrantQuery}
             onChangeText={onChangeOpsAdminGrantQuery}
             placeholder="예: driver"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={ui.colors.placeholder}
           />
           <Pressable style={styles.secondaryButton} onPress={onSearchOpsAdminGrantCandidates}>
             <Text style={styles.secondaryButtonText}>검색</Text>
@@ -495,7 +496,7 @@ export function SysAdminHomeContentSection({
           onChangeText={onChangeUserIdInput}
           placeholder="예: 12"
           keyboardType="numeric"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={ui.colors.placeholder}
         />
 
         {roleResultMessage && (
@@ -529,3 +530,5 @@ export function SysAdminHomeContentSection({
     </View>
   );
 }
+
+

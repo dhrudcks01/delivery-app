@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import type { ImageStyle, StyleProp, ViewStyle } from 'react-native';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ui } from '../theme/ui';
@@ -83,17 +83,17 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.cardBorder,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#f8fafc',
+    backgroundColor: ui.colors.surfaceMuted,
   },
   imageWrap: {
     width: '100%',
     minHeight: 120,
-    backgroundColor: '#d1d5db',
+    backgroundColor: ui.colors.neutralGrayBorder,
   },
   image: {
     width: '100%',
     height: 120,
-    backgroundColor: '#d1d5db',
+    backgroundColor: ui.colors.neutralGrayBorder,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -107,23 +107,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     gap: 6,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: ui.colors.neutralBorderSoft,
   },
   errorFallbackText: {
     fontSize: 11,
-    color: '#475569',
+    color: ui.colors.textSecondary,
     fontWeight: '600',
   },
   retryButton: {
     borderWidth: 1,
-    borderColor: '#64748b',
+    borderColor: ui.colors.caption,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   retryButtonText: {
     fontSize: 11,
-    color: '#334155',
+    color: ui.colors.text,
     fontWeight: '700',
   },
   footer: {
@@ -141,14 +141,15 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     borderWidth: 1,
-    borderColor: '#ef4444',
+    borderColor: ui.colors.errorAccent,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   removeButtonText: {
-    color: '#ef4444',
+    color: ui.colors.errorAccent,
     fontSize: 12,
     fontWeight: '600',
   },
 });
+

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { ui } from '../theme/ui';
@@ -53,8 +53,8 @@ const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
+    backgroundColor: ui.colors.primarySoftBackground,
+    color: ui.colors.primaryPressed,
     paddingHorizontal: 10,
     paddingVertical: 4,
     fontSize: 12,
@@ -74,3 +74,4 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 });
+
