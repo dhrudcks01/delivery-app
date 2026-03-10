@@ -5,6 +5,7 @@ import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.exception.PhoneVerificationException;
 import com.delivery.auth.exception.UserNotFoundException;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.notification.service.WasteRequestCreatedNotificationService;
 import com.delivery.servicearea.service.ServiceAreaService;
 import com.delivery.waste.dto.AssignWasteRequest;
 import com.delivery.waste.dto.CreateWasteRequestRequest;
@@ -63,6 +64,7 @@ public class WasteRequestService {
     private final UserRepository userRepository;
     private final ServiceAreaService serviceAreaService;
     private final WasteStatusTransitionService wasteStatusTransitionService;
+    private final WasteRequestCreatedNotificationService wasteRequestCreatedNotificationService;
     private final JdbcTemplate jdbcTemplate;
 
     public WasteRequestService(
@@ -74,6 +76,7 @@ public class WasteRequestService {
             UserRepository userRepository,
             ServiceAreaService serviceAreaService,
             WasteStatusTransitionService wasteStatusTransitionService,
+            WasteRequestCreatedNotificationService wasteRequestCreatedNotificationService,
             JdbcTemplate jdbcTemplate
     ) {
         this.wasteRequestRepository = wasteRequestRepository;
@@ -84,6 +87,7 @@ public class WasteRequestService {
         this.userRepository = userRepository;
         this.serviceAreaService = serviceAreaService;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
+        this.wasteRequestCreatedNotificationService = wasteRequestCreatedNotificationService;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -111,6 +115,7 @@ public class WasteRequestService {
         if (!referencePhotos.isEmpty()) {
             wastePhotoRepository.saveAll(referencePhotos);
         }
+        wasteRequestCreatedNotificationService.notifyCreated(saved);
 
         return toUserResponse(saved);
     }

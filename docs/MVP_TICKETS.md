@@ -2200,7 +2200,7 @@
 
 ---
 
-### [ ] T-0805 USER: 수거 신청 완료 푸시 알림
+### [x] T-0805 USER: 수거 신청 완료 푸시 알림
 **Goal**
 - 사용자가 수거 신청을 생성하면 신청 접수 알림을 받게 한다.
 
@@ -2213,6 +2213,15 @@
 - 푸시 발송 실패 여부와 관계없이 `notifications`에는 기록 저장
 - 중복 생성/재시도 시 동일 요청에 대한 중복 알림 방지 정책 정의
 - 최소 1개 테스트: 동일 요청에 대해 중복 푸시 이벤트 비정상 생성 방지
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `POST /waste-requests` 성공 시 `notifications`에 `WASTE_REQUEST_CREATED` 1건 저장
+- [x] 알림 제목/본문이 정책 문구와 일치 (`수거 신청이 접수되었어요`, `주문번호 {orderNo} 요청이 정상 접수되었습니다.`)
+- [x] 동일 `wasteRequestId + orderNo` payload 기준으로 중복 알림 생성 방지
+- [x] 푸시 발송 예외가 발생해도 API 요청은 실패로 전파하지 않고 알림 저장 유지
+- [x] 통합 테스트 추가:
+  - `WasteRequestCreatedNotificationServiceIntegrationTest#createsNotificationOnlyOnceForSameWasteRequest`
+  - `WasteRequestCreatedNotificationServiceIntegrationTest#keepsNotificationRecordEvenWhenPushSendFails`
 
 ---
 
