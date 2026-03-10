@@ -8,7 +8,7 @@
     "android": {
       "package": "com.delivery.mobile",
       "permissions": [
-        "POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "assetBundlePatterns": [
@@ -22,6 +22,12 @@
         }
       ],
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9007286c-2bb5-4238-96e6-ec9f493a6b48"
+      }
+    },
+    "owner": "emong96"
   }
 }
