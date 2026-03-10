@@ -1,5 +1,4 @@
-import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
 import {
@@ -14,17 +13,15 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { AddressItem } from '../types/address';
 import { UserAddress, UserAddressUpsertPayload } from '../types/userAddress';
-import { ApiErrorResponse } from '../types/waste';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ui } from '../theme/ui';
+import { toApiErrorMessage } from '../utils/errorMessage';
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '주소 처리 중 오류가 발생했습니다.';
-  }
-  return '주소 처리 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '주소 처리 중 오류가 발생했습니다.',
+  timeoutMessage: '주소 처리 중 오류가 발생했습니다.',
+  networkMessage: '주소 처리 중 오류가 발생했습니다.',
+};
 
 function formatAddress(item: UserAddress): string {
   const result = buildWasteRequestAddress(item);
@@ -122,7 +119,7 @@ export function UserAddressManagementScreen() {
       }
       setAddresses(loaded);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
       setAddresses([]);
     } finally {
       setIsLoadingAddresses(false);
@@ -163,7 +160,7 @@ export function UserAddressManagementScreen() {
         setSearchError('검색 결과가 없습니다.');
       }
     } catch (error) {
-      setSearchError(toErrorMessage(error));
+      setSearchError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -228,7 +225,7 @@ export function UserAddressManagementScreen() {
       setResultMessage(editingAddressId ? '주소를 수정했습니다.' : '주소를 등록했습니다.');
       resetForm();
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSaving(false);
     }
@@ -243,7 +240,7 @@ export function UserAddressManagementScreen() {
       await loadAddresses();
       setResultMessage('대표 주소지를 변경했습니다.');
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     }
   };
 
@@ -259,7 +256,7 @@ export function UserAddressManagementScreen() {
       }
       setResultMessage('주소를 삭제했습니다.');
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     }
   };
 
@@ -784,5 +781,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
+
 
 

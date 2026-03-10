@@ -1,5 +1,4 @@
-import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -12,8 +11,9 @@ import { getMyPaymentMethodStatus, startPaymentMethodRegistration } from '../api
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PaymentMethodStatusResponse, PaymentMethodType } from '../types/payment';
-import { ApiErrorResponse } from '../types/waste';
 import { ui } from '../theme/ui';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, type StatusBadgeTone } from '../utils/statusBadge';
 
 type CardOwnerType = 'PERSONAL' | 'BUSINESS';
 
@@ -23,13 +23,11 @@ const METHOD_OPTIONS: Array<{ type: PaymentMethodType; title: string; subtitle: 
   { type: 'KAKAOPAY', title: '카카오페이', subtitle: '카카오페이 간편결제로 연결합니다.' },
 ];
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '결제수단 처리 중 오류가 발생했습니다.';
-  }
-  return '결제수단 처리 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '결제수단 처리 중 오류가 발생했습니다.',
+  timeoutMessage: '결제수단 처리 중 오류가 발생했습니다.',
+  networkMessage: '결제수단 처리 중 오류가 발생했습니다.',
+};
 
 function formatDate(dateTime: string): string {
   return new Date(dateTime).toLocaleString();
@@ -70,14 +68,14 @@ function isValidExpiry(rawInput: string): boolean {
   return month >= 1 && month <= 12;
 }
 
-function getMethodStatusBadgeStyle(status: string) {
+function resolveMethodStatusBadgeTone(status: string): StatusBadgeTone {
   if (status.includes('ACTIVE') || status.includes('REGISTERED')) {
-    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
+    return 'success';
   }
   if (status.includes('FAILED') || status.includes('ERROR')) {
-    return { container: styles.badgeError, text: styles.badgeErrorText };
+    return 'error';
   }
-  return { container: styles.badgeWarning, text: styles.badgeWarningText };
+  return 'warning';
 }
 
 export function UserPaymentManagementScreen() {
@@ -112,7 +110,7 @@ export function UserPaymentManagementScreen() {
       const response = await getMyPaymentMethodStatus();
       setStatus(response);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +172,7 @@ export function UserPaymentManagementScreen() {
       await openRegistrationPage(selectedMethodType);
       setIsMethodPickerVisible(false);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmitting(false);
     }
@@ -211,7 +209,7 @@ export function UserPaymentManagementScreen() {
       setIsCardFormVisible(false);
       resetCardForm();
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmitting(false);
     }
@@ -295,7 +293,7 @@ export function UserPaymentManagementScreen() {
         {hasPaymentMethods && (
           <View style={styles.methodList}>
             {status?.paymentMethods.map((item, index) => {
-              const badgeStyle = getMethodStatusBadgeStyle(item.status);
+              const badgePalette = getStatusBadgePalette(resolveMethodStatusBadgeTone(item.status));
               return (
                 <View
                   key={item.id}
@@ -309,8 +307,8 @@ export function UserPaymentManagementScreen() {
                           <Text style={styles.primaryBadgeText}>기본</Text>
                         </View>
                       )}
-                      <View style={[styles.statusBadge, badgeStyle.container]}>
-                        <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                        <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>{item.status}</Text>
                       </View>
                     </View>
                   </View>
@@ -711,24 +709,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  badgeSuccess: {
-    backgroundColor: '#dcfce7',
-  },
-  badgeSuccessText: {
-    color: '#166534',
-  },
-  badgeWarning: {
-    backgroundColor: '#fef3c7',
-  },
-  badgeWarningText: {
-    color: '#92400e',
-  },
-  badgeError: {
-    backgroundColor: '#fee2e2',
-  },
-  badgeErrorText: {
-    color: '#991b1b',
-  },
   primaryButton: {
     height: 48,
     borderRadius: 12,
@@ -894,5 +874,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
 
 

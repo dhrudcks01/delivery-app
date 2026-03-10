@@ -1,25 +1,16 @@
-import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getUserServiceAreas } from '../api/serviceAreaApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { ServiceArea } from '../types/serviceArea';
-import { ApiErrorResponse } from '../types/waste';
 import { ui } from '../theme/ui';
+import { toApiErrorMessage } from '../utils/errorMessage';
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    if (error.code === 'ECONNABORTED') {
-      return '요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.';
-    }
-    if (!error.response) {
-      return '네트워크 연결을 확인해 주세요.';
-    }
-    return apiError?.message ?? '서비스 지역 목록을 불러오지 못했습니다.';
-  }
-  return '서비스 지역 목록을 불러오지 못했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '서비스 지역 목록을 불러오지 못했습니다.',
+  timeoutMessage: '요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
+  networkMessage: '네트워크 연결을 확인해 주세요.',
+};
 
 function formatAreaLabel(area: ServiceArea): string {
   return `${area.city} ${area.district} ${area.dong}`.trim();
@@ -48,7 +39,7 @@ export function ServiceAreaBrowseScreen() {
     } catch (error) {
       setAreas([]);
       setTotalCount(0);
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoading(false);
     }

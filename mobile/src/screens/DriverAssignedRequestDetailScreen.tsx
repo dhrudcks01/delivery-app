@@ -1,6 +1,5 @@
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { AxiosError } from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -14,18 +13,17 @@ import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
-import { ApiErrorResponse, DriverAssignedWasteRequest } from '../types/waste';
+import { DriverAssignedWasteRequest } from '../types/waste';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 const colors = ui.colors;
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '요청 처리 중 오류가 발생했습니다.',
+  timeoutMessage: '요청 처리 중 오류가 발생했습니다.',
+  networkMessage: '요청 처리 중 오류가 발생했습니다.',
+};
 
 function formatDate(dateTime: string | null): string {
   if (!dateTime) {
@@ -36,19 +34,6 @@ function formatDate(dateTime: string | null): string {
 
 function formatOrderNoFromRequestId(requestId: number): string {
   return `WR-${String(requestId).padStart(6, '0')}`;
-}
-
-function getStatusBadgeStyle(status: string) {
-  if (status === 'ASSIGNED') {
-    return { container: styles.statusBadgeWarning, text: styles.statusBadgeWarningText };
-  }
-  if (status === 'COMPLETED' || status === 'PAID') {
-    return { container: styles.statusBadgeSuccess, text: styles.statusBadgeSuccessText };
-  }
-  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
-    return { container: styles.statusBadgeError, text: styles.statusBadgeErrorText };
-  }
-  return { container: styles.statusBadgeNeutral, text: styles.statusBadgeNeutralText };
 }
 
 async function ensureImagePermission(): Promise<boolean> {
@@ -96,6 +81,10 @@ export function DriverAssignedRequestDetailScreen() {
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
   const canMeasureSelected = selectedRequest?.status === 'ASSIGNED';
+  const statusBadgePalette = useMemo(
+    () => getStatusBadgePalette(resolveWasteStatusBadgeTone(selectedRequest?.status ?? 'REQUESTED')),
+    [selectedRequest?.status],
+  );
   const selectedTitle = useMemo(() => {
     if (!selectedRequest) {
       return `요청 #${requestId}`;
@@ -118,7 +107,7 @@ export function DriverAssignedRequestDetailScreen() {
       const detail = await getMyAssignedWasteRequestDetail(requestId);
       setSelectedRequest(detail);
     } catch (error) {
-      setDetailError(toErrorMessage(error));
+      setDetailError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
       setSelectedRequest(null);
     } finally {
       setIsLoadingDetail(false);
@@ -153,7 +142,7 @@ export function DriverAssignedRequestDetailScreen() {
       const uploadedUrl = await uploadImageFile(selectedAsset.uri, selectedAsset.fileName ?? undefined);
       setPhotoUrls((prev) => [...prev, uploadedUrl]);
     } catch (error) {
-      setUploadError(toErrorMessage(error));
+      setUploadError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -188,7 +177,7 @@ export function DriverAssignedRequestDetailScreen() {
       resetMeasureForm();
       await loadAssignedRequestDetail();
     } catch (error) {
-      setMeasureError(toErrorMessage(error));
+      setMeasureError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsMeasuring(false);
     }
@@ -256,8 +245,16 @@ export function DriverAssignedRequestDetailScreen() {
               <View style={styles.infoGroup}>
                 <View style={styles.rowBetween}>
                   <Text style={styles.infoLabel}>상태</Text>
-                  <View style={[styles.statusBadge, getStatusBadgeStyle(selectedRequest.status).container]}>
-                    <Text style={[styles.statusBadgeText, getStatusBadgeStyle(selectedRequest.status).text]}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: statusBadgePalette.backgroundColor,
+                        borderColor: statusBadgePalette.backgroundColor,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.statusBadgeText, { color: statusBadgePalette.textColor }]}>
                       {toWasteStatusLabel(selectedRequest.status)}
                     </Text>
                   </View>
@@ -505,34 +502,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  statusBadgeSuccess: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
-  },
-  statusBadgeSuccessText: {
-    color: colors.success,
-  },
-  statusBadgeWarning: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
-  },
-  statusBadgeWarningText: {
-    color: '#b45309',
-  },
-  statusBadgeError: {
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
-  },
-  statusBadgeErrorText: {
-    color: colors.error,
-  },
-  statusBadgeNeutral: {
-    borderColor: colors.border,
-    backgroundColor: '#f8fafc',
-  },
-  statusBadgeNeutralText: {
-    color: colors.caption,
   },
   warningCard: {
     borderWidth: 1,

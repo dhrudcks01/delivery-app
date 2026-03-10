@@ -1,6 +1,5 @@
-﻿import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AxiosError } from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, StyleSheet } from 'react-native';
@@ -16,7 +15,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
 import type { UserAddress } from '../types/userAddress';
-import type { ApiErrorResponse } from '../types/waste';
+import { toApiErrorMessage } from '../utils/errorMessage';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 
 type Props = { includeTopInset?: boolean };
@@ -33,14 +32,11 @@ const DISPOSAL_ITEM_LABEL: Record<Code, string> = {
 const SERVICE_AREA_UNAVAILABLE_MESSAGE = '서비스 지역이 아닙니다.';
 
 const colors = ui.colors;
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '요청 처리 중 오류가 발생했습니다.',
+  timeoutMessage: '요청 처리 중 오류가 발생했습니다.',
+  networkMessage: '요청 처리 중 오류가 발생했습니다.',
+};
 
 async function ensureImagePermission(): Promise<boolean> {
   const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -155,7 +151,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
       const selected = addresses.find((item) => item.isPrimary) ?? addresses[0] ?? null;
       setPrimaryAddress(selected);
     } catch (loadError) {
-      setError(toErrorMessage(loadError));
+      setError(toApiErrorMessage(loadError, ERROR_MESSAGE_OPTIONS));
     }
   }, [migrateLegacyAddresses]);
 
@@ -235,7 +231,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
       const uploadedUrl = await uploadImageFile(picked.assets[0].uri, picked.assets[0].fileName ?? undefined);
       setReferencePhotoUrls((prev) => [...prev, uploadedUrl]);
     } catch (uploadError) {
-      setPhotoUploadError(toErrorMessage(uploadError));
+      setPhotoUploadError(toApiErrorMessage(uploadError, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -294,7 +290,7 @@ export function UserWasteRequestCreateScreen({ includeTopInset = false }: Props)
       setStarted(false);
       setStep(0);
     } catch (submitError) {
-      setError(toErrorMessage(submitError));
+      setError(toApiErrorMessage(submitError, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmitting(false);
     }

@@ -1908,7 +1908,7 @@
 - `docs/UI_SYSTEM.md`의 Color System(Primary/Success/Warning/Error/Background/Border)과 충돌하지 않도록 정렬
 - 기능/문구/네비게이션 동작 변경 없이 시각 토큰 참조만 정리
 
-### [ ] T-0592 에러/상태배지 공통 모듈 적용 확장(잔여 화면)
+### [x] T-0592 에러/상태배지 공통 모듈 적용 확장(잔여 화면)
 **Goal**
 - T-0590에서 도입한 `errorMessage/statusBadge` 공통 모듈을 잔여 화면으로 확장 적용해 중복 로직을 제거하고 정책 변경 비용을 낮춘다.
 

@@ -1,6 +1,5 @@
-﻿import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { AxiosError } from 'axios';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { cancelMyWasteRequest, getMyWasteRequestDetail } from '../api/wasteApi';
@@ -9,7 +8,9 @@ import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
-import { ApiErrorResponse, WasteRequestDetail } from '../types/waste';
+import { WasteRequestDetail } from '../types/waste';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import {
   toUserWasteStatusLabel,
   toUserWasteStatusLabelOrStart,
@@ -24,14 +25,11 @@ const DISPOSAL_ITEM_LABEL: Record<string, string> = {
 type StepState = 'done' | 'current' | 'upcoming';
 
 const colors = ui.colors;
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '요청 처리 중 오류가 발생했습니다.',
+  timeoutMessage: '요청 처리 중 오류가 발생했습니다.',
+  networkMessage: '요청 처리 중 오류가 발생했습니다.',
+};
 
 function formatDate(dateTime: string | null | undefined): string {
   if (!dateTime) {
@@ -78,16 +76,6 @@ function resolveStepState(stepStatus: string, currentStatus: string | null, pass
   }
 
   return passedStatuses.includes(stepStatus) ? 'done' : 'upcoming';
-}
-
-function getStatusBadgeStyle(status: string) {
-  if (status === 'COMPLETED' || status === 'PAID') {
-    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
-  }
-  if (status === 'PAYMENT_FAILED' || status === 'CANCELED') {
-    return { container: styles.badgeError, text: styles.badgeErrorText };
-  }
-  return { container: styles.badgeWarning, text: styles.badgeWarningText };
 }
 
 function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
@@ -137,8 +125,8 @@ export function UserWasteRequestDetailScreen() {
     [detail],
   );
 
-  const statusBadgeStyle = useMemo(
-    () => getStatusBadgeStyle(detail?.status ?? 'REQUESTED'),
+  const statusBadgePalette = useMemo(
+    () => getStatusBadgePalette(resolveWasteStatusBadgeTone(detail?.status ?? 'REQUESTED')),
     [detail?.status],
   );
 
@@ -150,7 +138,7 @@ export function UserWasteRequestDetailScreen() {
       const response = await getMyWasteRequestDetail(requestId);
       setDetail(response);
     } catch (loadError) {
-      setError(toErrorMessage(loadError));
+      setError(toApiErrorMessage(loadError, ERROR_MESSAGE_OPTIONS));
       setDetail(null);
     } finally {
       setIsLoading(false);
@@ -169,7 +157,7 @@ export function UserWasteRequestDetailScreen() {
       await cancelMyWasteRequest(requestId);
       await loadDetail();
     } catch (cancelError) {
-      setError(toErrorMessage(cancelError));
+      setError(toApiErrorMessage(cancelError, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsCancelling(false);
     }
@@ -230,8 +218,8 @@ export function UserWasteRequestDetailScreen() {
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>요약 정보</Text>
-                <View style={[styles.statusBadge, statusBadgeStyle.container]}>
-                  <Text style={[styles.statusBadgeText, statusBadgeStyle.text]}>
+                <View style={[styles.statusBadge, { backgroundColor: statusBadgePalette.backgroundColor }]}>
+                  <Text style={[styles.statusBadgeText, { color: statusBadgePalette.textColor }]}>
                     {toUserWasteStatusLabel(detail.status)}
                   </Text>
                 </View>
@@ -511,24 +499,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  badgeSuccess: {
-    backgroundColor: '#dcfce7',
-  },
-  badgeSuccessText: {
-    color: '#166534',
-  },
-  badgeWarning: {
-    backgroundColor: '#fef3c7',
-  },
-  badgeWarningText: {
-    color: '#92400e',
-  },
-  badgeError: {
-    backgroundColor: '#fee2e2',
-  },
-  badgeErrorText: {
-    color: '#991b1b',
   },
   infoRow: {
     gap: 4,

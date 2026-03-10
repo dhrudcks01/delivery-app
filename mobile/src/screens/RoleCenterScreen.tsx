@@ -1,4 +1,3 @@
-import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createDriverApplication, getMyDriverApplications } from '../api/driverApplicationApi';
@@ -6,8 +5,9 @@ import { getOpsAdminGrantCandidates, grantOpsAdminRole } from '../api/sysAdminRo
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { DriverApplication } from '../types/driverApplication';
 import { OpsAdminGrantCandidate } from '../types/opsAdmin';
-import { ApiErrorResponse } from '../types/waste';
 import { ui } from '../theme/ui';
+import { toApiErrorMessage } from '../utils/errorMessage';
+import { getStatusBadgePalette, resolveApplicationStatusBadgeTone } from '../utils/statusBadge';
 
 type AppRole = 'USER' | 'DRIVER' | 'OPS_ADMIN' | 'SYS_ADMIN';
 
@@ -16,13 +16,11 @@ type RoleCenterScreenProps = {
   onOpenSysAdminApproval: () => void;
 };
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    return apiError?.message ?? '요청 처리 중 오류가 발생했습니다.';
-  }
-  return '요청 처리 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '요청 처리 중 오류가 발생했습니다.',
+  timeoutMessage: '요청 처리 중 오류가 발생했습니다.',
+  networkMessage: '요청 처리 중 오류가 발생했습니다.',
+};
 
 function formatDate(dateTime: string | null): string {
   if (!dateTime) {
@@ -42,16 +40,6 @@ function getRoleBadgeText(role: AppRole): string {
     return 'OPS_ADMIN';
   }
   return 'SYS_ADMIN';
-}
-
-function getApplicationStatusBadgeStyle(status: string) {
-  if (status === 'APPROVED') {
-    return { container: styles.badgeSuccess, text: styles.badgeSuccessText };
-  }
-  if (status === 'REJECTED') {
-    return { container: styles.badgeError, text: styles.badgeErrorText };
-  }
-  return { container: styles.badgeWarning, text: styles.badgeWarningText };
 }
 
 export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCenterScreenProps) {
@@ -77,7 +65,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
       const data = await getMyDriverApplications();
       setDriverApplications(data);
     } catch (error) {
-      setDriverApplicationError(toErrorMessage(error));
+      setDriverApplicationError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoadingDriverApplications(false);
     }
@@ -102,7 +90,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
     } catch (error) {
       setOpsAdminGrantCandidates([]);
       setSelectedGrantCandidateId(null);
-      setOpsAdminGrantError(toErrorMessage(error));
+      setOpsAdminGrantError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoadingGrantCandidates(false);
     }
@@ -125,7 +113,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
       setDriverApplicationResult(`DRIVER 권한 신청이 접수되었습니다. (신청 #${response.id}, 상태: ${response.status})`);
       await loadDriverApplications();
     } catch (error) {
-      setDriverApplicationError(toErrorMessage(error));
+      setDriverApplicationError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmittingDriverApplication(false);
     }
@@ -147,7 +135,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
       setOpsAdminGrantResult(`${candidate.name} (${candidate.loginId}) 계정에 OPS_ADMIN 권한을 부여했습니다.`);
       await loadOpsAdminGrantCandidates();
     } catch (error) {
-      setOpsAdminGrantError(toErrorMessage(error));
+      setOpsAdminGrantError(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsGrantingOpsAdmin(false);
     }
@@ -245,13 +233,13 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
           )}
 
           {driverApplications.map((item) => {
-            const badgeStyle = getApplicationStatusBadgeStyle(item.status);
+            const badgePalette = getStatusBadgePalette(resolveApplicationStatusBadgeTone(item.status));
             return (
               <View key={item.id} style={styles.listCard}>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={styles.listTitle}>신청 #{item.id}</Text>
-                  <View style={[styles.statusBadge, badgeStyle.container]}>
-                    <Text style={[styles.statusBadgeText, badgeStyle.text]}>{item.status}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: badgePalette.backgroundColor }]}>
+                    <Text style={[styles.statusBadgeText, { color: badgePalette.textColor }]}>{item.status}</Text>
                   </View>
                 </View>
                 <Text style={styles.listMeta}>신청일: {formatDate(item.createdAt)}</Text>
@@ -556,24 +544,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  badgeSuccess: {
-    backgroundColor: '#dcfce7',
-  },
-  badgeSuccessText: {
-    color: '#166534',
-  },
-  badgeWarning: {
-    backgroundColor: '#fef3c7',
-  },
-  badgeWarningText: {
-    color: '#92400e',
-  },
-  badgeError: {
-    backgroundColor: '#fee2e2',
-  },
-  badgeErrorText: {
-    color: '#991b1b',
   },
   primaryButton: {
     height: 48,

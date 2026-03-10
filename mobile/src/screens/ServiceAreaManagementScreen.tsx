@@ -1,5 +1,4 @@
-import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import {
   createOpsServiceAreaByCode,
@@ -13,9 +12,9 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { useAuth } from '../auth/AuthContext';
 import { useServiceAreaManagementDerived } from './hooks/useServiceAreaManagementDerived';
 import { ServiceAreaManagementContentSection, ServiceAreaNoPermissionSection } from './sections/ServiceAreaManagementSections';
-import type { ApiErrorResponse } from '../types/waste';
 import type { ServiceArea, ServiceAreaMasterDong } from '../types/serviceArea';
 import { ui } from '../theme/ui';
+import { toApiErrorMessage } from '../utils/errorMessage';
 
 type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -30,22 +29,14 @@ const CITY_ALIAS_BY_NORMALIZED: Record<string, string> = {
   sejong: '세종특별자치시',
 };
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiErrorResponse | undefined;
-    if (error.code === 'ECONNABORTED') {
-      return '요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.';
-    }
-    if (!error.response) {
-      return '네트워크 연결을 확인해 주세요.';
-    }
-    if (error.response.status === 403) {
-      return '권한이 없습니다. OPS_ADMIN 또는 SYS_ADMIN 권한이 필요합니다.';
-    }
-    return apiError?.message ?? '서비스 신청지역 작업 중 오류가 발생했습니다.';
-  }
-  return '서비스 신청지역 작업 중 오류가 발생했습니다.';
-}
+const ERROR_MESSAGE_OPTIONS = {
+  defaultMessage: '서비스 신청지역 작업 중 오류가 발생했습니다.',
+  timeoutMessage: '요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
+  networkMessage: '네트워크 연결을 확인해 주세요.',
+  statusMessages: {
+    403: '권한이 없습니다. OPS_ADMIN 또는 SYS_ADMIN 권한이 필요합니다.',
+  },
+};
 
 function normalizeToken(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '');
@@ -139,7 +130,7 @@ export function ServiceAreaManagementScreen() {
     } catch (error) {
       setAreas([]);
       setTotalCount(0);
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +225,7 @@ export function ServiceAreaManagementScreen() {
         setResultMessage(null);
       }
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsCityLoading(false);
     }
@@ -273,7 +264,7 @@ export function ServiceAreaManagementScreen() {
         setResultMessage(null);
       }
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsDistrictLoading(false);
     }
@@ -314,7 +305,7 @@ export function ServiceAreaManagementScreen() {
         setResultMessage(null);
       }
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsDongLoading(false);
     }
@@ -377,7 +368,7 @@ export function ServiceAreaManagementScreen() {
       setResultMessage(`구 전체 선택 결과: 추가 ${addedCount}건, 스킵 ${skippedCount}건, 대상 ${districtDongs.length}건`);
       setFailedRegistrationTargets([]);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsBulkSelecting(false);
     }
@@ -415,7 +406,7 @@ export function ServiceAreaManagementScreen() {
         } catch (error) {
           failedCount += 1;
           failedTargets.push(item);
-          failureMessages.push(`${formatAreaLabel(item)}: ${toErrorMessage(error)}`);
+          failureMessages.push(`${formatAreaLabel(item)}: ${toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS)}`);
         }
       }
 
@@ -436,7 +427,7 @@ export function ServiceAreaManagementScreen() {
         clearSelectedDongs();
       }
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setIsSubmitting(false);
       setIsRetrySubmitting(false);
@@ -465,7 +456,7 @@ export function ServiceAreaManagementScreen() {
       setResultMessage(`비활성화 처리되었습니다: ${formatAreaLabel(updated)}`);
       await loadAreas(appliedQuery, activeParam);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setUpdatingAreaId(null);
     }
@@ -480,7 +471,7 @@ export function ServiceAreaManagementScreen() {
       setResultMessage(`재활성화 처리되었습니다: ${formatAreaLabel(updated)}`);
       await loadAreas(appliedQuery, activeParam);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setUpdatingAreaId(null);
     }
@@ -495,7 +486,7 @@ export function ServiceAreaManagementScreen() {
       setResultMessage('비활성 서비스 신청지역이 삭제되었습니다.');
       await loadAreas(appliedQuery, activeParam);
     } catch (error) {
-      setErrorMessage(toErrorMessage(error));
+      setErrorMessage(toApiErrorMessage(error, ERROR_MESSAGE_OPTIONS));
     } finally {
       setDeletingAreaId(null);
     }
@@ -1035,5 +1026,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 });
+
 
 
