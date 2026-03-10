@@ -2274,7 +2274,7 @@
 
 ---
 
-### [ ] T-0808 OPS_ADMIN: 운영 공지/광고성 알림 발송
+### [x] T-0808 OPS_ADMIN: 운영 공지/광고성 알림 발송
 **Goal**
 - 운영자가 전체 사용자 또는 특정 조건 대상에게 공지/이벤트 알림을 발송할 수 있게 한다.
 
@@ -2294,6 +2294,16 @@
 - 발송 이력 저장 및 감사로그 기록
 - 광고성/운영성 메시지 구분 필드 정의(예: `category=NOTICE/MARKETING`)
 - 최소 1개 테스트: 권한 없는 사용자의 발송 시도 403
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `POST /ops-admin/notifications/broadcast` API 추가(OPS_ADMIN/SYS_ADMIN 전용)
+- [x] 대상 정책 반영: `ALL_USERS`, `ALL_DRIVERS`, `USER_IDS`
+- [x] 입력 필드 반영: `title`, `message`, `targetType`, `targetUserIds(옵션)`, `scheduledAt(옵션)`, `category`
+- [x] 발송 이력 테이블(`notification_broadcast_histories`) 생성 및 저장 연동
+- [x] 감사 로그(`notification.broadcast ...`) 기록 연동
+- [x] `category=NOTICE/MARKETING` enum 정의 및 요청 검증 연동
+- [x] 권한 없는 사용자 발송 403 테스트 추가:
+  - `OpsAdminNotificationBroadcastControllerSecurityTest#userRoleCannotCallBroadcastEndpoint`
 
 ---
 

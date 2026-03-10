@@ -53,4 +53,18 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             nativeQuery = true
     )
     long countRoleByUserIdAndRoleCode(@Param("userId") Long userId, @Param("roleCode") String roleCode);
+
+    @Query(
+            value = """
+                    SELECT DISTINCT u.*
+                    FROM users u
+                    JOIN user_roles ur ON ur.user_id = u.id
+                    JOIN roles r ON r.id = ur.role_id
+                    WHERE u.status = 'ACTIVE'
+                      AND r.code = :roleCode
+                    ORDER BY u.id
+                    """,
+            nativeQuery = true
+    )
+    List<UserEntity> findActiveUsersByRoleCode(@Param("roleCode") String roleCode);
 }

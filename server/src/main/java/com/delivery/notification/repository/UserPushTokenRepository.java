@@ -23,4 +23,6 @@ public interface UserPushTokenRepository extends JpaRepository<UserPushTokenEnti
     );
 
     List<UserPushTokenEntity> findAllByUserAndActiveTrue(UserEntity user);
+
+    List<UserPushTokenEntity> findAllByUserInAndActiveTrue(List<UserEntity> users);
 }

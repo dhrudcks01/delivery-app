@@ -29,6 +29,7 @@ import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
+import com.delivery.notification.exception.InvalidNotificationBroadcastRequestException;
 import com.delivery.servicearea.exception.InvalidServiceAreaMasterDongFileException;
 import com.delivery.servicearea.exception.ServiceAreaDeleteNotAllowedException;
 import com.delivery.servicearea.exception.ServiceAreaMasterDongNotFoundException;
@@ -597,6 +598,20 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.of(
                 HttpStatus.BAD_REQUEST.value(),
                 "PHONE_NUMBER_UPDATE_NOT_ALLOWED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(InvalidNotificationBroadcastRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidNotificationBroadcastRequest(
+            InvalidNotificationBroadcastRequestException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_NOTIFICATION_BROADCAST_REQUEST",
                 exception.getMessage(),
                 request.getRequestURI()
         );
