@@ -5,7 +5,9 @@ import {
   startPhoneVerification as startPhoneVerificationApi,
 } from '../api/authApi';
 import { fetchMe, initializeAuth, loginAndStore, logout, registerAndStore } from './authClient';
+import { deactivatePushTokenForCurrentDevice, registerPushTokenForCurrentDevice } from '../notifications/pushNotificationService';
 import { LoginRequest, MeResponse, PhoneVerificationStartResponse, RegisterRequest } from '../types/auth';
+import { PushRegistrationState } from '../types/notification';
 
 type AuthState = {
   isLoading: boolean;
@@ -13,12 +15,14 @@ type AuthState = {
   phoneVerificationRequired: boolean;
   me: MeResponse | null;
   errorMessage: string | null;
+  pushRegistration: PushRegistrationState;
 };
 
 type AuthContextValue = AuthState & {
   signIn: (payload: LoginRequest) => Promise<void>;
   signUp: (payload: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshPushRegistration: () => Promise<void>;
   startPhoneVerification: () => Promise<PhoneVerificationStartResponse>;
   completePhoneVerification: (identityVerificationId: string) => Promise<void>;
 };
@@ -32,6 +36,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const LOGIN_FAILED_MESSAGE = '로그인에 실패했습니다. 아이디/비밀번호를 확인해 주세요.';
 const SIGNUP_FAILED_MESSAGE = '회원가입에 실패했습니다. 입력값을 확인해 주세요.';
 const AUTH_CHECK_FAILED_MESSAGE = '인증 세션 확인에 실패했습니다. 다시 로그인해 주세요.';
+const DEFAULT_PUSH_REGISTRATION_STATE: PushRegistrationState = {
+  status: 'idle',
+  message: '푸시 알림 설정을 확인해 주세요.',
+  pushToken: null,
+};
 
 function getApiErrorCode(error: unknown): string | null {
   if (!(error instanceof AxiosError)) {
@@ -57,7 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     phoneVerificationRequired: false,
     me: null,
     errorMessage: null,
+    pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
   });
+
+  const refreshPushRegistration = useCallback(async () => {
+    const nextState = await registerPushTokenForCurrentDevice();
+    setState((prev) => ({
+      ...prev,
+      pushRegistration: nextState,
+    }));
+  }, []);
 
   const bootstrap = useCallback(async () => {
     try {
@@ -69,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phoneVerificationRequired: false,
           me: null,
           errorMessage: null,
+          pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
         });
         return;
       }
@@ -80,7 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: resolvePhoneVerificationRequired(me),
         me,
         errorMessage: null,
+        pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
       });
+      void refreshPushRegistration();
     } catch (error) {
       if (isPhoneVerificationRequiredError(error)) {
         setState({
@@ -89,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phoneVerificationRequired: true,
           me: null,
           errorMessage: null,
+          pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
         });
         return;
       }
@@ -100,9 +122,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: false,
         me: null,
         errorMessage: AUTH_CHECK_FAILED_MESSAGE,
+        pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
       });
     }
-  }, []);
+  }, [refreshPushRegistration]);
 
   useEffect(() => {
     bootstrap();
@@ -120,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phoneVerificationRequired: true,
           me: null,
           errorMessage: null,
+          pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
         });
         return;
       }
@@ -131,7 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: resolvePhoneVerificationRequired(me),
         me,
         errorMessage: null,
+        pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
       });
+      void refreshPushRegistration();
     } catch (error) {
       let loginErrorMessage = LOGIN_FAILED_MESSAGE;
       const errorCode = getApiErrorCode(error);
@@ -148,9 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: false,
         me: null,
         errorMessage: loginErrorMessage,
+        pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
       });
     }
-  }, []);
+  }, [refreshPushRegistration]);
 
   const signUp = useCallback(async (payload: RegisterRequest) => {
     setState((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
@@ -164,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phoneVerificationRequired: true,
           me: null,
           errorMessage: null,
+          pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
         });
         return;
       }
@@ -175,7 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: resolvePhoneVerificationRequired(me),
         me,
         errorMessage: null,
+        pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
       });
+      void refreshPushRegistration();
     } catch {
       await logout();
       setState({
@@ -184,9 +214,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: false,
         me: null,
         errorMessage: SIGNUP_FAILED_MESSAGE,
+        pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
       });
     }
-  }, []);
+  }, [refreshPushRegistration]);
 
   const startPhoneVerification = useCallback(async () => {
     return startPhoneVerificationApi();
@@ -204,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         me,
         errorMessage: null,
       }));
+      void refreshPushRegistration();
     } catch {
       setState((prev) => ({
         ...prev,
@@ -211,10 +243,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneVerificationRequired: false,
         errorMessage: null,
       }));
+      void refreshPushRegistration();
     }
-  }, []);
+  }, [refreshPushRegistration]);
 
   const signOut = useCallback(async () => {
+    try {
+      await deactivatePushTokenForCurrentDevice();
+    } catch {
+      // Ignore push token deactivation failure during logout.
+    }
     await logout();
     setState({
       isLoading: false,
@@ -222,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phoneVerificationRequired: false,
       me: null,
       errorMessage: null,
+      pushRegistration: DEFAULT_PUSH_REGISTRATION_STATE,
     });
   }, []);
 
@@ -231,10 +270,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
+      refreshPushRegistration,
       startPhoneVerification,
       completePhoneVerification,
     }),
-    [state, signIn, signUp, signOut, startPhoneVerification, completePhoneVerification],
+    [state, signIn, signUp, signOut, refreshPushRegistration, startPhoneVerification, completePhoneVerification],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

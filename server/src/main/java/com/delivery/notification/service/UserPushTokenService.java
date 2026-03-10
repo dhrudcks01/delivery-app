@@ -52,6 +52,25 @@ public class UserPushTokenService {
                 ));
     }
 
+    @Transactional
+    public void deactivateToken(
+            String loginId,
+            PushTokenProvider provider,
+            String pushToken
+    ) {
+        String normalizedPushToken = normalizePushToken(pushToken);
+        UserEntity user = userRepository.findByLoginId(loginId)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        userPushTokenRepository.findByUserAndProviderAndPushToken(user, provider, normalizedPushToken)
+                .ifPresent(existing -> {
+                    if (existing.isActive()) {
+                        existing.deactivate();
+                        userPushTokenRepository.save(existing);
+                    }
+                });
+    }
+
     private String normalizePushToken(String pushToken) {
         String normalized = Objects.requireNonNull(pushToken).trim();
         if (normalized.isEmpty()) {

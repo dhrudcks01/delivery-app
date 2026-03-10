@@ -21,8 +21,15 @@ function formatDateTime(dateTime: string | null | undefined): string {
   return new Date(dateTime).toLocaleString();
 }
 
+function maskPushToken(pushToken: string | null): string {
+  if (!pushToken || pushToken.length < 10) {
+    return '-';
+  }
+  return `${pushToken.slice(0, 6)}...${pushToken.slice(-4)}`;
+}
+
 export function ProfileSettingsScreen() {
-  const { me, signOut, isLoading, errorMessage } = useAuth();
+  const { me, signOut, isLoading, errorMessage, pushRegistration, refreshPushRegistration } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const roles = me?.roles ?? [];
   const canManageServiceArea = roles.includes('OPS_ADMIN') || roles.includes('SYS_ADMIN');
@@ -34,6 +41,11 @@ export function ProfileSettingsScreen() {
   const phoneNumberLabel = formatValue(me?.phoneNumber);
   const phoneVerificationProviderLabel = formatValue(me?.phoneVerificationProvider);
   const isPhoneVerified = Boolean(me?.phoneVerifiedAt);
+  const isPushRegistered = pushRegistration.status === 'registered';
+  const isPushWarning = pushRegistration.status === 'permission_denied'
+    || pushRegistration.status === 'token_failed'
+    || pushRegistration.status === 'api_failed';
+  const isPushUnsupported = pushRegistration.status === 'unsupported';
 
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} includeTopInset>
@@ -85,6 +97,55 @@ export function ProfileSettingsScreen() {
               <Text style={styles.infoLabel}>보유 권한</Text>
               <Text style={styles.infoValue}>{roleLabel}</Text>
             </View>
+          </View>
+        )}
+
+        {hasProfile && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>알림 설정</Text>
+            <Text style={styles.sectionCaption}>푸시 알림 권한과 토큰 등록 상태를 확인합니다.</Text>
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>푸시 상태</Text>
+              <Text style={styles.infoValue}>{pushRegistration.message}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>등록 토큰</Text>
+              <Text style={styles.infoValue}>{maskPushToken(pushRegistration.pushToken)}</Text>
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                isPushWarning && styles.statusBadgeWarning,
+                isPushUnsupported && styles.statusBadgeNeutral,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  isPushWarning && styles.statusBadgeWarningText,
+                  isPushUnsupported && styles.statusBadgeNeutralText,
+                ]}
+              >
+                {isPushRegistered ? '알림 활성화' : isPushUnsupported ? '미지원 기기' : '알림 설정 필요'}
+              </Text>
+            </View>
+            <Pressable
+              style={[
+                styles.secondaryButton,
+                isPushUnsupported && styles.buttonDisabled,
+              ]}
+              disabled={isPushUnsupported}
+              onPress={() => {
+                void refreshPushRegistration();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="알림 설정 다시 시도"
+              accessibilityHint="푸시 권한 요청과 토큰 등록을 다시 시도합니다."
+              accessibilityState={{ disabled: isPushUnsupported }}
+            >
+              <Text style={styles.secondaryButtonText}>알림 설정 다시 시도</Text>
+            </Pressable>
           </View>
         )}
 
@@ -251,6 +312,13 @@ const styles = StyleSheet.create({
   statusBadgeWarningText: {
     color: ui.colors.warningTextStrong,
   },
+  statusBadgeNeutral: {
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.surfaceMuted,
+  },
+  statusBadgeNeutralText: {
+    color: ui.colors.text,
+  },
   descriptionText: {
     fontSize: 14,
     color: ui.colors.text,
@@ -315,6 +383,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: ui.colors.card,
   },
+  secondaryButton: {
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ui.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ui.colors.card,
+    paddingHorizontal: 12,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: ui.colors.primary,
+  },
   dangerButton: {
     height: 48,
     borderRadius: 12,
@@ -328,6 +411,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: ui.colors.errorStrong,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 
