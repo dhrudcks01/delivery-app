@@ -3,6 +3,7 @@ package com.delivery.waste.service;
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.notification.service.WasteRequestMeasuredNotificationService;
 import com.delivery.payment.service.PaymentAutomationService;
 import com.delivery.waste.dto.DriverAssignedWasteRequestResponse;
 import com.delivery.waste.dto.MeasureWasteRequest;
@@ -29,6 +30,7 @@ public class DriverWasteRequestService {
     private final WastePhotoRepository wastePhotoRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
     private final WastePricingService wastePricingService;
+    private final WasteRequestMeasuredNotificationService wasteRequestMeasuredNotificationService;
     private final PaymentAutomationService paymentAutomationService;
 
     public DriverWasteRequestService(
@@ -37,6 +39,7 @@ public class DriverWasteRequestService {
             WastePhotoRepository wastePhotoRepository,
             WasteStatusTransitionService wasteStatusTransitionService,
             WastePricingService wastePricingService,
+            WasteRequestMeasuredNotificationService wasteRequestMeasuredNotificationService,
             PaymentAutomationService paymentAutomationService
     ) {
         this.userRepository = userRepository;
@@ -44,6 +47,7 @@ public class DriverWasteRequestService {
         this.wastePhotoRepository = wastePhotoRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
         this.wastePricingService = wastePricingService;
+        this.wasteRequestMeasuredNotificationService = wasteRequestMeasuredNotificationService;
         this.paymentAutomationService = paymentAutomationService;
     }
 
@@ -79,6 +83,7 @@ public class DriverWasteRequestService {
                 .map(url -> new WastePhotoEntity(updated, url, null))
                 .toList();
         wastePhotoRepository.saveAll(photos);
+        wasteRequestMeasuredNotificationService.notifyMeasured(updated);
         paymentAutomationService.attemptAutoPaymentAfterMeasured(updated, email);
 
         return toWasteRequestResponse(updated);

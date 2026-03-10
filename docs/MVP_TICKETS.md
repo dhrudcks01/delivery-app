@@ -2225,7 +2225,7 @@
 
 ---
 
-### [ ] T-0806 USER: 기사 수거 완료(측정 완료) 푸시 알림
+### [x] T-0806 USER: 기사 수거 완료(측정 완료) 푸시 알림
 **Goal**
 - 기사님이 현장에서 수거 및 측정을 완료하면 사용자에게 알림을 보낸다.
 
@@ -2238,6 +2238,14 @@
 - `orderNo`, `measuredWeightKg`, `finalAmount` 등 템플릿 변수 정책과 정렬
 - USER 알림함에도 동일 내용 저장
 - 최소 1개 테스트: 측정 완료 재처리 시 중복 알림 방지
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `ASSIGNED -> MEASURED` 전이 직후 `WASTE_REQUEST_MEASURED` 알림 생성 트리거 연결
+- [x] 알림 제목/본문이 정책 문구와 일치 (`수거가 완료되었어요`, `주문번호 {orderNo}, 측정 무게 {measuredWeightKg}kg / 결제가 진행될 예정입니다.`)
+- [x] payload에 `wasteRequestId`, `orderNo`, `measuredWeightKg`, `finalAmount` 포함
+- [x] 푸시 발송 실패가 발생해도 `notifications` 저장은 유지
+- [x] 중복 방지 테스트 추가:
+  - `WasteRequestMeasuredNotificationServiceTest#doesNotCreateDuplicateNotificationForSameMeasuredRequest`
 
 ---
 
