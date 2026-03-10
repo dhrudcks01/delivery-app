@@ -2105,7 +2105,9 @@
 
 # EPIC 8) (추후) 알림/알림톡(카카오 등) 연동 준비
 
-> 목표: 수거 신청/수거 완료 시 사용자에게 주문번호 기반 알림을 보낼 수 있도록 데이터 계약과 발행 지점을 정리한다.
+> 목표: 수거 신청/수거 완료/결제 완료/쿠폰 만료/운영 공지 등 사용자 알림을
+> 앱 푸시 및 앱 내 알림함 기준으로 제공할 수 있도록 데이터 계약, 이벤트 발행 지점,
+> 발송 구조를 정리한다.
 
 ### [ ] T-0801 알림 이벤트 스키마 정의 + 템플릿 변수 문서화
 **Goal**
@@ -2135,3 +2137,170 @@
 - 최소 1개 테스트: 동일 요청에 대해 중복 이벤트 생성 방지
 
 ---
+
+
+### [ ] T-0803 DB: notifications / user_push_tokens
+**Goal**
+- 앱 푸시 알림과 앱 내 알림함을 위한 최소 데이터 구조를 추가한다.
+
+**DoD**
+- DB(Flyway): `notifications` 테이블 추가
+  - 예: `id`, `user_id`, `type`, `title`, `message`, `payload_json`, `is_read`, `read_at`, `created_at`
+- DB(Flyway): `user_push_tokens` 테이블 추가
+  - 예: `id`, `user_id`, `device_type(IOS/ANDROID)`, `provider(EXPO)`, `push_token`, `is_active`, `last_seen_at`, `created_at`, `updated_at`
+- 사용자별 활성 토큰 중복 저장 방지 정책 정의(동일 토큰 upsert 또는 재활성화)
+- 알림 타입 enum 정의(최소)
+  - `WASTE_REQUEST_CREATED`
+  - `WASTE_REQUEST_MEASURED`
+  - `PAYMENT_COMPLETED`
+  - `COUPON_EXPIRING`
+  - `ADMIN_BROADCAST`
+- 최소 1개 테스트: 동일 토큰 재등록 시 중복 비정상 적재 방지
+
+---
+
+### [ ] T-0804 모바일: Push 권한 요청 + Expo Push Token 등록
+**Goal**
+- 앱이 푸시 권한을 요청하고, 발급된 Expo Push Token을 서버에 등록할 수 있게 한다.
+
+**DoD**
+- Expo Notifications 기반 권한 요청 플로우 추가
+- 로그인 사용자 기준 Expo Push Token 발급/조회
+- 서버 토큰 등록 API 연동
+  - 예: `POST /user/push-tokens`
+- 로그아웃 시 토큰 비활성화 또는 현재 디바이스 연결 해제 API 연동
+- 권한 거부/알림 미지원 기기/토큰 발급 실패 UX 제공
+- iOS/Android에서 권한 허용/거부 수동 검증 시나리오 문서화
+
+---
+
+### [ ] T-0805 USER: 수거 신청 완료 푸시 알림
+**Goal**
+- 사용자가 수거 신청을 생성하면 신청 접수 알림을 받게 한다.
+
+**DoD**
+- 이벤트: `WASTE_REQUEST_CREATED`
+- 발송 시점: `POST /waste-requests` 성공 직후
+- 푸시 메시지 예시:
+  - 제목: `수거 신청이 접수되었어요`
+  - 본문: `주문번호 {orderNo} 요청이 정상 접수되었습니다.`
+- 푸시 발송 실패 여부와 관계없이 `notifications`에는 기록 저장
+- 중복 생성/재시도 시 동일 요청에 대한 중복 알림 방지 정책 정의
+- 최소 1개 테스트: 동일 요청에 대해 중복 푸시 이벤트 비정상 생성 방지
+
+---
+
+### [ ] T-0806 USER: 기사 수거 완료(측정 완료) 푸시 알림
+**Goal**
+- 기사님이 현장에서 수거 및 측정을 완료하면 사용자에게 알림을 보낸다.
+
+**DoD**
+- 이벤트: `WASTE_REQUEST_MEASURED`
+- 발송 시점: `ASSIGNED -> MEASURED` 전이 완료 후
+- 푸시 메시지 예시:
+  - 제목: `수거가 완료되었어요`
+  - 본문: `주문번호 {orderNo}, 측정 무게 {measuredWeightKg}kg / 결제가 진행될 예정입니다.`
+- `orderNo`, `measuredWeightKg`, `finalAmount` 등 템플릿 변수 정책과 정렬
+- USER 알림함에도 동일 내용 저장
+- 최소 1개 테스트: 측정 완료 재처리 시 중복 알림 방지
+
+---
+
+### [ ] T-0807 USER: 결제 완료 푸시 알림
+**Goal**
+- 자동 결제가 완료되면 사용자에게 결제 완료 알림을 보낸다.
+
+**DoD**
+- 이벤트: `PAYMENT_COMPLETED`
+- 발송 시점: 최종 상태 `COMPLETED` 확정 후
+- 푸시 메시지 예시:
+  - 제목: `결제가 완료되었어요`
+  - 본문: `주문번호 {orderNo}, {finalAmount}원 결제가 완료되었습니다.`
+- USER API 상태 노출 정책(T-0406)과 충돌 없이 동작
+- 앱 내 알림함에도 저장
+- 최소 1개 테스트: 결제 재시도/중복 승인 시 중복 완료 알림 방지
+
+---
+
+### [ ] T-0808 OPS_ADMIN: 운영 공지/광고성 알림 발송
+**Goal**
+- 운영자가 전체 사용자 또는 특정 조건 대상에게 공지/이벤트 알림을 발송할 수 있게 한다.
+
+**DoD**
+- OPS_ADMIN 또는 SYS_ADMIN용 발송 API 제공
+  - 예: `POST /ops-admin/notifications/broadcast`
+- 발송 대상 최소 범위:
+  - `ALL_USERS`
+  - `ALL_DRIVERS`
+  - `USER_IDS[]`
+- 입력 필드:
+  - `title`
+  - `message`
+  - `targetType`
+  - `targetUserIds`(옵션)
+  - `scheduledAt`(후순위 또는 옵션)
+- 발송 이력 저장 및 감사로그 기록
+- 광고성/운영성 메시지 구분 필드 정의(예: `category=NOTICE/MARKETING`)
+- 최소 1개 테스트: 권한 없는 사용자의 발송 시도 403
+
+---
+
+### [ ] T-0809 USER: 앱 내 알림함 목록/읽음 처리
+**Goal**
+- 사용자가 앱 내에서 받은 알림 목록을 확인하고 읽음 처리할 수 있게 한다.
+
+**DoD**
+- USER API 제공
+  - `GET /user/notifications`
+  - `POST /user/notifications/{id}/read`
+- 목록 응답 필드 최소
+  - `id`, `type`, `title`, `message`, `isRead`, `createdAt`
+- 본인 알림만 조회 가능하도록 RBAC 적용
+- 미읽음 개수 응답 또는 별도 API 제공(택1)
+- 최소 1개 테스트: 타인 알림 조회/읽음 처리 403
+
+---
+
+### [ ] T-0810 모바일: 알림함 화면 + 푸시 탭 액션 연동
+**Goal**
+- 앱에 알림함 화면을 추가하고, 푸시 알림 탭 시 해당 화면 또는 관련 상세 화면으로 이동하게 한다.
+
+**DoD**
+- 하단 탭 또는 내정보 하위 메뉴 중 1개 정책 확정 후 알림함 진입 화면 제공
+- 알림 목록 UI 제공(미읽음/읽음 구분 포함)
+- 알림 탭 시 라우팅 정책 정의
+  - 수거 신청 알림 → 신청 상세
+  - 수거 완료 알림 → 신청 상세
+  - 결제 완료 알림 → 신청 상세 또는 알림함
+  - 운영 공지 → 알림 상세 또는 알림함
+- 빈 상태/로딩/오류 상태 UI 제공
+- iOS/Android에서 foreground/background/cold start 수동 검증 시나리오 문서화
+
+---
+
+### [ ] T-0811 쿠폰 만료 예정 알림 (쿠폰 기능 연계)
+**Goal**
+- 추후 쿠폰 기능 도입 시, 만료 예정 쿠폰에 대해 사전 알림을 발송할 수 있는 기반을 만든다.
+
+**DoD**
+- 이벤트: `COUPON_EXPIRING`
+- 발송 정책 초안 정의:
+  - 만료 3일 전 1회
+  - 만료 1일 전 1회
+- 배치 또는 스케줄러 기반 발송 구조 설계
+- 현재는 쿠폰 기능(T-0701~T-0704) 완료 전까지 feature flag 또는 비활성 상태로 유지 가능
+- 쿠폰 도메인 도입 이후 바로 연결 가능한 payload 규격 문서화
+
+---
+
+### [ ] T-0812 서버: 푸시 발송 서비스(Expo) + 실패 처리 정책
+**Goal**
+- 서버에서 Expo Push API를 통해 실제 푸시를 발송하고, 실패/만료 토큰을 관리할 수 있게 한다.
+
+**DoD**
+- Expo Push 발송 서비스 구현
+- 발송 결과(success/failure/ticketId) 기록
+- 만료/무효 토큰 응답 시 `user_push_tokens.is_active=false` 처리 정책 정의
+- 일시 실패 재시도 정책 정의(최소 1회 또는 후순위 문서화)
+- 민감정보/토큰 로그 비노출
+- 최소 1개 테스트 또는 mock 기반 검증 추가
