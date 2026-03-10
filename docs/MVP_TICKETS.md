@@ -2249,7 +2249,7 @@
 
 ---
 
-### [ ] T-0807 USER: 결제 완료 푸시 알림
+### [x] T-0807 USER: 결제 완료 푸시 알림
 **Goal**
 - 자동 결제가 완료되면 사용자에게 결제 완료 알림을 보낸다.
 
@@ -2262,6 +2262,15 @@
 - USER API 상태 노출 정책(T-0406)과 충돌 없이 동작
 - 앱 내 알림함에도 저장
 - 최소 1개 테스트: 결제 재시도/중복 승인 시 중복 완료 알림 방지
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] 자동 결제 성공 경로(`PaymentAutomationService`)에서 `COMPLETED` 확정 직후 `PAYMENT_COMPLETED` 알림 발송 연동
+- [x] 결제 재시도/배치 처리 경로(`PaymentFailureHandlingService`)에서 `COMPLETED` 확정 직후 동일 알림 발송 연동
+- [x] 알림 제목/본문 정책 문구 일치 (`결제가 완료되었어요`, `주문번호 {orderNo}, {finalAmount}원 결제가 완료되었습니다.`)
+- [x] 동일 `wasteRequestId + orderNo + finalAmount` payload 기준 중복 알림 방지
+- [x] 푸시 발송 실패 시에도 `notifications` 저장은 유지
+- [x] 테스트 추가:
+  - `WasteRequestPaymentCompletedNotificationServiceTest#doesNotCreateDuplicateNotificationForSameCompletedRequest`
 
 ---
 

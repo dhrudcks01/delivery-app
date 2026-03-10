@@ -3,6 +3,7 @@ package com.delivery.payment.service;
 import com.delivery.auth.entity.UserEntity;
 import com.delivery.auth.exception.InvalidCredentialsException;
 import com.delivery.auth.repository.UserRepository;
+import com.delivery.notification.service.WasteRequestPaymentCompletedNotificationService;
 import com.delivery.payment.dto.FailedPaymentResponse;
 import com.delivery.payment.dto.PaymentMethodStatusResponse;
 import com.delivery.payment.dto.PendingPaymentBatchExecuteRequest;
@@ -55,19 +56,22 @@ public class PaymentFailureHandlingService {
     private final PaymentRepository paymentRepository;
     private final WasteRequestRepository wasteRequestRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
+    private final WasteRequestPaymentCompletedNotificationService wasteRequestPaymentCompletedNotificationService;
 
     public PaymentFailureHandlingService(
             UserRepository userRepository,
             PaymentMethodRepository paymentMethodRepository,
             PaymentRepository paymentRepository,
             WasteRequestRepository wasteRequestRepository,
-            WasteStatusTransitionService wasteStatusTransitionService
+            WasteStatusTransitionService wasteStatusTransitionService,
+            WasteRequestPaymentCompletedNotificationService wasteRequestPaymentCompletedNotificationService
     ) {
         this.userRepository = userRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.paymentRepository = paymentRepository;
         this.wasteRequestRepository = wasteRequestRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
+        this.wasteRequestPaymentCompletedNotificationService = wasteRequestPaymentCompletedNotificationService;
     }
 
     @Transactional
@@ -239,11 +243,13 @@ public class PaymentFailureHandlingService {
 
         payment.markSuccess("mock_payment_key_retry_" + UUID.randomUUID());
         wasteStatusTransitionService.transition(request.getId(), STATUS_PAID, actorLoginId);
-        return wasteStatusTransitionService.transition(
+        WasteRequestEntity completed = wasteStatusTransitionService.transition(
                 request.getId(),
                 STATUS_COMPLETED,
                 actorLoginId
         );
+        wasteRequestPaymentCompletedNotificationService.notifyPaymentCompleted(completed);
+        return completed;
     }
 
     private WasteRequestResponse toResponse(WasteRequestEntity request) {

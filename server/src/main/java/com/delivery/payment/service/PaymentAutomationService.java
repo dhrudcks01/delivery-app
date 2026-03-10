@@ -1,5 +1,6 @@
 package com.delivery.payment.service;
 
+import com.delivery.notification.service.WasteRequestPaymentCompletedNotificationService;
 import com.delivery.payment.entity.PaymentEntity;
 import com.delivery.payment.entity.PaymentMethodEntity;
 import com.delivery.payment.model.PaymentMethodType;
@@ -25,15 +26,18 @@ public class PaymentAutomationService {
     private final PaymentRepository paymentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
     private final WasteStatusTransitionService wasteStatusTransitionService;
+    private final WasteRequestPaymentCompletedNotificationService wasteRequestPaymentCompletedNotificationService;
 
     public PaymentAutomationService(
             PaymentRepository paymentRepository,
             PaymentMethodRepository paymentMethodRepository,
-            WasteStatusTransitionService wasteStatusTransitionService
+            WasteStatusTransitionService wasteStatusTransitionService,
+            WasteRequestPaymentCompletedNotificationService wasteRequestPaymentCompletedNotificationService
     ) {
         this.paymentRepository = paymentRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.wasteStatusTransitionService = wasteStatusTransitionService;
+        this.wasteRequestPaymentCompletedNotificationService = wasteRequestPaymentCompletedNotificationService;
     }
 
     @Transactional
@@ -69,7 +73,8 @@ public class PaymentAutomationService {
 
         payment.markSuccess("mock_payment_key_" + UUID.randomUUID());
         wasteStatusTransitionService.transition(request.getId(), STATUS_PAID, actorEmail);
-        wasteStatusTransitionService.transition(request.getId(), STATUS_COMPLETED, actorEmail);
+        WasteRequestEntity completed = wasteStatusTransitionService.transition(request.getId(), STATUS_COMPLETED, actorEmail);
+        wasteRequestPaymentCompletedNotificationService.notifyPaymentCompleted(completed);
     }
 
     private String createProviderOrderId(Long requestId) {
