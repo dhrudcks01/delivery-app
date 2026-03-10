@@ -2139,7 +2139,7 @@
 ---
 
 
-### [ ] T-0803 DB: notifications / user_push_tokens
+### [x] T-0803 DB: notifications / user_push_tokens
 **Goal**
 - 앱 푸시 알림과 앱 내 알림함을 위한 최소 데이터 구조를 추가한다.
 
@@ -2153,9 +2153,17 @@
   - `WASTE_REQUEST_CREATED`
   - `WASTE_REQUEST_MEASURED`
   - `PAYMENT_COMPLETED`
-  - `COUPON_EXPIRING`
-  - `ADMIN_BROADCAST`
+- `COUPON_EXPIRING`
+- `ADMIN_BROADCAST`
 - 최소 1개 테스트: 동일 토큰 재등록 시 중복 비정상 적재 방지
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] Flyway `V20__create_notifications_and_user_push_tokens.sql` 추가
+- [x] `notifications`, `user_push_tokens` 테이블/인덱스/고유 제약(사용자+provider+push_token) 반영
+- [x] 알림 타입 enum 정의: `WASTE_REQUEST_CREATED`, `WASTE_REQUEST_MEASURED`, `PAYMENT_COMPLETED`, `COUPON_EXPIRING`, `ADMIN_BROADCAST`
+- [x] 푸시 토큰 enum 정의: `PushTokenDeviceType(IOS/ANDROID)`, `PushTokenProvider(EXPO)`
+- [x] `UserPushTokenService.registerOrReactivateToken` 구현(동일 토큰 upsert/재활성화 정책)
+- [x] `UserPushTokenServiceIntegrationTest` 추가(동일 토큰 재등록 시 1건 유지 + 비활성 토큰 재활성화 검증)
 
 ---
 
