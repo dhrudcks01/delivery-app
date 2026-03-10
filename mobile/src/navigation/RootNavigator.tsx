@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import { DriverAssignedRequestDetailScreen } from '../screens/DriverAssignedRequestDetailScreen';
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
+import { NotificationInboxScreen } from '../screens/NotificationInboxScreen';
 import { OpsAdminHomeScreen } from '../screens/OpsAdminHomeScreen';
 import { OpsWasteRequestDetailScreen } from '../screens/OpsWasteRequestDetailScreen';
 import { PhoneVerificationScreen } from '../screens/PhoneVerificationScreen';
@@ -46,6 +47,7 @@ export type RootStackParamList = {
   ServiceAreaBrowse: undefined;
   ServiceAreaManagement: undefined;
   UserPaymentManagement: undefined;
+  NotificationInbox: undefined;
   WasteRequestDetail: { requestId: number; orderNo?: string };
   ProfileSettings: undefined;
 };
@@ -280,6 +282,7 @@ function AppTabsScreen() {
             hasUserRole={hasUserRole}
             onOpenAddressManagement={() => navigation.navigate('UserAddressManagement')}
             onOpenPaymentManagement={() => navigation.navigate('UserPaymentManagement')}
+            onOpenNotificationInbox={() => navigation.navigate('NotificationInbox')}
             onOpenRoleCenter={() => navigation.navigate('RoleCenter', { activeRole: primaryRole })}
             onOpenSettings={() => navigation.navigate('ProfileSettings')}
           />
@@ -373,6 +376,13 @@ export function RootNavigator() {
           name="UserPaymentManagement"
           component={UserPaymentManagementScreen}
           options={{ title: '결제수단 관리' }}
+        />
+      )}
+      {isAuthenticated && !isPhoneVerificationPending && (
+        <RootStack.Screen
+          name="NotificationInbox"
+          component={NotificationInboxScreen}
+          options={{ title: '알림함' }}
         />
       )}
       {isAuthenticated && !isPhoneVerificationPending && (

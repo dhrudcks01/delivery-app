@@ -2332,7 +2332,7 @@
 
 ---
 
-### [ ] T-0810 모바일: 알림함 화면 + 푸시 탭 액션 연동
+### [x] T-0810 모바일: 알림함 화면 + 푸시 탭 액션 연동
 **Goal**
 - 앱에 알림함 화면을 추가하고, 푸시 알림 탭 시 해당 화면 또는 관련 상세 화면으로 이동하게 한다.
 
@@ -2346,6 +2346,22 @@
   - 운영 공지 → 알림 상세 또는 알림함
 - 빈 상태/로딩/오류 상태 UI 제공
 - iOS/Android에서 foreground/background/cold start 수동 검증 시나리오 문서화
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] 내정보 하위 메뉴(`TabProfileScreen`)에 알림함 진입 동선 추가
+- [x] 알림함 화면(`NotificationInboxScreen`) 추가: 카드 목록 + 읽음/미읽음 구분 + 읽음 처리 액션
+- [x] 알림 API 연동: `GET /user/notifications`, `POST /user/notifications/{id}/read`, `GET /user/notifications/unread-count`
+- [x] 푸시 탭 라우팅 정책 반영:
+  - 수거 신청(`WASTE_REQUEST_CREATED`) -> `WasteRequestDetail`
+  - 수거 완료(`WASTE_REQUEST_MEASURED`) -> `WasteRequestDetail`
+  - 결제 완료(`PAYMENT_COMPLETED`) -> `WasteRequestDetail`(requestId 없으면 알림함)
+  - 운영 공지(`ADMIN_BROADCAST`) -> `NotificationInbox`
+- [x] foreground/background/cold start 공통 라우팅 처리 리스너 추가 (`getLastNotificationResponseAsync` + response listener)
+- [x] `cd mobile && npm run typecheck` 통과
+- [ ] iOS foreground: 푸시 수신 후 알림 탭 시 정책 화면 이동 확인
+- [ ] iOS background/cold start: 알림 탭으로 앱 진입 시 정책 화면 이동 확인
+- [ ] Android foreground: 푸시 수신 후 알림 탭 시 정책 화면 이동 확인
+- [ ] Android background/cold start: 알림 탭으로 앱 진입 시 정책 화면 이동 확인
 
 ---
 

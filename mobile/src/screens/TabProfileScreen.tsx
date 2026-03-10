@@ -14,6 +14,7 @@ type TabProfileScreenProps = {
   hasUserRole: boolean;
   onOpenAddressManagement: () => void;
   onOpenPaymentManagement: () => void;
+  onOpenNotificationInbox: () => void;
   onOpenRoleCenter: () => void;
   onOpenSettings: () => void;
 };
@@ -35,6 +36,7 @@ export function TabProfileScreen({
   hasUserRole,
   onOpenAddressManagement,
   onOpenPaymentManagement,
+  onOpenNotificationInbox,
   onOpenRoleCenter,
   onOpenSettings,
 }: TabProfileScreenProps) {
@@ -99,6 +101,9 @@ export function TabProfileScreen({
           <Pressable
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
             onPress={onOpenAddressManagement}
+            accessibilityRole="button"
+            accessibilityLabel="주소관리로 이동"
+            accessibilityHint="등록된 주소를 확인하고 대표주소를 변경하는 화면으로 이동합니다."
           >
             <Text style={styles.secondaryButtonText}>주소관리</Text>
           </Pressable>
@@ -107,19 +112,37 @@ export function TabProfileScreen({
           <Pressable
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
             onPress={onOpenPaymentManagement}
+            accessibilityRole="button"
+            accessibilityLabel="결제수단 관리로 이동"
+            accessibilityHint="내 결제수단 등록 상태를 확인하고 수정하는 화면으로 이동합니다."
           >
             <Text style={styles.secondaryButtonText}>결제수단 관리</Text>
           </Pressable>
         )}
         <Pressable
           style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+          onPress={onOpenNotificationInbox}
+          accessibilityRole="button"
+          accessibilityLabel="알림함으로 이동"
+          accessibilityHint="앱 내 알림 목록을 확인하는 화면으로 이동합니다."
+        >
+          <Text style={styles.secondaryButtonText}>알림함</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
           onPress={onOpenRoleCenter}
+          accessibilityRole="button"
+          accessibilityLabel="권한 신청 및 승인 화면으로 이동"
+          accessibilityHint="권한 신청 내역을 확인하거나 운영 권한 승인 화면으로 이동합니다."
         >
           <Text style={styles.secondaryButtonText}>권한 신청/승인</Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}
           onPress={onOpenSettings}
+          accessibilityRole="button"
+          accessibilityLabel="설정으로 이동"
+          accessibilityHint="프로필 설정 화면으로 이동합니다."
         >
           <Text style={styles.primaryButtonText}>설정</Text>
         </Pressable>
