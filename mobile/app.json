@@ -5,6 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.delivery.mobile",
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -14,7 +20,8 @@
         {
           "photosPermission": "참고사진 업로드를 위해 사진 접근 권한이 필요합니다."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

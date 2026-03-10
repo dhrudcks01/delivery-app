@@ -70,3 +70,91 @@ npm run typecheck
 
 - Docker 없이 로컬 개발 가능
 - 실제 OPS_ADMIN/SYS_ADMIN 업무 기능은 후속 티켓에서 구현
+
+## Android APK 빌드 (실기기 설치용)
+
+알림(Push) 실기기 테스트는 Expo Go 대신 APK 설치본으로 진행하는 것을 권장합니다.
+
+### 1) 사전 준비
+
+1. Expo 계정 로그인
+```bash
+cd mobile
+npx eas-cli login
+```
+
+2. EAS 프로젝트 연결(최초 1회)
+```bash
+npx eas-cli init
+```
+
+3. 필요 시 EAS Build 설정 동기화
+```bash
+npx eas-cli build:configure --platform android
+```
+
+### 2) APK 빌드
+
+```bash
+cd mobile
+npx eas-cli build --platform android --profile preview
+```
+
+- `preview` 프로필은 `mobile/eas.json`에서 APK(`buildType: apk`)로 설정되어 있습니다.
+- 빌드 완료 후 EAS가 제공한 설치 URL/QR로 안드로이드 기기에 APK를 설치합니다.
+
+### 3) 서버/앱 연결 확인
+
+1. 서버를 IntelliJ에서 실행
+2. `EXPO_PUBLIC_API_BASE_URL`이 안드로이드 기기에서 접근 가능한 서버 주소인지 확인
+   - 예: `http://192.168.x.x:8080`
+3. 앱 로그인 후 알림 권한 허용
+4. `user_push_tokens` 테이블에 토큰이 등록되고 `is_active=true`인지 확인
+
+## 알림 기능 실기기 테스트 절차
+
+### 권장 시나리오 A (일반 사용자 플로우)
+
+1. USER 계정으로 로그인
+2. 수거 신청 생성
+3. 서버에서 `WASTE_REQUEST_CREATED` 알림 발송 로그 확인
+4. 안드로이드 기기에서 푸시 수신 확인
+5. 알림 탭 시 앱 내 라우팅(상세 또는 알림함) 확인
+
+### 권장 시나리오 B (운영자 브로드캐스트)
+
+OPS_ADMIN 토큰으로 아래 API 호출:
+
+```bash
+curl -X POST "http://<SERVER_HOST>:8080/ops-admin/notifications/broadcast" \
+  -H "Authorization: Bearer <OPS_ADMIN_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"title\": \"알림 테스트\",
+    \"message\": \"안드로이드 실기기 알림 테스트입니다.\",
+    \"targetType\": \"ALL_USERS\",
+    \"targetUserIds\": [],
+    \"scheduledAt\": null,
+    \"category\": \"NOTICE\"
+  }"
+```
+
+## Expo Push 연동 체크포인트
+
+1. 서버 설정(`application.yml`)
+   - `app.notification.expo.*` 항목 확인
+   - 필요 시 `APP_NOTIFICATION_EXPO_ACCESS_TOKEN` 환경변수 설정
+2. Expo/EAS 프로젝트에서 Android Push 자격증명(FCM) 설정
+3. 앱 패키지명(`mobile/app.json`의 `android.package`)과 EAS 프로젝트 설정 일치 확인
+
+## 트러블슈팅
+
+- 토큰 발급 실패:
+  - 실기기인지 확인(에뮬레이터/Expo Go 제한 가능)
+  - 알림 권한 허용 여부 확인
+- 푸시 미수신:
+  - 서버에서 Expo 발송 성공 로그(`result=SUCCESS`) 확인
+  - `user_push_tokens.is_active` 값 확인
+  - 앱이 배터리 최적화/알림 차단 상태인지 확인
+- 라우팅 미동작:
+  - 알림 payload에 `type`, `wasteRequestId` 포함 여부 확인
