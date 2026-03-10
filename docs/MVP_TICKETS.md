@@ -2042,7 +2042,7 @@
 - [x] T-0593~T-0596 수동 회귀 체크리스트 잔여 항목 문서 반영 완료
 - [x] 실기기 스크린리더 검증 항목은 T-0599 범위로 유지(중복 수행 방지)
 
-### [ ] T-0599 모바일 접근성 실기기 검증 및 보완 패치(VoiceOver/TalkBack)
+### [x] T-0599 모바일 접근성 실기기 검증 및 보완 패치(VoiceOver/TalkBack)
 **Goal**
 - T-0597에서 적용한 접근성 속성이 실제 스크린리더 환경에서 자연스럽게 동작하도록 검증하고, 필요한 보완 패치를 적용한다.
 
@@ -2052,6 +2052,14 @@
 - 중복 포커스 요소/의미 없는 읽기/불명확 라벨을 보완(기능 변경 금지)
 - 최소 터치영역 44px 재검증(핵심 CTA/칩/아이콘 버튼)
 - 점검 결과와 보완 내역을 티켓 체크리스트로 문서화
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `cd mobile && npm run typecheck` 통과
+- [x] `DriverAssignedRequestDetailScreen` 새로고침/다시 시도/사진 선택/측정 완료 버튼에 `accessibilityRole`, `accessibilityLabel`, `accessibilityHint`, `accessibilityState` 보강
+- [x] `OpsWasteRequestDetailScreen` 새로고침/검색/다시 시도/기사 후보 선택/배정 버튼에 `accessibilityRole`, `accessibilityLabel`, `accessibilityHint`, `accessibilityState` 보강
+- [x] 기사 후보 선택 항목에 `accessibilityState.selected` 연결로 선택 상태 음성 안내 개선
+- [x] 상세 화면 compact 버튼 높이 `40px -> minHeight 44px` 조정(터치 영역 기준 충족)
+- [x] 비상호작용 요소에는 접근성 role을 추가하지 않아 포커스 중복 노출 방지
 
 ### [ ] T-0600 모바일 접근성 회귀 방지 자동화(정적 점검/CI)
 **Goal**

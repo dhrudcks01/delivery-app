@@ -195,6 +195,10 @@ export function DriverAssignedRequestDetailScreen() {
                 style={[styles.secondaryButtonCompact, isLoadingDetail && styles.buttonDisabled]}
                 onPress={() => void loadAssignedRequestDetail()}
                 disabled={isLoadingDetail}
+                accessibilityRole="button"
+                accessibilityLabel="요청 정보 새로고침"
+                accessibilityHint="요청 상세 정보를 다시 불러옵니다."
+                accessibilityState={{ disabled: isLoadingDetail, busy: isLoadingDetail }}
               >
                 <Text style={styles.secondaryButtonCompactText}>{isLoadingDetail ? '새로고침 중...' : '새로고침'}</Text>
               </Pressable>
@@ -216,7 +220,13 @@ export function DriverAssignedRequestDetailScreen() {
             {!isLoadingDetail && detailError && (
               <View style={styles.errorCard}>
                 <Text style={styles.errorText}>{detailError}</Text>
-                <Pressable style={styles.retryButton} onPress={() => void loadAssignedRequestDetail()}>
+                <Pressable
+                  style={styles.retryButton}
+                  onPress={() => void loadAssignedRequestDetail()}
+                  accessibilityRole="button"
+                  accessibilityLabel="요청 정보 다시 시도"
+                  accessibilityHint="요청 상세 정보를 다시 불러옵니다."
+                >
                   <Text style={styles.retryButtonText}>다시 시도</Text>
                 </Pressable>
               </View>
@@ -284,6 +294,13 @@ export function DriverAssignedRequestDetailScreen() {
                 style={[styles.secondaryButtonCompact, (!canMeasureSelected || isUploadingPhoto || isMeasuring) && styles.buttonDisabled]}
                 onPress={() => void handlePickAndUploadPhoto()}
                 disabled={!canMeasureSelected || isUploadingPhoto || isMeasuring}
+                accessibilityRole="button"
+                accessibilityLabel="사진 선택 및 업로드"
+                accessibilityHint="측정 완료에 필요한 사진을 선택해 업로드합니다."
+                accessibilityState={{
+                  disabled: !canMeasureSelected || isUploadingPhoto || isMeasuring,
+                  busy: isUploadingPhoto,
+                }}
               >
                 <Text style={styles.secondaryButtonCompactText}>{isUploadingPhoto ? '업로드 중...' : '사진 선택/업로드'}</Text>
               </Pressable>
@@ -332,6 +349,13 @@ export function DriverAssignedRequestDetailScreen() {
               style={[styles.primaryButton, (!canMeasureSelected || isMeasuring || isUploadingPhoto) && styles.buttonDisabled]}
               onPress={() => void handleMeasureComplete()}
               disabled={!canMeasureSelected || isMeasuring || isUploadingPhoto}
+              accessibilityRole="button"
+              accessibilityLabel="측정 완료 처리"
+              accessibilityHint="입력한 무게와 업로드한 사진으로 측정 완료를 처리합니다."
+              accessibilityState={{
+                disabled: !canMeasureSelected || isMeasuring || isUploadingPhoto,
+                busy: isMeasuring,
+              }}
             >
               <Text style={styles.primaryButtonText}>{isMeasuring ? '측정 완료 처리 중...' : '측정 완료 처리'}</Text>
             </Pressable>
@@ -410,7 +434,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonCompact: {
-    height: 40,
+    minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,

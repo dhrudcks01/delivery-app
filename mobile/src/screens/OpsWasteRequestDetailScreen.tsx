@@ -178,6 +178,10 @@ export function OpsWasteRequestDetailScreen() {
                 style={[styles.secondaryButtonCompact, isLoadingWasteDetail && styles.buttonDisabled]}
                 onPress={() => void loadWasteRequestDetail()}
                 disabled={isLoadingWasteDetail}
+                accessibilityRole="button"
+                accessibilityLabel="요청 정보 새로고침"
+                accessibilityHint="요청 상세 정보를 다시 불러옵니다."
+                accessibilityState={{ disabled: isLoadingWasteDetail, busy: isLoadingWasteDetail }}
               >
                 <Text style={styles.secondaryButtonCompactText}>
                   {isLoadingWasteDetail ? '새로고침 중...' : '새로고침'}
@@ -202,7 +206,13 @@ export function OpsWasteRequestDetailScreen() {
             {wasteDetailError && (
               <View style={styles.errorCard}>
                 <Text style={styles.errorText}>{wasteDetailError}</Text>
-                <Pressable style={styles.retryButton} onPress={() => void loadWasteRequestDetail()}>
+                <Pressable
+                  style={styles.retryButton}
+                  onPress={() => void loadWasteRequestDetail()}
+                  accessibilityRole="button"
+                  accessibilityLabel="요청 정보 다시 시도"
+                  accessibilityHint="요청 상세 정보를 다시 불러옵니다."
+                >
                   <Text style={styles.retryButtonText}>다시 시도</Text>
                 </Pressable>
               </View>
@@ -339,6 +349,10 @@ export function OpsWasteRequestDetailScreen() {
                 style={[styles.secondaryButtonCompact, isLoadingDriverCandidates && styles.buttonDisabled]}
                 onPress={() => void loadDriverCandidates()}
                 disabled={isLoadingDriverCandidates}
+                accessibilityRole="button"
+                accessibilityLabel="기사 후보 검색"
+                accessibilityHint="입력한 검색어로 기사 후보를 조회합니다."
+                accessibilityState={{ disabled: isLoadingDriverCandidates, busy: isLoadingDriverCandidates }}
               >
                 <Text style={styles.secondaryButtonCompactText}>검색</Text>
               </Pressable>
@@ -354,7 +368,13 @@ export function OpsWasteRequestDetailScreen() {
             {!isLoadingDriverCandidates && driverCandidateError && (
               <View style={styles.errorCard}>
                 <Text style={styles.errorText}>{driverCandidateError}</Text>
-                <Pressable style={styles.retryButton} onPress={() => void loadDriverCandidates()}>
+                <Pressable
+                  style={styles.retryButton}
+                  onPress={() => void loadDriverCandidates()}
+                  accessibilityRole="button"
+                  accessibilityLabel="기사 후보 조회 다시 시도"
+                  accessibilityHint="기사 후보 목록을 다시 조회합니다."
+                >
                   <Text style={styles.retryButtonText}>다시 시도</Text>
                 </Pressable>
               </View>
@@ -381,6 +401,10 @@ export function OpsWasteRequestDetailScreen() {
                       setSelectedDriverId(candidate.driverId);
                       setAssignError(null);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`기사 ${candidate.name}, 아이디 ${candidate.loginId}`}
+                    accessibilityHint="선택한 기사로 배정 대상을 변경합니다."
+                    accessibilityState={{ selected: selectedDriverId === candidate.driverId }}
                   >
                     <View style={styles.rowBetween}>
                       <Text style={styles.listTitle}>기사 #{candidate.driverId}</Text>
@@ -413,6 +437,10 @@ export function OpsWasteRequestDetailScreen() {
               style={[styles.primaryButton, isAssigning && styles.buttonDisabled]}
               onPress={() => void handleAssignWasteRequest()}
               disabled={isAssigning}
+              accessibilityRole="button"
+              accessibilityLabel={isReassignMode ? '기사 재배정' : '기사 배정'}
+              accessibilityHint="선택한 기사로 요청을 배정합니다."
+              accessibilityState={{ disabled: isAssigning, busy: isAssigning }}
             >
               <Text style={styles.primaryButtonText}>
                 {isAssigning ? '처리 중...' : isReassignMode ? '기사 재배정' : '기사 배정'}
@@ -575,7 +603,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   secondaryButtonCompact: {
-    height: 40,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,
