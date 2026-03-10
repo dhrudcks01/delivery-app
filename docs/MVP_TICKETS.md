@@ -2307,7 +2307,7 @@
 
 ---
 
-### [ ] T-0809 USER: 앱 내 알림함 목록/읽음 처리
+### [x] T-0809 USER: 앱 내 알림함 목록/읽음 처리
 **Goal**
 - 사용자가 앱 내에서 받은 알림 목록을 확인하고 읽음 처리할 수 있게 한다.
 
@@ -2320,6 +2320,15 @@
 - 본인 알림만 조회 가능하도록 RBAC 적용
 - 미읽음 개수 응답 또는 별도 API 제공(택1)
 - 최소 1개 테스트: 타인 알림 조회/읽음 처리 403
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] USER API 추가: `GET /user/notifications`
+- [x] USER API 추가: `POST /user/notifications/{id}/read`
+- [x] 미읽음 개수 API 추가: `GET /user/notifications/unread-count`
+- [x] 목록 응답 필드 제공 확인: `id`, `type`, `title`, `message`, `isRead`, `createdAt`
+- [x] 타인 알림 읽음 처리 403 테스트 추가:
+  - `UserNotificationIntegrationTest#userCannotReadAnotherUsersNotification`
+- [ ] IntelliJ에서 서버 테스트 실행으로 전체 회귀 확인 (`UserNotificationIntegrationTest` 포함)
 
 ---
 

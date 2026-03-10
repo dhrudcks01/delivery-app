@@ -29,6 +29,8 @@ import com.delivery.driver.exception.DriverApplicationStatusConflictException;
 import com.delivery.payment.exception.InvalidPaymentMethodRegistrationException;
 import com.delivery.payment.exception.PaymentNotFoundException;
 import com.delivery.payment.exception.PaymentRetryConflictException;
+import com.delivery.notification.exception.NotificationAccessDeniedException;
+import com.delivery.notification.exception.NotificationNotFoundException;
 import com.delivery.notification.exception.InvalidNotificationBroadcastRequestException;
 import com.delivery.servicearea.exception.InvalidServiceAreaMasterDongFileException;
 import com.delivery.servicearea.exception.ServiceAreaDeleteNotAllowedException;
@@ -616,6 +618,34 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotificationNotFound(
+            NotificationNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "NOTIFICATION_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(NotificationAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotificationAccessDenied(
+            NotificationAccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.FORBIDDEN.value(),
+                "NOTIFICATION_ACCESS_DENIED",
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

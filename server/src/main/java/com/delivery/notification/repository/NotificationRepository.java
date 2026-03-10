@@ -5,15 +5,20 @@ import com.delivery.notification.entity.NotificationEntity;
 import com.delivery.notification.model.NotificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
+
+    List<NotificationEntity> findAllByUserOrderByCreatedAtDesc(UserEntity user);
 
     boolean existsByUserAndTypeAndPayloadJson(
             UserEntity user,
             NotificationType type,
             String payloadJson
     );
+
+    long countByUserAndReadFalse(UserEntity user);
 
     long countByUserAndType(UserEntity user, NotificationType type);
 
