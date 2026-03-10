@@ -105,7 +105,13 @@ export function WasteRequestEntrySection({
       )}
 
       {serviceAreaError && (
-        <Pressable style={styles.secondaryButton} onPress={onRetryServiceArea}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="서비스 가능 지역 다시 확인"
+          accessibilityHint="서비스 가능 지역 조회를 다시 시도합니다."
+          style={styles.secondaryButton}
+          onPress={onRetryServiceArea}
+        >
           <Text style={styles.secondaryButtonText}>다시 시도</Text>
         </Pressable>
       )}
@@ -116,13 +122,23 @@ export function WasteRequestEntrySection({
             <Text style={styles.warningTitle}>{serviceAreaUnavailableMessage}</Text>
             <Text style={styles.warningText}>현재 대표 주소지는 신청 가능한 지역이 아닙니다.</Text>
           </View>
-          <Pressable style={styles.secondaryButton} onPress={onOpenServiceAreaBrowse}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="서비스 가능 지역 화면 열기"
+            accessibilityHint="서비스 가능 지역 목록 화면으로 이동합니다."
+            style={styles.secondaryButton}
+            onPress={onOpenServiceAreaBrowse}
+          >
             <Text style={styles.secondaryButtonText}>서비스 지역 살펴보기</Text>
           </Pressable>
         </>
       )}
 
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="수거 요청 시작"
+        accessibilityHint="수거 요청 단계 입력 화면으로 이동합니다."
+        accessibilityState={{ disabled: !canStartRequest }}
         style={[styles.primaryButton, !canStartRequest && styles.buttonDisabled]}
         onPress={onStartRequest}
         disabled={!canStartRequest}
@@ -203,11 +219,21 @@ export function WasteRequestStepFlowSection({
               <Text style={styles.selectionDescription}>기본 수거 품목입니다.</Text>
             </View>
             <View style={styles.counter}>
-              <Pressable style={styles.counterButton} onPress={() => onAdjustCount('GENERAL', -1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="혼합 쓰레기 수량 감소"
+                style={styles.counterButton}
+                onPress={() => onAdjustCount('GENERAL', -1)}
+              >
                 <Text style={styles.counterButtonText}>-</Text>
               </Pressable>
               <Text style={styles.counterValue}>{counts.GENERAL}</Text>
-              <Pressable style={styles.counterButton} onPress={() => onAdjustCount('GENERAL', 1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="혼합 쓰레기 수량 증가"
+                style={styles.counterButton}
+                onPress={() => onAdjustCount('GENERAL', 1)}
+              >
                 <Text style={styles.counterButtonText}>+</Text>
               </Pressable>
             </View>
@@ -219,11 +245,21 @@ export function WasteRequestStepFlowSection({
               <Text style={styles.selectionDescription}>함께 배출할 박스 수량을 선택해 주세요.</Text>
             </View>
             <View style={styles.counter}>
-              <Pressable style={styles.counterButton} onPress={() => onAdjustCount('BOX', -1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="택배 박스 수량 감소"
+                style={styles.counterButton}
+                onPress={() => onAdjustCount('BOX', -1)}
+              >
                 <Text style={styles.counterButtonText}>-</Text>
               </Pressable>
               <Text style={styles.counterValue}>{counts.BOX}</Text>
-              <Pressable style={styles.counterButton} onPress={() => onAdjustCount('BOX', 1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="택배 박스 수량 증가"
+                style={styles.counterButton}
+                onPress={() => onAdjustCount('BOX', 1)}
+              >
                 <Text style={styles.counterButtonText}>+</Text>
               </Pressable>
             </View>
@@ -236,11 +272,21 @@ export function WasteRequestStepFlowSection({
               <Text style={styles.selectionDescription}>필요한 수량을 선택해 주세요.</Text>
             </View>
             <View style={styles.counter}>
-              <Pressable style={styles.counterButton} onPress={() => onAdjustBagCount(-1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="수거비닐 수량 감소"
+                style={styles.counterButton}
+                onPress={() => onAdjustBagCount(-1)}
+              >
                 <Text style={styles.counterButtonText}>-</Text>
               </Pressable>
               <Text style={styles.counterValue}>{bagCount}</Text>
-              <Pressable style={styles.counterButton} onPress={() => onAdjustBagCount(1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="수거비닐 수량 증가"
+                style={styles.counterButton}
+                onPress={() => onAdjustBagCount(1)}
+              >
                 <Text style={styles.counterButtonText}>+</Text>
               </Pressable>
             </View>
@@ -276,6 +322,10 @@ export function WasteRequestStepFlowSection({
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>참고사진 ({referencePhotoUrls.length})</Text>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="참고사진 추가"
+              accessibilityHint="사진 라이브러리에서 참고사진을 선택합니다."
+              accessibilityState={{ disabled: isUploadingPhoto }}
               style={[styles.secondaryButtonCompact, isUploadingPhoto && styles.buttonDisabled]}
               disabled={isUploadingPhoto}
               onPress={onAddPhoto}
@@ -292,6 +342,10 @@ export function WasteRequestStepFlowSection({
 
           {photoUploadError && (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="사진 업로드 다시 시도"
+              accessibilityHint="참고사진 업로드를 다시 시도합니다."
+              accessibilityState={{ disabled: isUploadingPhoto }}
               style={[styles.secondaryButton, isUploadingPhoto && styles.buttonDisabled]}
               disabled={isUploadingPhoto}
               onPress={onRetryPhotoUpload}
@@ -370,7 +424,14 @@ export function WasteRequestStepFlowSection({
             <Text style={styles.summaryValue}>카드 자동결제</Text>
           </View>
 
-          <Pressable style={styles.agreementRow} onPress={onToggleAgreement}>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel="유의사항 확인 동의"
+            accessibilityHint="수거 신청 유의사항 확인 여부를 변경합니다."
+            accessibilityState={{ checked: agreed }}
+            style={styles.agreementRow}
+            onPress={onToggleAgreement}
+          >
             <View style={[styles.agreementCheckbox, agreed && styles.agreementCheckboxChecked]}>
               <Text style={[styles.agreementCheckboxText, agreed && styles.agreementCheckboxTextChecked]}>
                 {agreed ? '✓' : ''}
@@ -388,10 +449,18 @@ export function WasteRequestStepFlowSection({
       )}
 
       <View style={styles.footerRow}>
-        <Pressable style={styles.secondaryButton} onPress={onBack}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={step === 0 ? '수거 요청 취소' : '이전 단계로 이동'}
+          style={styles.secondaryButton}
+          onPress={onBack}
+        >
           <Text style={styles.secondaryButtonText}>{step === 0 ? '취소' : '이전'}</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={step === 2 ? '수거 요청 제출' : '다음 단계로 이동'}
+          accessibilityState={{ disabled: isSubmitting || isUploadingPhoto }}
           style={[styles.primaryButton, (isSubmitting || isUploadingPhoto) && styles.buttonDisabled]}
           disabled={isSubmitting || isUploadingPhoto}
           onPress={onNext}

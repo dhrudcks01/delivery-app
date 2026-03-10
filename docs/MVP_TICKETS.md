@@ -1998,7 +1998,7 @@
 - [x] `UserPaymentManagementScreen` 결제수단 상태 톤 매핑을 `statusBadge.ts` 공통 모듈로 이동 확인
 - [ ] SYS_ADMIN/USER 주요 화면에서 상태 배지 색상/문구 회귀 수동 확인(iOS/Android)
 
-### [ ] T-0597 모바일 접근성(A11y) 기본선 정비
+### [x] T-0597 모바일 접근성(A11y) 기본선 정비
 **Goal**
 - 주요 터치 요소에 접근성 속성을 체계적으로 부여해 스크린리더 사용성과 접근성 품질의 최소 기준을 맞춘다.
 
@@ -2007,6 +2007,14 @@
 - `TouchableOpacity`/`Pressable`에 `accessibilityRole`, `accessibilityLabel`(필요 시 `accessibilityHint`)를 정책적으로 추가
 - 최소 터치 영역 44px 보장 및 의미 없는 중복 포커스 요소 정리
 - iOS VoiceOver/Android TalkBack 기준으로 핵심 시나리오 수동 점검 체크리스트 작성
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `cd mobile && npm run typecheck` 통과
+- [x] 탭 네비게이션(`Home/Request/History/Profile`) 접근성 라벨/힌트 적용 확인
+- [x] USER 신청 플로우 주요 CTA/카운터/동의 체크 액션 접근성 속성 적용 확인
+- [x] DRIVER/OPS/SYS 핵심 목록 액션(필터/선택/승인/반려/재시도) 접근성 속성 적용 확인
+- [ ] iOS VoiceOver 실기기/시뮬레이터로 탭 이동, 신청 생성, 승인/반려 시나리오 수동 점검
+- [ ] Android TalkBack 실기기/에뮬레이터로 탭 이동, 신청 생성, 승인/반려 시나리오 수동 점검
 
 ---
 

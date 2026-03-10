@@ -202,6 +202,7 @@ function AppTabsScreen() {
           title: TAB_TO_LABEL.HomeTab,
           headerShown: isPrimaryUser,
           tabBarIcon: renderHomeTabIcon,
+          tabBarAccessibilityLabel: '홈 탭',
         }}
         children={() =>
           isPrimaryUser
@@ -225,6 +226,7 @@ function AppTabsScreen() {
           title: TAB_TO_LABEL.RequestTab,
           headerShown: false,
           tabBarIcon: renderRequestTabIcon,
+          tabBarAccessibilityLabel: '신청 탭',
         }}
         children={() =>
           hasUserRole
@@ -245,6 +247,7 @@ function AppTabsScreen() {
           title: TAB_TO_LABEL.HistoryTab,
           headerShown: false,
           tabBarIcon: renderHistoryTabIcon,
+          tabBarAccessibilityLabel: '이용내역 탭',
         }}
         children={() =>
           hasUserRole
@@ -264,6 +267,7 @@ function AppTabsScreen() {
         options={{
           title: TAB_TO_LABEL.ProfileTab,
           tabBarIcon: renderProfileTabIcon,
+          tabBarAccessibilityLabel: '내정보 탭',
         }}
         children={() => (
           <TabProfileScreen

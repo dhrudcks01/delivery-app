@@ -32,7 +32,14 @@ export function PhotoThumbnailCard({
 
   return (
     <View style={[styles.card, containerStyle]}>
-      <Pressable disabled={!onPress} onPress={onPress} style={styles.imageWrap}>
+      <Pressable
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={onPress ? `${label} 확대 보기` : label}
+        accessibilityHint={onPress ? '사진 미리보기를 엽니다.' : undefined}
+        disabled={!onPress}
+        onPress={onPress}
+        style={styles.imageWrap}
+      >
         {!hasError && (
           <Image
             key={`${photoUrl}-${reloadKey}`}
@@ -58,7 +65,13 @@ export function PhotoThumbnailCard({
         {hasError && (
           <View style={styles.errorFallback}>
             <Text style={styles.errorFallbackText}>이미지 로딩 실패</Text>
-            <Pressable style={styles.retryButton} onPress={handleRetryLoad}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${label} 다시 불러오기`}
+              accessibilityHint="이미지 로딩을 다시 시도합니다."
+              style={styles.retryButton}
+              onPress={handleRetryLoad}
+            >
               <Text style={styles.retryButtonText}>다시 시도</Text>
             </Pressable>
           </View>
@@ -67,7 +80,13 @@ export function PhotoThumbnailCard({
       <View style={styles.footer}>
         <Text style={styles.label}>{label}</Text>
         {onRemove && (
-          <Pressable style={styles.removeButton} onPress={onRemove}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${label} 삭제`}
+            accessibilityHint="첨부된 사진을 목록에서 제거합니다."
+            style={styles.removeButton}
+            onPress={onRemove}
+          >
             <Text style={styles.removeButtonText}>삭제</Text>
           </Pressable>
         )}

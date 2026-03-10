@@ -173,6 +173,10 @@ export function SysAdminHomeContentSection({
         <Text style={styles.cardTitle}>상태 필터</Text>
         <View style={styles.filterRow}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="PENDING 신청 필터"
+            accessibilityHint="대기 중인 권한 신청만 표시합니다."
+            accessibilityState={{ selected: applicationStatusFilter === 'PENDING' }}
             style={[styles.filterChip, applicationStatusFilter === 'PENDING' && styles.filterChipActive]}
             onPress={() => onChangeApplicationStatusFilter('PENDING')}
           >
@@ -181,6 +185,10 @@ export function SysAdminHomeContentSection({
             </Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="전체 신청 필터"
+            accessibilityHint="전체 권한 신청을 표시합니다."
+            accessibilityState={{ selected: applicationStatusFilter === 'ALL' }}
             style={[styles.filterChip, applicationStatusFilter === 'ALL' && styles.filterChipActive]}
             onPress={() => onChangeApplicationStatusFilter('ALL')}
           >
@@ -195,6 +203,9 @@ export function SysAdminHomeContentSection({
         <View style={styles.rowBetween}>
           <Text style={styles.cardTitle}>OPS_ADMIN 권한 신청 승인</Text>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="OPS_ADMIN 신청 목록 새로고침"
+            accessibilityHint="OPS_ADMIN 권한 신청 목록을 다시 불러옵니다."
             style={[styles.ghostButton, isLoadingOpsAdminApplications && styles.buttonDisabled]}
             onPress={onRefreshOpsAdminApplications}
             disabled={isLoadingOpsAdminApplications}
@@ -227,6 +238,10 @@ export function SysAdminHomeContentSection({
               return (
                 <Pressable
                   key={item.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`OPS_ADMIN 신청 ${item.id} 선택`}
+                  accessibilityHint="신청 상세 정보를 확인하고 승인 또는 반려할 수 있습니다."
+                  accessibilityState={{ selected: selectedOpsAdminApplicationId === item.id }}
                   style={[styles.listItem, selectedOpsAdminApplicationId === item.id && styles.listItemActive]}
                   onPress={() => onSelectOpsAdminApplication(item.id)}
                 >
@@ -263,6 +278,10 @@ export function SysAdminHomeContentSection({
         )}
         <View style={styles.buttonRow}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="OPS_ADMIN 신청 승인"
+            accessibilityHint="선택한 OPS_ADMIN 신청을 승인합니다."
+            accessibilityState={{ disabled: isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId }}
             style={[styles.button, isProcessingOpsAdminApplication && styles.buttonDisabled]}
             onPress={onApproveOpsAdminApplication}
             disabled={isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId}
@@ -270,6 +289,10 @@ export function SysAdminHomeContentSection({
             <Text style={styles.buttonText}>승인</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="OPS_ADMIN 신청 반려"
+            accessibilityHint="선택한 OPS_ADMIN 신청을 반려합니다."
+            accessibilityState={{ disabled: isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId }}
             style={[styles.button, styles.rejectButton, isProcessingOpsAdminApplication && styles.buttonDisabled]}
             onPress={onRejectOpsAdminApplication}
             disabled={isProcessingOpsAdminApplication || !selectedOpsAdminApplicationId}
@@ -283,6 +306,9 @@ export function SysAdminHomeContentSection({
         <View style={styles.rowBetween}>
           <Text style={styles.cardTitle}>SYS_ADMIN 권한 신청 승인</Text>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="SYS_ADMIN 신청 목록 새로고침"
+            accessibilityHint="SYS_ADMIN 권한 신청 목록을 다시 불러옵니다."
             style={[styles.ghostButton, isLoadingSysAdminApplications && styles.buttonDisabled]}
             onPress={onRefreshSysAdminApplications}
             disabled={isLoadingSysAdminApplications}
@@ -315,6 +341,10 @@ export function SysAdminHomeContentSection({
               return (
                 <Pressable
                   key={item.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`SYS_ADMIN 신청 ${item.id} 선택`}
+                  accessibilityHint="신청 상세 정보를 확인하고 승인 또는 반려할 수 있습니다."
+                  accessibilityState={{ selected: selectedSysAdminApplicationId === item.id }}
                   style={[styles.listItem, selectedSysAdminApplicationId === item.id && styles.listItemActive]}
                   onPress={() => onSelectSysAdminApplication(item.id)}
                 >
@@ -351,6 +381,10 @@ export function SysAdminHomeContentSection({
         )}
         <View style={styles.buttonRow}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="SYS_ADMIN 신청 승인"
+            accessibilityHint="선택한 SYS_ADMIN 신청을 승인합니다."
+            accessibilityState={{ disabled: isProcessingSysAdminApplication || !selectedSysAdminApplicationId }}
             style={[styles.button, isProcessingSysAdminApplication && styles.buttonDisabled]}
             onPress={onApproveSysAdminApplication}
             disabled={isProcessingSysAdminApplication || !selectedSysAdminApplicationId}
@@ -358,6 +392,10 @@ export function SysAdminHomeContentSection({
             <Text style={styles.buttonText}>승인</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="SYS_ADMIN 신청 반려"
+            accessibilityHint="선택한 SYS_ADMIN 신청을 반려합니다."
+            accessibilityState={{ disabled: isProcessingSysAdminApplication || !selectedSysAdminApplicationId }}
             style={[styles.button, styles.rejectButton, isProcessingSysAdminApplication && styles.buttonDisabled]}
             onPress={onRejectSysAdminApplication}
             disabled={isProcessingSysAdminApplication || !selectedSysAdminApplicationId}
@@ -379,7 +417,13 @@ export function SysAdminHomeContentSection({
             placeholder="예: admin"
             placeholderTextColor={ui.colors.placeholder}
           />
-          <Pressable style={styles.secondaryButton} onPress={onSearchSysAdminGrantCandidates}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="SYS_ADMIN 부여 대상 검색"
+            accessibilityHint="입력한 검색어로 SYS_ADMIN 부여 대상을 조회합니다."
+            style={styles.secondaryButton}
+            onPress={onSearchSysAdminGrantCandidates}
+          >
             <Text style={styles.secondaryButtonText}>검색</Text>
           </Pressable>
         </View>
@@ -398,6 +442,10 @@ export function SysAdminHomeContentSection({
         {sysAdminGrantCandidates.map((item) => (
           <Pressable
             key={item.userId}
+            accessibilityRole="button"
+            accessibilityLabel={`SYS_ADMIN 부여 대상 ${item.name} 선택`}
+            accessibilityHint="선택한 계정에 SYS_ADMIN 권한을 부여할 수 있습니다."
+            accessibilityState={{ selected: selectedSysAdminGrantCandidateId === item.userId }}
             style={[styles.listItem, selectedSysAdminGrantCandidateId === item.userId && styles.listItemActive]}
             onPress={() => onSelectSysAdminGrantCandidate(item.userId)}
           >
@@ -423,6 +471,10 @@ export function SysAdminHomeContentSection({
         )}
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="선택 대상 SYS_ADMIN 권한 부여"
+          accessibilityHint="선택한 사용자에게 SYS_ADMIN 권한을 부여합니다."
+          accessibilityState={{ disabled: isGrantingSysAdminRole || !selectedSysAdminGrantCandidateId }}
           style={[styles.button, isGrantingSysAdminRole && styles.buttonDisabled]}
           onPress={onGrantSysAdminRole}
           disabled={isGrantingSysAdminRole || !selectedSysAdminGrantCandidateId}
@@ -445,7 +497,13 @@ export function SysAdminHomeContentSection({
             placeholder="예: driver"
             placeholderTextColor={ui.colors.placeholder}
           />
-          <Pressable style={styles.secondaryButton} onPress={onSearchOpsAdminGrantCandidates}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="OPS_ADMIN 부여 대상 검색"
+            accessibilityHint="입력한 검색어로 OPS_ADMIN 부여 대상을 조회합니다."
+            style={styles.secondaryButton}
+            onPress={onSearchOpsAdminGrantCandidates}
+          >
             <Text style={styles.secondaryButtonText}>검색</Text>
           </Pressable>
         </View>
@@ -464,6 +522,10 @@ export function SysAdminHomeContentSection({
         {opsAdminGrantCandidates.map((item) => (
           <Pressable
             key={item.userId}
+            accessibilityRole="button"
+            accessibilityLabel={`OPS_ADMIN 부여 대상 ${item.name} 선택`}
+            accessibilityHint="선택한 계정에 OPS_ADMIN 권한을 부여할 수 있습니다."
+            accessibilityState={{ selected: selectedGrantCandidateId === item.userId }}
             style={[styles.listItem, selectedGrantCandidateId === item.userId && styles.listItemActive]}
             onPress={() => onSelectOpsAdminGrantCandidate(item.userId)}
           >
@@ -511,6 +573,10 @@ export function SysAdminHomeContentSection({
 
         <View style={styles.buttonRow}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="선택 대상 OPS_ADMIN 권한 부여"
+            accessibilityHint="선택한 사용자에게 OPS_ADMIN 권한을 부여합니다."
+            accessibilityState={{ disabled: isGranting || isRevoking }}
             style={[styles.button, isGranting && styles.buttonDisabled]}
             onPress={onGrantOpsAdminRole}
             disabled={isGranting || isRevoking}
@@ -518,6 +584,10 @@ export function SysAdminHomeContentSection({
             <Text style={styles.buttonText}>{isGranting ? '부여 중...' : '선택 대상 권한 부여'}</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="OPS_ADMIN 권한 회수"
+            accessibilityHint="입력한 사용자 ID의 OPS_ADMIN 권한을 회수합니다."
+            accessibilityState={{ disabled: isGranting || isRevoking }}
             style={[styles.button, styles.rejectButton, isRevoking && styles.buttonDisabled]}
             onPress={onRevokeOpsAdminRole}
             disabled={isGranting || isRevoking}

@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ghostButton: {
-    height: 40,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,
@@ -681,9 +681,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 999,
+    minHeight: 44,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: ui.colors.card,
+    justifyContent: 'center',
   },
   filterChipActive: {
     borderColor: ui.colors.infoSoftBorder,

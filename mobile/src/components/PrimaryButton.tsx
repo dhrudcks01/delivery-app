@@ -7,6 +7,8 @@ type PrimaryButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
 };
@@ -17,6 +19,8 @@ export function PrimaryButton({
   disabled = false,
   loading = false,
   loadingLabel,
+  accessibilityLabel,
+  accessibilityHint,
   style,
   textStyle,
 }: PrimaryButtonProps) {
@@ -26,6 +30,9 @@ export function PrimaryButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? buttonLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: isDisabled }}
       disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [

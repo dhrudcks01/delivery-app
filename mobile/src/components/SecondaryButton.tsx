@@ -7,6 +7,8 @@ type SecondaryButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   tone?: SecondaryButtonTone;
@@ -17,6 +19,8 @@ export function SecondaryButton({
   label,
   onPress,
   disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
   style,
   textStyle,
   tone = 'primary',
@@ -38,6 +42,9 @@ export function SecondaryButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

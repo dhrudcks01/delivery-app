@@ -121,6 +121,10 @@ export function DriverHomeScreen() {
 
           <View style={styles.filterRow}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="처리 필요 필터"
+              accessibilityHint="상태가 ASSIGNED인 요청만 표시합니다."
+              accessibilityState={{ selected: driverFilter === 'ACTION_REQUIRED' }}
               style={[styles.filterChip, driverFilter === 'ACTION_REQUIRED' && styles.filterChipActive]}
               onPress={() => setDriverFilter('ACTION_REQUIRED')}
             >
@@ -129,6 +133,10 @@ export function DriverHomeScreen() {
               </Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="처리 완료 필터"
+              accessibilityHint="처리가 완료된 요청만 표시합니다."
+              accessibilityState={{ selected: driverFilter === 'DONE' }}
               style={[styles.filterChip, driverFilter === 'DONE' && styles.filterChipActive]}
               onPress={() => setDriverFilter('DONE')}
             >
@@ -137,6 +145,10 @@ export function DriverHomeScreen() {
               </Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="전체 필터"
+              accessibilityHint="모든 배정 요청을 표시합니다."
+              accessibilityState={{ selected: driverFilter === 'ALL' }}
               style={[styles.filterChip, driverFilter === 'ALL' && styles.filterChipActive]}
               onPress={() => setDriverFilter('ALL')}
             >
@@ -180,6 +192,9 @@ export function DriverHomeScreen() {
                 return (
                   <Pressable
                     key={item.requestId}
+                    accessibilityRole="button"
+                    accessibilityLabel={`요청 ${item.requestId} 상세`}
+                    accessibilityHint="배정 상세 화면으로 이동해 수거 측정을 진행합니다."
                     style={styles.listItem}
                     onPress={() => navigation.navigate('DriverAssignedRequestDetail', { requestId: item.requestId })}
                   >

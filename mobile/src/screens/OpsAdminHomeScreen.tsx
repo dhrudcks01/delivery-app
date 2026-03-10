@@ -219,11 +219,14 @@ export function OpsAdminHomeScreen() {
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>기사 신청 승인/반려</Text>
-            <Pressable
-              style={[styles.secondaryButtonCompact, isLoadingApplications && styles.buttonDisabled]}
-              onPress={() => void loadPendingApplications()}
-              disabled={isLoadingApplications}
-            >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="기사 신청 목록 새로고침"
+            accessibilityHint="기사 신청 승인 목록을 다시 불러옵니다."
+            style={[styles.secondaryButtonCompact, isLoadingApplications && styles.buttonDisabled]}
+            onPress={() => void loadPendingApplications()}
+            disabled={isLoadingApplications}
+          >
               <Text style={styles.secondaryButtonCompactText}>{isLoadingApplications ? '불러오는 중...' : '새로고침'}</Text>
             </Pressable>
           </View>
@@ -245,7 +248,13 @@ export function OpsAdminHomeScreen() {
           {!isLoadingApplications && applicationListError && (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>{applicationListError}</Text>
-              <Pressable style={styles.retryButton} onPress={() => void loadPendingApplications()}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="기사 신청 목록 다시 시도"
+                accessibilityHint="기사 신청 목록 조회를 다시 시도합니다."
+                style={styles.retryButton}
+                onPress={() => void loadPendingApplications()}
+              >
                 <Text style={styles.retryButtonText}>다시 시도</Text>
               </Pressable>
             </View>
@@ -267,6 +276,10 @@ export function OpsAdminHomeScreen() {
                 return (
                   <Pressable
                     key={item.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`기사 신청 ${item.id} 선택`}
+                    accessibilityHint="선택한 기사 신청의 상세 정보를 확인합니다."
+                    accessibilityState={{ selected: isSelected }}
                     style={[styles.listItem, isSelected && styles.listItemActive]}
                     onPress={() => {
                       setSelectedApplicationId(item.id);
@@ -315,6 +328,10 @@ export function OpsAdminHomeScreen() {
 
           <View style={styles.buttonRow}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="기사 신청 승인"
+              accessibilityHint="선택한 기사 신청을 승인합니다."
+              accessibilityState={{ disabled: isSubmittingApprove || isSubmittingReject || !selectedApplicationId }}
               style={[styles.primaryButton, (isSubmittingApprove || isSubmittingReject || !selectedApplicationId) && styles.buttonDisabled]}
               onPress={() => void handleApproveApplication()}
               disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
@@ -322,6 +339,10 @@ export function OpsAdminHomeScreen() {
               <Text style={styles.primaryButtonText}>{isSubmittingApprove ? '승인 중...' : '승인'}</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="기사 신청 반려"
+              accessibilityHint="선택한 기사 신청을 반려합니다."
+              accessibilityState={{ disabled: isSubmittingApprove || isSubmittingReject || !selectedApplicationId }}
               style={[styles.dangerButton, (isSubmittingApprove || isSubmittingReject || !selectedApplicationId) && styles.buttonDisabled]}
               onPress={() => void handleRejectApplication()}
               disabled={isSubmittingApprove || isSubmittingReject || !selectedApplicationId}
@@ -343,11 +364,14 @@ export function OpsAdminHomeScreen() {
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>수거 요청 목록</Text>
-            <Pressable
-              style={[styles.secondaryButtonCompact, isLoadingWasteList && styles.buttonDisabled]}
-              onPress={() => void loadWasteRequests()}
-              disabled={isLoadingWasteList}
-            >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="수거 요청 목록 새로고침"
+            accessibilityHint="수거 요청 목록을 다시 불러옵니다."
+            style={[styles.secondaryButtonCompact, isLoadingWasteList && styles.buttonDisabled]}
+            onPress={() => void loadWasteRequests()}
+            disabled={isLoadingWasteList}
+          >
               <Text style={styles.secondaryButtonCompactText}>{isLoadingWasteList ? '불러오는 중...' : '새로고침'}</Text>
             </Pressable>
           </View>
@@ -362,13 +386,31 @@ export function OpsAdminHomeScreen() {
             placeholderTextColor={ui.colors.placeholder}
           />
           <View style={styles.chipWrap}>
-            <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('REQUESTED')}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="요청 접수 상태 필터"
+              accessibilityHint="수거 요청 상태를 REQUESTED로 설정합니다."
+              style={styles.quickChip}
+              onPress={() => setWasteStatusFilter('REQUESTED')}
+            >
               <Text style={styles.quickChipText}>REQUESTED</Text>
             </Pressable>
-            <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('ASSIGNED')}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="기사 배정 상태 필터"
+              accessibilityHint="수거 요청 상태를 ASSIGNED로 설정합니다."
+              style={styles.quickChip}
+              onPress={() => setWasteStatusFilter('ASSIGNED')}
+            >
               <Text style={styles.quickChipText}>ASSIGNED</Text>
             </Pressable>
-            <Pressable style={styles.quickChip} onPress={() => setWasteStatusFilter('PAYMENT_FAILED')}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="결제 실패 상태 필터"
+              accessibilityHint="수거 요청 상태를 PAYMENT_FAILED로 설정합니다."
+              style={styles.quickChip}
+              onPress={() => setWasteStatusFilter('PAYMENT_FAILED')}
+            >
               <Text style={styles.quickChipText}>PAYMENT_FAILED</Text>
             </Pressable>
           </View>
@@ -391,7 +433,13 @@ export function OpsAdminHomeScreen() {
           {!isLoadingWasteList && wasteListError && (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>{wasteListError}</Text>
-              <Pressable style={styles.retryButton} onPress={() => void loadWasteRequests()}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="수거 요청 목록 다시 시도"
+                accessibilityHint="수거 요청 목록 조회를 다시 시도합니다."
+                style={styles.retryButton}
+                onPress={() => void loadWasteRequests()}
+              >
                 <Text style={styles.retryButtonText}>다시 시도</Text>
               </Pressable>
             </View>
@@ -412,6 +460,9 @@ export function OpsAdminHomeScreen() {
                 return (
                   <Pressable
                     key={item.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`수거 요청 ${item.id} 상세`}
+                    accessibilityHint="수거 요청 상세 및 기사 배정 화면으로 이동합니다."
                     style={styles.listItem}
                     onPress={() => navigation.navigate('OpsWasteRequestDetail', { requestId: item.id })}
                   >
@@ -438,11 +489,14 @@ export function OpsAdminHomeScreen() {
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>결제 실패 처리</Text>
-            <Pressable
-              style={[styles.secondaryButtonCompact, isLoadingFailedPayments && styles.buttonDisabled]}
-              onPress={() => void loadFailedPayments()}
-              disabled={isLoadingFailedPayments}
-            >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="결제 실패 목록 새로고침"
+            accessibilityHint="결제 실패 목록을 다시 불러옵니다."
+            style={[styles.secondaryButtonCompact, isLoadingFailedPayments && styles.buttonDisabled]}
+            onPress={() => void loadFailedPayments()}
+            disabled={isLoadingFailedPayments}
+          >
               <Text style={styles.secondaryButtonCompactText}>{isLoadingFailedPayments ? '불러오는 중...' : '새로고침'}</Text>
             </Pressable>
           </View>
@@ -465,7 +519,13 @@ export function OpsAdminHomeScreen() {
           {!isLoadingFailedPayments && failedPaymentError && (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>{failedPaymentError}</Text>
-              <Pressable style={styles.retryButton} onPress={() => void loadFailedPayments()}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="결제 실패 목록 다시 시도"
+                accessibilityHint="결제 실패 목록 조회를 다시 시도합니다."
+                style={styles.retryButton}
+                onPress={() => void loadFailedPayments()}
+              >
                 <Text style={styles.retryButtonText}>다시 시도</Text>
               </Pressable>
             </View>
@@ -496,6 +556,10 @@ export function OpsAdminHomeScreen() {
                   <Text style={styles.listSub}>실패사유: {item.failureMessage ?? '-'}</Text>
                   <Text style={styles.listSub}>갱신시각: {formatDate(item.updatedAt)}</Text>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`요청 ${item.wasteRequestId} 결제 재시도`}
+                    accessibilityHint="선택한 요청의 실패 결제를 다시 시도합니다."
+                    accessibilityState={{ disabled: isRetryingPayment !== null }}
                     style={[styles.primaryButton, isRetryingPayment === item.wasteRequestId && styles.buttonDisabled]}
                     onPress={() => void handleRetryFailedPayment(item.wasteRequestId)}
                     disabled={isRetryingPayment !== null}
@@ -605,7 +669,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonCompact: {
-    height: 40,
+    minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
@@ -640,12 +704,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickChip: {
+    minHeight: 44,
     borderWidth: 1,
     borderColor: ui.colors.infoSoftBorder,
     backgroundColor: ui.colors.infoSoftBackground,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quickChipText: {
     color: ui.colors.primaryPressed,

@@ -503,8 +503,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   counterButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   secondaryButtonCompact: {
-    minHeight: 36,
+    minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
