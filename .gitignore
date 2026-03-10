@@ -34,3 +34,4 @@ mobile/.expo-shared/
 # Gradle build outputs
 server/.gradle/
 server/build/
+server/out/
