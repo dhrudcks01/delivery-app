@@ -1,16 +1,17 @@
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { cancelMyWasteRequest, getMyWasteRequestDetail } from '../api/wasteApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useUserWasteRequestDetailDerived } from './hooks/useUserWasteRequestDetailDerived';
+import { UserWasteRequestDetailHeaderSection } from './sections/UserWasteRequestDetailSections';
 import { ui } from '../theme/ui';
 import { WasteRequestDetail } from '../types/waste';
 import { toApiErrorMessage } from '../utils/errorMessage';
-import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import {
   toUserWasteStatusLabel,
   toUserWasteStatusLabelOrStart,
@@ -96,39 +97,19 @@ export function UserWasteRequestDetailScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
-
-  const canCancel = detail?.status === 'REQUESTED';
-  const displayOrderNo = detail?.orderNo ?? routeOrderNo ?? '-';
-  const paymentFailureNotice =
-    detail?.status === 'PAYMENT_FAILED'
-      ? '결제가 실패했습니다. 결제수단을 확인한 뒤 다시 시도해 주세요.'
-      : null;
-
-  const passedStatuses = useMemo(() => {
-    if (!detail) {
-      return [];
-    }
-    const ordered = detail.statusTimeline.map((item) => item.toStatus);
-    if (detail.status) {
-      ordered.push(detail.status);
-    }
-    return Array.from(new Set(ordered));
-  }, [detail]);
-
-  const disposalItems = useMemo(() => detail?.disposalItems ?? [], [detail]);
-  const referencePhotos = useMemo(
-    () => detail?.photos.filter((photo) => photo.type === 'REFERENCE') ?? [],
-    [detail],
-  );
-  const driverPhotos = useMemo(
-    () => detail?.photos.filter((photo) => photo.type !== 'REFERENCE') ?? [],
-    [detail],
-  );
-
-  const statusBadgePalette = useMemo(
-    () => getStatusBadgePalette(resolveWasteStatusBadgeTone(detail?.status ?? 'REQUESTED')),
-    [detail?.status],
-  );
+  const {
+    canCancel,
+    displayOrderNo,
+    paymentFailureNotice,
+    passedStatuses,
+    disposalItems,
+    referencePhotos,
+    driverPhotos,
+    statusBadgePalette,
+  } = useUserWasteRequestDetailDerived({
+    detail,
+    routeOrderNo,
+  });
 
   const loadDetail = useCallback(async () => {
     setIsLoading(true);
@@ -172,20 +153,15 @@ export function UserWasteRequestDetailScreen() {
   return (
     <>
       <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerCard}>
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.title}>수거요청 상세</Text>
-            <Text style={styles.caption}>요청 ID: {requestId}</Text>
-            <Text style={styles.caption}>주문번호: {displayOrderNo}</Text>
-          </View>
-          <Pressable
-            style={[styles.secondaryButtonCompact, isLoading && styles.buttonDisabled]}
-            onPress={() => void loadDetail()}
-            disabled={isLoading}
-          >
-            <Text style={styles.secondaryButtonCompactText}>{isLoading ? '불러오는 중...' : '새로고침'}</Text>
-          </Pressable>
-        </View>
+        <UserWasteRequestDetailHeaderSection
+          styles={styles}
+          requestId={requestId}
+          displayOrderNo={displayOrderNo}
+          isLoading={isLoading}
+          onRefresh={() => {
+            void loadDetail();
+          }}
+        />
 
         {isLoading && !detail && (
           <View style={styles.loadingGroup}>

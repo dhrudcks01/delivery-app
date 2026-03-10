@@ -1,7 +1,7 @@
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   getMyAssignedWasteRequestDetail,
@@ -12,10 +12,11 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useDriverAssignedRequestDetailDerived } from './hooks/useDriverAssignedRequestDetailDerived';
+import { DriverAssignedRequestDetailHeaderSection } from './sections/DriverAssignedRequestDetailSections';
 import { ui } from '../theme/ui';
 import { DriverAssignedWasteRequest } from '../types/waste';
 import { toApiErrorMessage } from '../utils/errorMessage';
-import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import { toWasteStatusLabel } from '../utils/wasteStatusLabel';
 
 const colors = ui.colors;
@@ -79,18 +80,10 @@ export function DriverAssignedRequestDetailScreen() {
   const [measuredWeightKgText, setMeasuredWeightKgText] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
-
-  const canMeasureSelected = selectedRequest?.status === 'ASSIGNED';
-  const statusBadgePalette = useMemo(
-    () => getStatusBadgePalette(resolveWasteStatusBadgeTone(selectedRequest?.status ?? 'REQUESTED')),
-    [selectedRequest?.status],
-  );
-  const selectedTitle = useMemo(() => {
-    if (!selectedRequest) {
-      return `요청 #${requestId}`;
-    }
-    return `요청 #${selectedRequest.requestId} (${toWasteStatusLabel(selectedRequest.status)})`;
-  }, [requestId, selectedRequest]);
+  const { canMeasureSelected, statusBadgePalette, selectedTitle } = useDriverAssignedRequestDetailDerived({
+    requestId,
+    selectedRequest,
+  });
 
   const resetMeasureForm = () => {
     setMeasuredWeightKgText('');
@@ -193,11 +186,7 @@ export function DriverAssignedRequestDetailScreen() {
     <>
       <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} includeTopInset keyboardShouldPersistTaps="handled">
         <View style={styles.screenContainer}>
-          <View style={styles.headerCard}>
-            <Text style={styles.badge}>DRIVER 상세</Text>
-            <Text style={styles.title}>배정 상세</Text>
-            <Text style={styles.description}>{selectedTitle}</Text>
-          </View>
+          <DriverAssignedRequestDetailHeaderSection styles={styles} selectedTitle={selectedTitle} />
 
           <View style={styles.card}>
             <View style={styles.rowBetween}>

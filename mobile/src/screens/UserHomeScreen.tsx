@@ -1,13 +1,12 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getUserServiceAreaAvailability } from '../api/serviceAreaApi';
 import { createUserAddress, getUserAddresses } from '../api/userAddressApi';
 import { createWasteRequest, getMyWasteRequests } from '../api/wasteApi';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
-import { TabHeaderCard } from '../components/TabHeaderCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { clearLegacyUserAddresses, loadLegacyUserAddresses } from '../storage/userAddressStorage';
 import { ui } from '../theme/ui';
@@ -16,31 +15,14 @@ import type { WasteRequest } from '../types/waste';
 import { toApiErrorMessage } from '../utils/errorMessage';
 import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import { toUserWasteStatusLabel } from '../utils/wasteStatusLabel';
-import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
+import { useUserHomeDerived } from './hooks/useUserHomeDerived';
+import { UserHomeHeaderSection } from './sections/UserHomeSections';
 
 type UserHomeSection = 'all' | 'history' | 'request-form';
 
 type UserHomeScreenProps = {
   section?: UserHomeSection;
   includeTopInset?: boolean;
-};
-
-const SECTION_HEADER_COPY: Record<UserHomeSection, { badge: string; title: string; description: string }> = {
-  all: {
-    badge: '수거 요청',
-    title: '수거 요청 홈',
-    description: '요청 현황과 이용 내역을 한곳에서 확인할 수 있어요.',
-  },
-  history: {
-    badge: '이용내역',
-    title: '이용내역',
-    description: '내 수거 요청의 상태와 처리 이력을 확인할 수 있어요.',
-  },
-  'request-form': {
-    badge: '수거 요청',
-    title: '수거 요청',
-    description: '대표 주소를 기준으로 수거 신청을 진행할 수 있어요.',
-  },
 };
 
 const colors = ui.colors;
@@ -58,7 +40,6 @@ function formatDate(dateTime: string | null): string {
 export function UserHomeScreen({ section = 'all', includeTopInset = false }: UserHomeScreenProps) {
   const { me } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const headerCopy = SECTION_HEADER_COPY[section];
 
   const [primaryAddress, setPrimaryAddress] = useState<UserAddress | null>(null);
   const [isLoadingPrimaryAddress, setIsLoadingPrimaryAddress] = useState(false);
@@ -79,37 +60,29 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unavailableAlertAddressRef = useRef<string | null>(null);
-
-  const showRequestForm = section === 'all' || section === 'request-form';
-  const showHistory = section === 'all' || section === 'history';
-  const isPhoneVerified = Boolean(me?.phoneNumber && me?.phoneVerifiedAt);
-
-  const primaryAddressBuildResult = useMemo(() => {
-    if (!primaryAddress) {
-      return null;
-    }
-    return buildWasteRequestAddress(primaryAddress);
-  }, [primaryAddress]);
-
-  const canUsePrimaryAddress = primaryAddressBuildResult?.ok ?? false;
-  const primaryRequestAddress = primaryAddressBuildResult?.ok ? primaryAddressBuildResult.address : null;
-  const isPrimaryAddressMissing = !isLoadingPrimaryAddress && !primaryAddress && !primaryAddressError;
-  const shouldShowAddressManagementCta = isPrimaryAddressMissing;
-  const primaryAddressIssueMessage =
-    isPrimaryAddressMissing
-      ? PRIMARY_ADDRESS_MISSING_MESSAGE
-      : (primaryAddressError
-        ?? (primaryAddress && primaryAddressBuildResult && !primaryAddressBuildResult.ok
-          ? primaryAddressBuildResult.message
-          : null));
-
-  const isServiceAreaBlocked = isServiceAreaAvailable === false;
-  const canSubmitRequest =
-    canUsePrimaryAddress
-    && isPhoneVerified
-    && isServiceAreaAvailable === true
-    && !isCheckingServiceArea
-    && !serviceAreaCheckError;
+  const {
+    headerCopy,
+    showRequestForm,
+    showHistory,
+    isPhoneVerified,
+    primaryAddressBuildResult,
+    canUsePrimaryAddress,
+    primaryRequestAddress,
+    shouldShowAddressManagementCta,
+    primaryAddressIssueMessage,
+    isServiceAreaBlocked,
+    canSubmitRequest,
+  } = useUserHomeDerived({
+    section,
+    me,
+    primaryAddress,
+    isLoadingPrimaryAddress,
+    primaryAddressError,
+    isServiceAreaAvailable,
+    isCheckingServiceArea,
+    serviceAreaCheckError,
+    primaryAddressMissingMessage: PRIMARY_ADDRESS_MISSING_MESSAGE,
+  });
 
   const showSubmitSuccessMessage = useCallback((message: string) => {
     if (successTimerRef.current) {
@@ -304,16 +277,13 @@ export function UserHomeScreen({ section = 'all', includeTopInset = false }: Use
       keyboardShouldPersistTaps="handled"
       includeTopInset={includeTopInset}
     >
-      <TabHeaderCard
+      <UserHomeHeaderSection
+        styles={styles}
         badge={headerCopy.badge}
         title={headerCopy.title}
         description={headerCopy.description}
-        meta={(
-          <>
-            <Text style={styles.caption}>로그인 ID: {me?.loginId ?? me?.email ?? '-'}</Text>
-            <Text style={styles.caption}>권한: {me?.roles.join(', ') ?? '-'}</Text>
-          </>
-        )}
+        loginId={me?.loginId ?? me?.email ?? '-'}
+        rolesLabel={me?.roles.join(', ') ?? '-'}
       />
 
       {showRequestForm && (

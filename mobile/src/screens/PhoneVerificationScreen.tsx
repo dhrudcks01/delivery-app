@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../auth/AuthContext';
+import { usePhoneVerificationDerived } from './hooks/usePhoneVerificationDerived';
+import { PhoneVerificationHeaderSection } from './sections/PhoneVerificationSections';
 import type { PhoneVerificationStartResponse } from '../types/auth';
 import { ui } from '../theme/ui';
 
@@ -199,6 +201,17 @@ export function PhoneVerificationScreen() {
     }
     return buildPhoneVerificationHtml(session);
   }, [session]);
+  const {
+    showStartSection,
+    showProgressSection,
+    showStartPreparingBadge,
+    progressStatusLabel,
+    progressStatusTone,
+  } = usePhoneVerificationDerived({
+    session,
+    isStarting,
+    isCompleting,
+  });
 
   const handleStartVerification = useCallback(async () => {
     debugPhoneVerificationLog('start-requested');
@@ -337,16 +350,13 @@ export function PhoneVerificationScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.screenContainer}>
-        <View style={styles.headerCard}>
-          <Text style={styles.title}>휴대폰 본인인증</Text>
-          <Text style={styles.description}>본인인증이 완료되어야 서비스를 계속 사용할 수 있습니다.</Text>
-        </View>
+        <PhoneVerificationHeaderSection styles={styles} />
 
-        {!session && (
+        {showStartSection && (
           <View style={styles.contentCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.sectionTitle}>인증 시작</Text>
-              {isStarting && (
+              {showStartPreparingBadge && (
                 <View style={[styles.statusBadge, styles.warningBadge]}>
                   <Text style={styles.warningBadgeText}>준비 중</Text>
                 </View>
@@ -375,13 +385,13 @@ export function PhoneVerificationScreen() {
           </View>
         )}
 
-        {session && (
+        {showProgressSection && (
           <View style={styles.contentCardLarge}>
             <View style={styles.cardHeader}>
               <Text style={styles.sectionTitle}>인증 진행</Text>
-              <View style={[styles.statusBadge, isCompleting ? styles.warningBadge : styles.successBadge]}>
-                <Text style={isCompleting ? styles.warningBadgeText : styles.successBadgeText}>
-                  {isCompleting ? '확인 중' : '진행 중'}
+              <View style={[styles.statusBadge, progressStatusTone === 'warning' ? styles.warningBadge : styles.successBadge]}>
+                <Text style={progressStatusTone === 'warning' ? styles.warningBadgeText : styles.successBadgeText}>
+                  {progressStatusLabel}
                 </Text>
               </View>
             </View>

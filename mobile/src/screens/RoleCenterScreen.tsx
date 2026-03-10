@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createDriverApplication, getMyDriverApplications } from '../api/driverApplicationApi';
 import { getOpsAdminGrantCandidates, grantOpsAdminRole } from '../api/sysAdminRoleApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
+import { useRoleCenterDerived } from './hooks/useRoleCenterDerived';
+import { RoleCenterHeaderSection } from './sections/RoleCenterSections';
 import { DriverApplication } from '../types/driverApplication';
 import { OpsAdminGrantCandidate } from '../types/opsAdmin';
 import { ui } from '../theme/ui';
@@ -29,19 +31,6 @@ function formatDate(dateTime: string | null): string {
   return new Date(dateTime).toLocaleString();
 }
 
-function getRoleBadgeText(role: AppRole): string {
-  if (role === 'USER') {
-    return 'USER';
-  }
-  if (role === 'DRIVER') {
-    return 'DRIVER';
-  }
-  if (role === 'OPS_ADMIN') {
-    return 'OPS_ADMIN';
-  }
-  return 'SYS_ADMIN';
-}
-
 export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCenterScreenProps) {
   const [driverReason, setDriverReason] = useState('');
   const [driverApplications, setDriverApplications] = useState<DriverApplication[]>([]);
@@ -57,6 +46,18 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
   const [isGrantingOpsAdmin, setIsGrantingOpsAdmin] = useState(false);
   const [opsAdminGrantError, setOpsAdminGrantError] = useState<string | null>(null);
   const [opsAdminGrantResult, setOpsAdminGrantResult] = useState<string | null>(null);
+  const {
+    roleBadgeText,
+    isUserRole,
+    isOpsAdminRole,
+    isSysAdminRole,
+    isDriverRole,
+    selectedGrantCandidate,
+  } = useRoleCenterDerived({
+    activeRole,
+    opsAdminGrantCandidates,
+    selectedGrantCandidateId,
+  });
 
   const loadDriverApplications = async () => {
     setIsLoadingDriverApplications(true);
@@ -120,7 +121,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
   };
 
   const handleGrantOpsAdmin = async () => {
-    const candidate = opsAdminGrantCandidates.find((item) => item.userId === selectedGrantCandidateId);
+    const candidate = selectedGrantCandidate;
     if (!candidate) {
       setOpsAdminGrantError('부여할 사용자를 선택해 주세요.');
       return;
@@ -142,26 +143,19 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
   };
 
   useEffect(() => {
-    if (activeRole === 'USER') {
+    if (isUserRole) {
       void loadDriverApplications();
     }
-    if (activeRole === 'OPS_ADMIN') {
+    if (isOpsAdminRole) {
       void loadOpsAdminGrantCandidates();
     }
-  }, [activeRole]);
+  }, [isUserRole, isOpsAdminRole]);
 
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerCard}>
-        <Text style={styles.badge}>권한센터</Text>
-        <Text style={styles.title}>권한 신청/승인</Text>
-        <Text style={styles.description}>현재 역할에 맞는 신청, 조회, 승인 메뉴를 제공합니다.</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>현재 역할: {getRoleBadgeText(activeRole)}</Text>
-        </View>
-      </View>
+      <RoleCenterHeaderSection styles={styles} roleBadgeText={roleBadgeText} />
 
-      {activeRole === 'USER' && (
+      {isUserRole && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>DRIVER 권한 신청</Text>
           <Text style={styles.caption}>신청 사유를 입력하면 운영자가 검토 후 승인/반려합니다.</Text>
@@ -198,7 +192,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
         </View>
       )}
 
-      {activeRole === 'USER' && (
+      {isUserRole && (
         <View style={styles.card}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>내 DRIVER 신청 내역</Text>
@@ -250,7 +244,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
         </View>
       )}
 
-      {activeRole === 'OPS_ADMIN' && (
+      {isOpsAdminRole && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>OPS_ADMIN 권한 부여</Text>
           <Text style={styles.caption}>신청이 아닌 운영 부여 동선입니다. (대상: DRIVER + OPS_ADMIN 미보유)</Text>
@@ -337,7 +331,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
         </View>
       )}
 
-      {activeRole === 'SYS_ADMIN' && (
+      {isSysAdminRole && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>권한 승인 메뉴</Text>
           <Text style={styles.caption}>OPS_ADMIN/SYS_ADMIN 권한 신청 승인 화면으로 이동합니다.</Text>
@@ -347,7 +341,7 @@ export function RoleCenterScreen({ activeRole, onOpenSysAdminApproval }: RoleCen
         </View>
       )}
 
-      {activeRole === 'DRIVER' && (
+      {isDriverRole && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>권한 메뉴 안내</Text>
           <Text style={styles.caption}>현재 역할에서는 권한 신청/부여 메뉴가 제공되지 않습니다.</Text>
