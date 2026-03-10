@@ -5,22 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../auth/AuthContext';
 import type { PhoneVerificationStartResponse } from '../types/auth';
+import { ui } from '../theme/ui';
 
 const PORTONE_BROWSER_SDK_URL = 'https://cdn.portone.io/v2/browser-sdk.js';
 const PORTONE_REDIRECT_URL = 'https://delivery-mobile.local/phone-verification/callback';
-
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0f172a',
-  text: '#334155',
-  caption: '#64748b',
-};
 
 type VerificationSession = PhoneVerificationStartResponse & {
   redirectUrl: string;
@@ -369,7 +357,7 @@ export function PhoneVerificationScreen() {
 
             {isStarting ? (
               <View style={styles.skeletonCard}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={ui.colors.primary} />
                 <View style={styles.skeletonLineShort} />
                 <View style={styles.skeletonLineLong} />
               </View>
@@ -421,7 +409,7 @@ export function PhoneVerificationScreen() {
                 }}
                 disabled={isCompleting}
               >
-                {isCompleting && <ActivityIndicator size="small" color={colors.primary} />}
+                {isCompleting && <ActivityIndicator size="small" color={ui.colors.primary} />}
                 <Text style={styles.secondaryButtonText}>인증 완료 확인</Text>
               </Pressable>
 
@@ -456,38 +444,38 @@ export function PhoneVerificationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
   },
   screenContainer: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 24,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
   },
   headerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   description: {
     fontSize: 14,
     lineHeight: 20,
-    color: colors.text,
+    color: ui.colors.text,
   },
   contentCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 12,
   },
@@ -495,8 +483,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 12,
     minHeight: 420,
@@ -510,11 +498,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   bodyText: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   statusBadge: {
@@ -528,7 +516,7 @@ const styles = StyleSheet.create({
   successBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.success,
+    color: ui.colors.success,
   },
   warningBadge: {
     backgroundColor: '#fef3c7',
@@ -541,7 +529,7 @@ const styles = StyleSheet.create({
   skeletonCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#f8fafc',
     padding: 16,
     gap: 10,
@@ -563,7 +551,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 320,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#ffffff',
@@ -578,7 +566,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -591,7 +579,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -599,7 +587,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonText: {
-    color: colors.primary,
+    color: ui.colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -609,7 +597,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   retryText: {
-    color: colors.primary,
+    color: ui.colors.primary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -625,7 +613,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   errorText: {
-    color: colors.error,
+    color: ui.colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -636,14 +624,15 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   ghostButtonText: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 14,
     fontWeight: '700',
   },
 });
+

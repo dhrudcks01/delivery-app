@@ -4,18 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { RootStackParamList } from '../navigation/RootNavigator';
-
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
+import { ui } from '../theme/ui';
 
 function formatValue(value: string | null | undefined): string {
   if (!value) {
@@ -57,7 +46,7 @@ export function ProfileSettingsScreen() {
 
         {isLoading && !hasProfile && (
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={ui.colors.primary} />
             <Text style={styles.loadingText}>설정 정보를 불러오는 중입니다...</Text>
           </View>
         )}
@@ -167,7 +156,7 @@ export function ProfileSettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
@@ -175,9 +164,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerCard: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 8,
@@ -195,17 +184,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   description: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -213,11 +202,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   sectionCaption: {
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
     lineHeight: 18,
   },
   infoRow: {
@@ -230,14 +219,14 @@ const styles = StyleSheet.create({
   infoLabel: {
     width: 92,
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
     fontWeight: '600',
     lineHeight: 20,
   },
   infoValue: {
     flex: 1,
     fontSize: 14,
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     lineHeight: 20,
     textAlign: 'right',
   },
@@ -253,7 +242,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.success,
+    color: ui.colors.success,
   },
   statusBadgeWarning: {
     borderColor: '#fde68a',
@@ -264,7 +253,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   loadingCard: {
@@ -291,13 +280,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: colors.error,
+    color: ui.colors.error,
     lineHeight: 18,
   },
   emptyCard: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -306,18 +295,18 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   emptyDescription: {
     fontSize: 13,
-    color: colors.text,
+    color: ui.colors.text,
     textAlign: 'center',
     lineHeight: 18,
   },
   primaryButton: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -341,3 +330,4 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
   },
 });
+

@@ -1898,7 +1898,7 @@
 - 최소 USER/DRIVER/OPS/SYS 대표 화면에 공통 모듈 적용
 - 상태 라벨/색상/문구 정책 변경 시 한 지점 수정으로 반영되는 구조 보장
 
-### [ ] T-0591 UI 토큰 단일화 2차(잔여 화면 `const colors` 제거)
+### [x] T-0591 UI 토큰 단일화 2차(잔여 화면 `const colors` 제거)
 **Goal**
 - 잔여 화면에 남아있는 `const colors` 상수 중복을 제거하고 `mobile/src/theme/ui.ts` 기준으로 색상 참조를 완전 단일화한다.
 

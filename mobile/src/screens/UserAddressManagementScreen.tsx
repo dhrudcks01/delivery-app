@@ -16,19 +16,7 @@ import { AddressItem } from '../types/address';
 import { UserAddress, UserAddressUpsertPayload } from '../types/userAddress';
 import { ApiErrorResponse } from '../types/waste';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
-
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
+import { ui } from '../theme/ui';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -470,14 +458,14 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
     gap: 24,
   },
   headerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 10,
   },
@@ -494,22 +482,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   description: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   caption: {
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
   },
   card: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 12,
   },
@@ -522,12 +510,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   skeletonGroup: {
     gap: 10,
@@ -535,7 +523,7 @@ const styles = StyleSheet.create({
   skeletonCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#f8fafc',
     padding: 12,
     gap: 8,
@@ -561,7 +549,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   errorText: {
-    color: colors.error,
+    color: ui.colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -574,30 +562,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   successText: {
-    color: colors.success,
+    color: ui.colors.success,
     fontSize: 13,
     fontWeight: '600',
   },
   emptyCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     padding: 16,
     alignItems: 'center',
     gap: 6,
   },
   emptyIcon: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 16,
   },
   emptyTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontSize: 14,
     fontWeight: '600',
   },
   emptyDescription: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
@@ -605,19 +593,19 @@ const styles = StyleSheet.create({
   addressCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     padding: 12,
     gap: 6,
   },
   addressTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '700',
     fontSize: 14,
     flex: 1,
   },
   addressMeta: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 12,
   },
   primaryBadge: {
@@ -640,14 +628,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   secondaryButtonSmallText: {
-    color: colors.text,
+    color: ui.colors.text,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -676,11 +664,11 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     backgroundColor: '#ffffff',
     fontSize: 14,
   },
@@ -689,7 +677,7 @@ const styles = StyleSheet.create({
   },
   searchResultCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -701,17 +689,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
   },
   searchResultTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '700',
     fontSize: 13,
   },
   searchResultMeta: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 12,
   },
   checkboxRow: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 12,
@@ -735,7 +723,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   checkboxActive: {
-    borderColor: colors.primary,
+    borderColor: ui.colors.primary,
     backgroundColor: '#dbeafe',
   },
   checkboxMark: {
@@ -744,17 +732,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   checkboxMarkActive: {
-    color: colors.primary,
+    color: ui.colors.primary,
   },
   checkboxLabel: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontSize: 14,
     flex: 1,
   },
   primaryButton: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -767,13 +755,13 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: colors.text,
+    color: ui.colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -781,14 +769,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   secondaryButtonCompactText: {
-    color: colors.primary,
+    color: ui.colors.primary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -796,3 +784,5 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
+
+

@@ -13,6 +13,7 @@ import { useAuth } from '../auth/AuthContext';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PaymentMethodStatusResponse, PaymentMethodType } from '../types/payment';
 import { ApiErrorResponse } from '../types/waste';
+import { ui } from '../theme/ui';
 
 type CardOwnerType = 'PERSONAL' | 'BUSINESS';
 
@@ -21,19 +22,6 @@ const METHOD_OPTIONS: Array<{ type: PaymentMethodType; title: string; subtitle: 
   { type: 'TRANSFER_TOSS', title: '계좌이체(토스)', subtitle: '토스 페이지에서 계좌를 연결합니다.' },
   { type: 'KAKAOPAY', title: '카카오페이', subtitle: '카카오페이 간편결제로 연결합니다.' },
 ];
-
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -508,14 +496,14 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
     gap: 24,
   },
   headerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 10,
   },
@@ -532,23 +520,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   description: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   caption: {
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
     lineHeight: 18,
   },
   card: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: ui.colors.border,
+    backgroundColor: ui.colors.card,
     padding: 16,
     gap: 12,
   },
@@ -561,7 +549,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   policyCard: {
     borderRadius: 12,
@@ -587,7 +575,7 @@ const styles = StyleSheet.create({
   loadingCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#f8fafc',
     padding: 12,
     gap: 8,
@@ -613,7 +601,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   errorText: {
-    color: colors.error,
+    color: ui.colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -626,30 +614,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   successText: {
-    color: colors.success,
+    color: ui.colors.success,
     fontSize: 13,
     fontWeight: '600',
   },
   emptyCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     padding: 16,
     alignItems: 'center',
     gap: 6,
   },
   emptyIcon: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 16,
   },
   emptyTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontSize: 14,
     fontWeight: '600',
   },
   emptyDescription: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
@@ -678,7 +666,7 @@ const styles = StyleSheet.create({
   },
   methodCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     gap: 4,
@@ -689,13 +677,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fbff',
   },
   methodTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '700',
     fontSize: 14,
     flex: 1,
   },
   methodMeta: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 12,
   },
   badgeRow: {
@@ -747,7 +735,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
     paddingHorizontal: 12,
   },
   primaryButtonText: {
@@ -759,14 +747,14 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: colors.text,
+    color: ui.colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -774,14 +762,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   secondaryButtonCompactText: {
-    color: colors.primary,
+    color: ui.colors.primary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -790,7 +778,7 @@ const styles = StyleSheet.create({
   },
   methodOptionCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
@@ -808,12 +796,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   methodOptionTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '700',
     fontSize: 14,
   },
   methodOptionSubtitle: {
-    color: colors.caption,
+    color: ui.colors.caption,
     fontSize: 12,
   },
   radio: {
@@ -869,7 +857,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
   },
   ownerTypeText: {
-    color: colors.text,
+    color: ui.colors.text,
     fontWeight: '600',
     fontSize: 13,
   },
@@ -878,17 +866,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   fieldLabel: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontSize: 13,
     fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     backgroundColor: '#ffffff',
     fontSize: 14,
   },
@@ -906,3 +894,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+

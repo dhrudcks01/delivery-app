@@ -5,19 +5,7 @@ import { getUserServiceAreas } from '../api/serviceAreaApi';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { ServiceArea } from '../types/serviceArea';
 import { ApiErrorResponse } from '../types/waste';
-
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
-};
+import { ui } from '../theme/ui';
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -141,7 +129,7 @@ export function ServiceAreaBrowseScreen() {
           {isLoading && (
             <View style={styles.loadingGroup}>
               <View style={styles.loadingCard}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={ui.colors.primary} />
                 <Text style={styles.loadingText}>서비스 가능지역을 불러오는 중입니다...</Text>
               </View>
               <View style={styles.skeletonCard}>
@@ -198,7 +186,7 @@ export function ServiceAreaBrowseScreen() {
 const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
@@ -206,9 +194,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerCard: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 8,
@@ -226,17 +214,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   description: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -244,20 +232,20 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   caption: {
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     backgroundColor: '#ffffff',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontSize: 14,
   },
   buttonRow: {
@@ -268,7 +256,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -282,7 +270,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -290,7 +278,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -334,7 +322,7 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     gap: 8,
@@ -362,7 +350,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: colors.error,
+    color: ui.colors.error,
     lineHeight: 18,
   },
   retryButton: {
@@ -381,7 +369,7 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -391,17 +379,17 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.caption,
+    color: ui.colors.caption,
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     textAlign: 'center',
   },
   emptyDescription: {
     fontSize: 13,
-    color: colors.text,
+    color: ui.colors.text,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -410,7 +398,7 @@ const styles = StyleSheet.create({
   },
   listItem: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     gap: 8,
@@ -419,13 +407,13 @@ const styles = StyleSheet.create({
   listTitle: {
     flex: 1,
     fontSize: 14,
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '600',
     lineHeight: 20,
   },
   listMeta: {
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -442,7 +430,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
   },
   statusBadgeSuccessText: {
-    color: colors.success,
+    color: ui.colors.success,
   },
   statusBadgeWarning: {
     borderColor: '#fde68a',
@@ -452,3 +440,4 @@ const styles = StyleSheet.create({
     color: '#b45309',
   },
 });
+

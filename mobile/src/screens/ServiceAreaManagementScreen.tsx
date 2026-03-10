@@ -1,4 +1,4 @@
-﻿import { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import {
@@ -15,6 +15,7 @@ import { useServiceAreaManagementDerived } from './hooks/useServiceAreaManagemen
 import { ServiceAreaManagementContentSection, ServiceAreaNoPermissionSection } from './sections/ServiceAreaManagementSections';
 import type { ApiErrorResponse } from '../types/waste';
 import type { ServiceArea, ServiceAreaMasterDong } from '../types/serviceArea';
+import { ui } from '../theme/ui';
 
 type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -27,19 +28,6 @@ const CITY_ALIAS_BY_NORMALIZED: Record<string, string> = {
   daejeon: '대전광역시',
   ulsan: '울산광역시',
   sejong: '세종특별자치시',
-};
-
-const colors = {
-  primary: '#2563EB',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  error: '#DC2626',
-  background: '#F9FAFB',
-  card: '#FFFFFF',
-  border: '#E5E7EB',
-  textStrong: '#0F172A',
-  text: '#334155',
-  caption: '#64748B',
 };
 
 function toErrorMessage(error: unknown): string {
@@ -529,7 +517,7 @@ export function ServiceAreaManagementScreen() {
     >
       <ServiceAreaManagementContentSection
         styles={styles}
-        primaryColor={colors.primary}
+        primaryColor={ui.colors.primary}
         resultMessage={resultMessage}
         errorMessage={errorMessage}
         citySearchInput={citySearchInput}
@@ -589,7 +577,7 @@ export function ServiceAreaManagementScreen() {
 const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
-    backgroundColor: colors.background,
+    backgroundColor: ui.colors.background,
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
@@ -597,9 +585,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerCard: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 8,
@@ -617,17 +605,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   description: {
     fontSize: 14,
-    color: colors.text,
+    color: ui.colors.text,
     lineHeight: 20,
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: ui.colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -635,24 +623,24 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
   },
   fieldLabel: {
     fontSize: 14,
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '600',
   },
   caption: {
     fontSize: 12,
-    color: colors.caption,
+    color: ui.colors.caption,
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     backgroundColor: '#ffffff',
     fontSize: 14,
   },
@@ -670,7 +658,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
   },
   inlineButtonText: {
     color: '#ffffff',
@@ -698,7 +686,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -709,7 +697,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
   },
   chipText: {
-    color: colors.text,
+    color: ui.colors.text,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -756,7 +744,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -767,7 +755,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
   },
   filterChipText: {
-    color: colors.text,
+    color: ui.colors.text,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -784,7 +772,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: ui.colors.primary,
   },
   primaryButtonText: {
     color: '#ffffff',
@@ -796,13 +784,13 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
   },
   secondaryButtonText: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -835,7 +823,7 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     gap: 8,
@@ -855,14 +843,14 @@ const styles = StyleSheet.create({
   },
   emptyInlineCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     backgroundColor: '#ffffff',
   },
   emptyCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -872,17 +860,17 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.caption,
+    color: ui.colors.caption,
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     textAlign: 'center',
   },
   emptyDescription: {
     fontSize: 13,
-    color: colors.text,
+    color: ui.colors.text,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -894,7 +882,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   successText: {
-    color: colors.success,
+    color: ui.colors.success,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -906,7 +894,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   errorText: {
-    color: colors.error,
+    color: ui.colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -954,7 +942,7 @@ const styles = StyleSheet.create({
   },
   listItem: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: ui.colors.border,
     borderRadius: 12,
     padding: 12,
     gap: 4,
@@ -965,22 +953,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
   },
   listTitle: {
-    color: colors.textStrong,
+    color: ui.colors.textStrong,
     fontSize: 14,
     fontWeight: '700',
   },
   listSub: {
-    color: colors.text,
+    color: ui.colors.text,
     fontSize: 12,
   },
   pickText: {
-    color: colors.primary,
+    color: ui.colors.primary,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
   },
   pickTextSelected: {
-    color: colors.success,
+    color: ui.colors.success,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -1001,7 +989,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fffbeb',
   },
   statusActiveText: {
-    color: colors.success,
+    color: ui.colors.success,
   },
   statusInactiveText: {
     color: '#b45309',
@@ -1047,3 +1035,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 });
+
+
