@@ -1,6 +1,6 @@
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   assignWasteRequestForOps,
@@ -11,10 +11,11 @@ import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScre
 import { PhotoPreviewModal } from '../components/PhotoPreviewModal';
 import { PhotoThumbnailCard } from '../components/PhotoThumbnailCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useOpsWasteRequestDetailDerived } from './hooks/useOpsWasteRequestDetailDerived';
+import { OpsWasteRequestDetailHeaderSection } from './sections/OpsWasteRequestDetailSections';
 import { ui } from '../theme/ui';
 import { DriverAssignmentCandidate, OpsWasteRequestDetail } from '../types/opsAdmin';
 import { toApiErrorMessage } from '../utils/errorMessage';
-import { getStatusBadgePalette, resolveWasteStatusBadgeTone } from '../utils/statusBadge';
 import { toWasteStatusLabel, toWasteStatusLabelOrStart } from '../utils/wasteStatusLabel';
 
 const colors = ui.colors;
@@ -81,20 +82,9 @@ export function OpsWasteRequestDetailScreen() {
   const [assignMessage, setAssignMessage] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
-
-  const referencePhotos = useMemo(
-    () => selectedWasteRequest?.photos.filter((photo) => photo.type === 'REFERENCE') ?? [],
-    [selectedWasteRequest],
-  );
-  const driverPhotos = useMemo(
-    () => selectedWasteRequest?.photos.filter((photo) => photo.type !== 'REFERENCE') ?? [],
-    [selectedWasteRequest],
-  );
-  const isReassignMode = selectedWasteRequest?.status === 'ASSIGNED' && selectedWasteRequest.driverId !== null;
-  const statusBadgePalette = useMemo(
-    () => getStatusBadgePalette(resolveWasteStatusBadgeTone(selectedWasteRequest?.status ?? 'REQUESTED')),
-    [selectedWasteRequest?.status],
-  );
+  const { referencePhotos, driverPhotos, isReassignMode, statusBadgePalette } = useOpsWasteRequestDetailDerived({
+    selectedWasteRequest,
+  });
 
   const loadWasteRequestDetail = useCallback(async () => {
     setIsLoadingWasteDetail(true);
@@ -179,11 +169,7 @@ export function OpsWasteRequestDetailScreen() {
     <>
       <KeyboardAwareScrollScreen contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
         <View style={styles.screenContainer}>
-          <View style={styles.headerCard}>
-            <Text style={styles.badge}>OPS_ADMIN 상세</Text>
-            <Text style={styles.title}>수거 요청 상세</Text>
-            <Text style={styles.description}>요청 #{requestId}의 배정/재배정 상태를 관리합니다.</Text>
-          </View>
+          <OpsWasteRequestDetailHeaderSection styles={styles} requestId={requestId} />
 
           <View style={styles.card}>
             <View style={styles.rowBetween}>

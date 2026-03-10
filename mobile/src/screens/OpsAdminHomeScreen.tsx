@@ -1,6 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   approveDriverApplication,
@@ -13,12 +13,12 @@ import {
   retryFailedPaymentForOps,
 } from '../api/opsAdminWasteApi';
 import { useAuth } from '../auth/AuthContext';
-import { Card } from '../components/Card';
 import { KeyboardAwareScrollScreen } from '../components/KeyboardAwareScrollScreen';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { SectionHeader } from '../components/SectionHeader';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ui } from '../theme/ui';
+import { useOpsAdminHomeDerived } from './hooks/useOpsAdminHomeDerived';
+import { OpsAdminHomeOverviewSection } from './sections/OpsAdminHomeSections';
 import type { DriverApplication } from '../types/driverApplication';
 import type { FailedPayment, OpsWasteRequest } from '../types/opsAdmin';
 import { toApiErrorMessage } from '../utils/errorMessage';
@@ -56,7 +56,6 @@ export function OpsAdminHomeScreen() {
   const [applicationResultMessage, setApplicationResultMessage] = useState<string | null>(null);
   const [applications, setApplications] = useState<DriverApplication[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<number | null>(null);
-  const [selectedApplication, setSelectedApplication] = useState<DriverApplication | null>(null);
   const [latestApplicationResult, setLatestApplicationResult] = useState<DriverApplication | null>(null);
 
   const [wasteStatusFilter, setWasteStatusFilter] = useState('REQUESTED');
@@ -69,6 +68,11 @@ export function OpsAdminHomeScreen() {
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
   const [isRetryingPayment, setIsRetryingPayment] = useState<number | null>(null);
   const [retryResultMessage, setRetryResultMessage] = useState<string | null>(null);
+  const { selectedApplication, requestedCount } = useOpsAdminHomeDerived({
+    applications,
+    selectedApplicationId,
+    opsWasteRequests,
+  });
 
   const loadWasteRequests = useCallback(async () => {
     setIsLoadingWasteList(true);
@@ -196,20 +200,6 @@ export function OpsAdminHomeScreen() {
     }, [loadFailedPayments, loadPendingApplications, loadWasteRequests]),
   );
 
-  useEffect(() => {
-    if (!selectedApplicationId) {
-      setSelectedApplication(null);
-      return;
-    }
-    const found = applications.find((item) => item.id === selectedApplicationId) ?? null;
-    setSelectedApplication(found);
-  }, [applications, selectedApplicationId]);
-
-  const requestedCount = useMemo(
-    () => opsWasteRequests.filter((item) => item.status === 'REQUESTED').length,
-    [opsWasteRequests],
-  );
-
   return (
     <KeyboardAwareScrollScreen
       contentContainerStyle={styles.screen}
@@ -217,32 +207,14 @@ export function OpsAdminHomeScreen() {
       includeTopInset
     >
       <View style={styles.screenContainer}>
-        <Card style={styles.headerCard}>
-          <SectionHeader
-            badge="OPS_ADMIN"
-            title="운영 관리"
-            description="기사 신청 승인, 수거 요청 조회, 결제 실패 재시도를 관리합니다."
-            titleStyle={styles.title}
-            descriptionStyle={styles.description}
-          />
-          <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-          <Text style={styles.caption}>역할: {me?.roles.join(', ') ?? '-'}</Text>
-        </Card>
-
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>기사 신청 대기</Text>
-            <Text style={styles.summaryValue}>{applications.length}건</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>REQUESTED 요청</Text>
-            <Text style={styles.summaryValue}>{requestedCount}건</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>결제 실패</Text>
-            <Text style={styles.summaryValueError}>{failedPayments.length}건</Text>
-          </View>
-        </View>
+        <OpsAdminHomeOverviewSection
+          styles={styles}
+          loginId={me?.loginId ?? me?.email ?? '-'}
+          rolesLabel={me?.roles.join(', ') ?? '-'}
+          applicationsCount={applications.length}
+          requestedCount={requestedCount}
+          failedPaymentsCount={failedPayments.length}
+        />
 
         <View style={styles.card}>
           <View style={styles.rowBetween}>
@@ -298,7 +270,6 @@ export function OpsAdminHomeScreen() {
                     style={[styles.listItem, isSelected && styles.listItemActive]}
                     onPress={() => {
                       setSelectedApplicationId(item.id);
-                      setSelectedApplication(item);
                       setApplicationActionError(null);
                       setApplicationResultMessage(null);
                     }}

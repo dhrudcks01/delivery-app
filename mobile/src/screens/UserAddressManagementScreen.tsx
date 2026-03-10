@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchRoadAddresses } from '../api/addressApi';
 import {
@@ -16,6 +16,8 @@ import { UserAddress, UserAddressUpsertPayload } from '../types/userAddress';
 import { buildWasteRequestAddress } from '../utils/wasteRequestAddress';
 import { ui } from '../theme/ui';
 import { toApiErrorMessage } from '../utils/errorMessage';
+import { useUserAddressManagementDerived } from './hooks/useUserAddressManagementDerived';
+import { UserAddressManagementHeaderSection } from './sections/UserAddressManagementSections';
 
 const ERROR_MESSAGE_OPTIONS = {
   defaultMessage: '주소 처리 중 오류가 발생했습니다.',
@@ -260,19 +262,11 @@ export function UserAddressManagementScreen() {
     }
   };
 
-  const primaryAddressId = useMemo(
-    () => addresses.find((item) => item.isPrimary)?.id ?? null,
-    [addresses],
-  );
+  const { primaryAddressId } = useUserAddressManagementDerived({ addresses });
 
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerCard}>
-        <Text style={styles.badge}>내정보</Text>
-        <Text style={styles.title}>주소 관리</Text>
-        <Text style={styles.description}>대표 주소 설정과 주소 등록/수정을 한 화면에서 관리할 수 있습니다.</Text>
-        <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-      </View>
+      <UserAddressManagementHeaderSection styles={styles} loginId={me?.loginId ?? me?.email ?? '-'} />
 
       <View style={styles.card}>
         <View style={styles.sectionHeaderRow}>

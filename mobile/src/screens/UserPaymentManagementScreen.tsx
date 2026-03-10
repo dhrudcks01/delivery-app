@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -14,6 +14,8 @@ import { PaymentMethodStatusResponse, PaymentMethodType } from '../types/payment
 import { ui } from '../theme/ui';
 import { toApiErrorMessage } from '../utils/errorMessage';
 import { getStatusBadgePalette, type StatusBadgeTone } from '../utils/statusBadge';
+import { useUserPaymentManagementDerived } from './hooks/useUserPaymentManagementDerived';
+import { UserPaymentManagementIntroSection } from './sections/UserPaymentManagementSections';
 
 type CardOwnerType = 'PERSONAL' | 'BUSINESS';
 
@@ -96,11 +98,12 @@ export function UserPaymentManagementScreen() {
   const [expiry, setExpiry] = useState('');
   const [passwordTwoDigits, setPasswordTwoDigits] = useState('');
   const [ownerIdentity, setOwnerIdentity] = useState('');
+  const { hasPaymentMethods, canRegisterMethod, cardNumberDisplay } = useUserPaymentManagementDerived({
+    status,
+    cardNumber,
+    formatCardNumberForDisplay,
+  });
 
-  const hasPaymentMethods = (status?.paymentMethods.length ?? 0) > 0;
-  const canRegisterMethod = !hasPaymentMethods || Boolean(status?.canReregister);
-
-  const cardNumberDisplay = useMemo(() => formatCardNumberForDisplay(cardNumber), [cardNumber]);
 
   const loadStatus = useCallback(async () => {
     setIsLoading(true);
@@ -217,18 +220,7 @@ export function UserPaymentManagementScreen() {
 
   return (
     <KeyboardAwareScrollScreen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerCard}>
-        <Text style={styles.badge}>결제관리</Text>
-        <Text style={styles.title}>결제수단 관리</Text>
-        <Text style={styles.description}>등록된 결제수단을 확인하고 기본 결제수단을 관리할 수 있습니다.</Text>
-        <Text style={styles.caption}>로그인 아이디: {me?.loginId ?? me?.email ?? '-'}</Text>
-      </View>
-
-      <View style={styles.policyCard}>
-        <Text style={styles.policyTitle}>자동결제 정책</Text>
-        <Text style={styles.policyText}>자동결제는 카드 직접 등록 수단만 지원합니다.</Text>
-        <Text style={styles.policyText}>계좌이체(토스), 카카오페이는 등록 후 수동 결제로 사용합니다.</Text>
-      </View>
+      <UserPaymentManagementIntroSection styles={styles} loginId={me?.loginId ?? me?.email ?? '-'} />
 
       {isLoading && !status && (
         <View style={styles.loadingGroup}>
