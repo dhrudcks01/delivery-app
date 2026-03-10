@@ -2396,7 +2396,7 @@
 
 ---
 
-### [ ] T-0812 서버: 푸시 발송 서비스(Expo) + 실패 처리 정책
+### [x] T-0812 서버: 푸시 발송 서비스(Expo) + 실패 처리 정책
 **Goal**
 - 서버에서 Expo Push API를 통해 실제 푸시를 발송하고, 실패/만료 토큰을 관리할 수 있게 한다.
 
@@ -2407,3 +2407,22 @@
 - 일시 실패 재시도 정책 정의(최소 1회 또는 후순위 문서화)
 - 민감정보/토큰 로그 비노출
 - 최소 1개 테스트 또는 mock 기반 검증 추가
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] Expo Push 발송 서비스 구현:
+  - `ExpoPushNotificationSender`
+- [x] 발송 결과(success/failure/ticketId) 로그 기록 추가:
+  - `result=SUCCESS|FAILURE`, `ticketId`, `errorCode`, `attempt`
+- [x] 무효 토큰 비활성화 처리:
+  - `DeviceNotRegistered` 응답 시 `user_push_tokens.is_active=false`
+- [x] 일시 실패 재시도 정책 반영:
+  - HTTP 429/5xx, `MessageRateExceeded`, 타임아웃 시 재시도
+  - 기본 `max-retry-attempts=1`
+- [x] 민감정보 비노출:
+  - push token 원문 / access token 로그 미출력
+- [x] mock 기반 검증 테스트 추가:
+  - `ExpoPushNotificationSenderTest`
+- [x] 정책 문서 추가:
+  - `docs/notifications/EXPO_PUSH_DELIVERY_POLICY.md`
+- [ ] IntelliJ에서 서버 테스트 실행으로 회귀 확인:
+  - `ExpoPushNotificationSenderTest`

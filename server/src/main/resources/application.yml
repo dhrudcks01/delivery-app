@@ -61,6 +61,13 @@ app:
       auto-import-enabled: ${APP_SERVICE_AREA_MASTER_DONG_AUTO_IMPORT_ENABLED:false}
       auto-import-reset: ${APP_SERVICE_AREA_MASTER_DONG_AUTO_IMPORT_RESET:false}
   notification:
+    expo:
+      base-url: ${APP_NOTIFICATION_EXPO_BASE_URL:https://exp.host}
+      send-path: ${APP_NOTIFICATION_EXPO_SEND_PATH:/--/api/v2/push/send}
+      access-token: ${APP_NOTIFICATION_EXPO_ACCESS_TOKEN:}
+      connect-timeout-millis: ${APP_NOTIFICATION_EXPO_CONNECT_TIMEOUT_MILLIS:2000}
+      read-timeout-millis: ${APP_NOTIFICATION_EXPO_READ_TIMEOUT_MILLIS:3000}
+      max-retry-attempts: ${APP_NOTIFICATION_EXPO_MAX_RETRY_ATTEMPTS:1}
     coupon-expiring:
       enabled: ${APP_NOTIFICATION_COUPON_EXPIRING_ENABLED:false}
       schedule-cron: "${APP_NOTIFICATION_COUPON_EXPIRING_SCHEDULE_CRON:0 0 10 * * *}"
