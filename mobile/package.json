@@ -8,7 +8,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:a11y": "node scripts/check-accessibility.mjs",
+    "lint": "npm run lint:a11y"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

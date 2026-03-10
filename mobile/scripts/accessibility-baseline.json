@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-10T05:33:00.402Z",
+  "description": "onPress가 있는 Pressable/Touchable 계열 컴포넌트의 accessibilityLabel 누락 개수 기준선",
+  "violations": {
+    "src/components/PhotoPreviewModal.tsx|Pressable|missing-accessibilityLabel": 1,
+    "src/screens/LoginScreen.tsx|Pressable|missing-accessibilityLabel": 2,
+    "src/screens/PhoneVerificationScreen.tsx|Pressable|missing-accessibilityLabel": 4,
+    "src/screens/ProfileSettingsScreen.tsx|Pressable|missing-accessibilityLabel": 2,
+    "src/screens/RoleCenterScreen.tsx|Pressable|missing-accessibilityLabel": 6,
+    "src/screens/sections/ServiceAreaManagementSections.tsx|Pressable|missing-accessibilityLabel": 19,
+    "src/screens/sections/UserWasteRequestDetailSections.tsx|Pressable|missing-accessibilityLabel": 1,
+    "src/screens/ServiceAreaBrowseScreen.tsx|Pressable|missing-accessibilityLabel": 3,
+    "src/screens/SignupScreen.tsx|Pressable|missing-accessibilityLabel": 2,
+    "src/screens/TabProfileScreen.tsx|Pressable|missing-accessibilityLabel": 4,
+    "src/screens/UserAddressManagementScreen.tsx|Pressable|missing-accessibilityLabel": 9,
+    "src/screens/UserHomeScreen.tsx|Pressable|missing-accessibilityLabel": 7,
+    "src/screens/UserPaymentManagementScreen.tsx|Pressable|missing-accessibilityLabel": 11,
+    "src/screens/UserWasteRequestDetailScreen.tsx|Pressable|missing-accessibilityLabel": 2
+  }
+}

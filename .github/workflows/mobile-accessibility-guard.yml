@@ -1,0 +1,40 @@
+name: Mobile Accessibility Guard
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-accessibility-guard.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-accessibility-guard.yml'
+  workflow_dispatch:
+
+jobs:
+  mobile-accessibility:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Accessibility guard
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck

@@ -2061,7 +2061,7 @@
 - [x] 상세 화면 compact 버튼 높이 `40px -> minHeight 44px` 조정(터치 영역 기준 충족)
 - [x] 비상호작용 요소에는 접근성 role을 추가하지 않아 포커스 중복 노출 방지
 
-### [ ] T-0600 모바일 접근성 회귀 방지 자동화(정적 점검/CI)
+### [x] T-0600 모바일 접근성 회귀 방지 자동화(정적 점검/CI)
 **Goal**
 - 접근성 관련 회귀를 조기에 탐지할 수 있도록 모바일 UI 코드의 정적 점검 기준을 추가하고 CI 파이프라인에 연결한다.
 
@@ -2071,6 +2071,14 @@
 - CI에서 접근성 점검이 자동 실행되도록 워크플로우 추가 또는 기존 워크플로우 확장
 - 실패 시 개발자가 조치할 수 있도록 오류 메시지/가이드 문구 최소 1건 이상 제공
 - 기존 기능 동작/빌드 파이프라인에 영향 없는지 확인
+
+**수동 회귀 체크리스트 (2026-03-10)**
+- [x] `mobile/scripts/check-accessibility.mjs` 추가: `Pressable/Touchable + onPress`의 `accessibilityLabel` 누락 정적 점검 구현
+- [x] `mobile/scripts/accessibility-baseline.json` 추가: 기존 누락 73건(14 signatures) 기준선 고정으로 회귀 차단
+- [x] `mobile/package.json` 스크립트 정리: `npm run lint` -> 접근성 가드 실행(`lint:a11y`)
+- [x] CI 워크플로우 추가: `.github/workflows/mobile-accessibility-guard.yml`에서 `npm run lint` + `npm run typecheck` 자동 실행
+- [x] 실패 시 가이드 문구 제공 확인: 누락 파일/라인 출력 + `accessibilityLabel` 추가 및 baseline 갱신 명령 안내
+- [x] 로컬 검증: `cd mobile && npm run lint` / `cd mobile && npm run typecheck` 통과
 
 ---
 
